@@ -10,7 +10,7 @@ const path = require("path");
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 let botCount = 0; // ตัวนับจำนวนบอท
 const botSessions = {}; // เก็บสถานะ ชื่อ และเวลาเริ่มต้นของบอทแต่ละตัวตามโทเค็น
