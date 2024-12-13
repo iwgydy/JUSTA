@@ -4,7 +4,7 @@ module.exports.config = {
     name: "ดูคำสั่ง",
     version: "1.0.0",
     hasPermssion: 0,
-    credits: "YourName",
+    credits: "ต้นสุดหล่อ",
     description: "แสดงรายการคำสั่งทั้งหมด",
     commandCategory: "ทั่วไป",
     usages: "",
@@ -22,8 +22,7 @@ module.exports.run = async function({ api, event }) {
             return {
                 name: command.config.name,
                 description: command.config.description,
-                category: command.config.commandCategory || "อื่นๆ",
-                cost: command.config.cost || 0
+                category: command.config.commandCategory || "อื่นๆ"
             };
         });
 
@@ -36,20 +35,40 @@ module.exports.run = async function({ api, event }) {
         }, {});
 
         // สร้างข้อความแสดงผล
-        let message = "✨ รายการคำสั่งทั้งหมด ✨\n";
+        let message = `
+✨━━━━━━━━━━━━━━━✨
+        🎉 𝐒𝐓𝐄𝐋𝐋𝐘 𝐂𝐇𝐀𝐓 𝐁𝐎𝐓 🎉
+✨━━━━━━━━━━━━━━━✨
+
+📚 **รายการคำสั่งทั้งหมด** 📚
+
+`;
+
         for (const [category, cmds] of Object.entries(groupedCommands)) {
-            message += `\n📂 หมวดหมู่: ${category}\n`;
+            message += `
+📂 **หมวดหมู่: ${category}** 📂
+-----------------------------------
+`;
             cmds.forEach(cmd => {
-                message += `  🔹 /${cmd.name} - ${cmd.description} (ใช้ ${cmd.cost} เครดิต)\n`;
+                message += `🔹 **/${cmd.name}**\n   ➜ ${cmd.description}\n\n`;
             });
         }
 
-        message += `\nℹ️ พิมพ์ "/<ชื่อคำสั่ง>" เพื่อใช้งานคำสั่งที่ต้องการ`;
+        message += `
+ℹ️ **วิธีใช้งาน:**
+พิมพ์ **/ชื่อคำสั่ง** เพื่อใช้งานคำสั่งที่ต้องการ
+
+💡 **ตัวอย่าง:**
+- **/ดูคำสั่ง** : แสดงรายการคำสั่งทั้งหมด
+- **/ลงทะเบียน** : ลงทะเบียนผู้ใช้ใหม่
+
+✨━━━━━━━━━━━━━━━✨
+`;
 
         // ส่งข้อความกลับไป
         api.sendMessage(message, event.threadID, event.messageID);
     } catch (error) {
         console.error("เกิดข้อผิดพลาดในการดึงข้อมูลคำสั่ง:", error);
-        api.sendMessage("ไม่สามารถแสดงรายการคำสั่งได้ กรุณาลองใหม่อีกครั้ง", event.threadID, event.messageID);
+        api.sendMessage("❌ ไม่สามารถแสดงรายการคำสั่งได้ กรุณาลองใหม่อีกครั้ง", event.threadID, event.messageID);
     }
 };
