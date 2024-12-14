@@ -12,7 +12,7 @@ module.exports.config = {
     }
 };
 
-module.exports.run = async function({ api, event, axios }) {
+module.exports.run = async function({ api, event }) { // ลบ `axios` จากพารามิเตอร์
     const { logMessageData, threadID } = event;
 
     // กำหนดคำนำหน้า
