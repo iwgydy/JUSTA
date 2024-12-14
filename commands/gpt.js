@@ -17,13 +17,20 @@ module.exports = {
 
         const query = args.join(' '); // รวบรวมคำถามจากผู้ใช้
 
-        // ตอบกลับทันทีว่า "กำลังถาม..."
-        api.sendMessage("⏳ กำลังถาม...", threadID, async () => {
+        // ส่งข้อความ "กำลังถาม..." แล้วเก็บ messageID สำหรับลบข้อความนี้ในภายหลัง
+        api.sendMessage("⏳ กำลังถาม...", threadID, async (err, info) => {
+            if (err) return console.error(`❌ ไม่สามารถส่งข้อความ "กำลังถาม..." ได้: ${err.message}`);
+
             try {
                 // ส่งคำถามไปยัง API
                 const response = await axios.get(`https://nash-api.onrender.com/api/gpt4`, {
                     params: { query: query },
                     timeout: 0 // ไม่มีการจำกัดเวลา
+                });
+
+                // ลบข้อความ "กำลังถาม..."
+                api.deleteMessage(info.messageID, (deleteErr) => {
+                    if (deleteErr) console.error(`❌ ไม่สามารถลบข้อความ "กำลังถาม..." ได้: ${deleteErr.message}`);
                 });
 
                 // ตรวจสอบว่ามี `response` ในข้อมูลที่ได้รับ
@@ -34,6 +41,13 @@ module.exports = {
                 }
             } catch (error) {
                 console.error(`❌ เกิดข้อผิดพลาดในการติดต่อ GPT API: ${error.message}`);
+
+                // ลบข้อความ "กำลังถาม..." กรณีมีข้อผิดพลาด
+                api.deleteMessage(info.messageID, (deleteErr) => {
+                    if (deleteErr) console.error(`❌ ไม่สามารถลบข้อความ "กำลังถาม..." ได้: ${deleteErr.message}`);
+                });
+
+                // ส่งข้อความแจ้งข้อผิดพลาดให้ผู้ใช้
                 api.sendMessage("❗ เกิดข้อผิดพลาดในการติดต่อ GPT API โปรดลองใหม่ภายหลัง", threadID);
             }
         });
