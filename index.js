@@ -18,7 +18,7 @@ const prefix = "/";
 const commands = {};
 const commandDescriptions = [];
 
-// Load commands from commands folder
+// โหลดคำสั่งจากโฟลเดอร์ commands
 if (fs.existsSync("./commands")) {
   fs.readdirSync("./commands").forEach((file) => {
     if (file.endsWith(".js")) {
@@ -27,15 +27,15 @@ if (fs.existsSync("./commands")) {
         commands[command.config.name.toLowerCase()] = command;
         commandDescriptions.push({
           name: command.config.name,
-          description: command.config.description || "No description available",
+          description: command.config.description || "ไม่มีคำอธิบาย",
         });
-        console.log(`📦 Loaded command: ${command.config.name}`);
+        console.log(`📦 โหลดคำสั่ง: ${command.config.name}`);
       }
     }
   });
 }
 
-// Load events from events folder
+// โหลดอีเวนต์จากโฟลเดอร์ events
 const events = {};
 if (fs.existsSync("./events")) {
   fs.readdirSync("./events").forEach((file) => {
@@ -46,7 +46,7 @@ if (fs.existsSync("./events")) {
           if (!events[type]) events[type] = [];
           events[type].push(event);
         });
-        console.log(`🔔 Loaded event: ${file}`);
+        console.log(`🔔 โหลดอีเวนต์: ${file}`);
       }
     }
   });
@@ -56,7 +56,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
-// Main dashboard route
+// เส้นทางแดชบอร์ดหลัก
 app.get("/", (req, res) => {
   const totalBots = Object.keys(botSessions).length;
   const onlineBots = Object.values(botSessions).filter(bot => bot.status === 'online').length;
@@ -70,20 +70,26 @@ app.get("/", (req, res) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>ระบบจัดการบอท | Bot Management System</title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <style>
             :root {
-                --primary-gradient: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-                --secondary-gradient: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-                --accent-gradient: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
-                --glass-bg: rgba(30, 41, 59, 0.7);
-                --glass-border: rgba(255, 255, 255, 0.1);
+                --primary-color: #ff9a9e;
+                --secondary-color: #fad0c4;
+                --accent-color: #fad0c4;
+                --background-color: #f0f8ff;
+                --card-bg: rgba(255, 255, 255, 0.8);
+                --card-border: rgba(255, 255, 255, 0.2);
+                --text-color: #333;
+                --success-color: #a8e6cf;
+                --error-color: #ff8b94;
+                --info-color: #a0c4ff;
             }
 
             body {
-                background: #0f172a;
-                color: #f8fafc;
-                font-family: 'Kanit', sans-serif;
+                background: var(--background-color);
+                color: var(--text-color);
+                font-family: 'Roboto', sans-serif;
                 min-height: 100vh;
                 position: relative;
                 overflow-x: hidden;
@@ -97,84 +103,90 @@ app.get("/", (req, res) => {
                 width: 100%;
                 height: 100%;
                 background: 
-                    radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
-                    radial-gradient(circle at 80% 80%, rgba(79, 70, 229, 0.15) 0%, transparent 40%);
+                    radial-gradient(circle at 20% 20%, rgba(255, 154, 158, 0.15) 0%, transparent 40%),
+                    radial-gradient(circle at 80% 80%, rgba(250, 208, 196, 0.15) 0%, transparent 40%);
                 pointer-events: none;
                 z-index: -1;
             }
 
+            .navbar {
+                background: rgba(255, 255, 255, 0.9);
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                border-bottom: 2px solid var(--primary-color);
+            }
+
+            .navbar-brand {
+                font-family: 'Kanit', sans-serif;
+                font-weight: 600;
+                color: var(--text-color) !important;
+            }
+
+            .stats-card {
+                background: var(--card-bg);
+                border: 1px solid var(--card-border);
+                border-radius: 12px;
+                padding: 20px;
+                text-align: center;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                transition: transform 0.3s ease, box-shadow 0.3s ease;
+            }
+
+            .stats-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            }
+
+            .stats-number {
+                font-size: 2.5rem;
+                font-weight: 700;
+                margin: 10px 0;
+                color: var(--primary-color);
+            }
+
+            .stats-label {
+                font-size: 1rem;
+                color: var(--text-color);
+            }
+
             .glass-card {
-                background: var(--glass-bg);
-                backdrop-filter: blur(12px);
-                border: 1px solid var(--glass-border);
+                background: var(--card-bg);
+                border: 1px solid var(--card-border);
                 border-radius: 16px;
                 padding: 24px;
+                box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
                 transition: transform 0.3s ease, box-shadow 0.3s ease;
             }
 
             .glass-card:hover {
                 transform: translateY(-5px);
-                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-            }
-
-            .navbar {
-                background: rgba(15, 23, 42, 0.8);
-                backdrop-filter: blur(10px);
-                border-bottom: 1px solid var(--glass-border);
-            }
-
-            .stats-card {
-                background: var(--primary-gradient);
-                border-radius: 16px;
-                padding: 24px;
-                text-align: center;
-                position: relative;
-                overflow: hidden;
-            }
-
-            .stats-card::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: linear-gradient(45deg, transparent 0%, rgba(255, 255, 255, 0.1) 100%);
-                pointer-events: none;
-            }
-
-            .stats-number {
-                font-size: 2.5rem;
-                font-weight: bold;
-                margin: 10px 0;
-                background: linear-gradient(to right, #fff, #e2e8f0);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
+                box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
             }
 
             .bot-table {
-                background: var(--glass-bg);
-                border-radius: 12px;
-                overflow: hidden;
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 20px;
+            }
+
+            .bot-table th, .bot-table td {
+                padding: 12px 15px;
+                text-align: left;
             }
 
             .bot-table th {
-                background: rgba(30, 41, 59, 0.9);
-                color: #f8fafc;
-                font-weight: 500;
-                border: none;
+                background-color: var(--primary-color);
+                color: #fff;
+                font-weight: 600;
             }
 
-            .bot-table td {
-                border: none;
-                color: #f8fafc;
-                padding: 16px;
+            .bot-table tr:nth-child(even) {
+                background-color: rgba(255, 154, 158, 0.05);
             }
 
             .status-online {
-                background: rgba(34, 197, 94, 0.2);
-                color: #4ade80;
-                padding: 6px 12px;
+                background: var(--success-color);
+                color: #2d6a4f;
+                padding: 5px 10px;
                 border-radius: 20px;
                 font-size: 0.9rem;
                 display: inline-flex;
@@ -183,9 +195,9 @@ app.get("/", (req, res) => {
             }
 
             .status-offline {
-                background: rgba(239, 68, 68, 0.2);
-                color: #f87171;
-                padding: 6px 12px;
+                background: var(--error-color);
+                color: #d00000;
+                padding: 5px 10px;
                 border-radius: 20px;
                 font-size: 0.9rem;
                 display: inline-flex;
@@ -193,35 +205,72 @@ app.get("/", (req, res) => {
                 gap: 6px;
             }
 
-            .add-bot-form {
-                background: var(--glass-bg);
-                border-radius: 16px;
-                padding: 24px;
+            .add-bot-form .form-label {
+                font-weight: 500;
+                color: var(--text-color);
             }
 
             .form-control {
-                background: rgba(15, 23, 42, 0.6);
-                border: 1px solid var(--glass-border);
-                color: #f8fafc;
-                transition: all 0.3s ease;
+                background: #fff;
+                border: 1px solid #ced4da;
+                border-radius: 8px;
+                padding: 10px 12px;
+                font-size: 1rem;
+                transition: border-color 0.3s ease;
             }
 
             .form-control:focus {
-                background: rgba(15, 23, 42, 0.8);
-                border-color: #6366f1;
-                box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+                border-color: var(--primary-color);
+                box-shadow: 0 0 0 0.2rem rgba(255, 154, 158, 0.25);
             }
 
             .btn-primary {
-                background: var(--primary-gradient);
+                background: var(--primary-color);
                 border: none;
-                padding: 12px 24px;
-                transition: all 0.3s ease;
+                padding: 10px 20px;
+                font-size: 1rem;
+                border-radius: 8px;
+                transition: background 0.3s ease, transform 0.2s ease;
+                color: #fff;
+                font-weight: 600;
             }
 
             .btn-primary:hover {
+                background: var(--secondary-color);
                 transform: translateY(-2px);
-                box-shadow: 0 8px 16px rgba(99, 102, 241, 0.3);
+            }
+
+            .command-list {
+                margin-top: 20px;
+            }
+
+            .command-item {
+                background: #fff;
+                border: 1px solid #ced4da;
+                border-radius: 8px;
+                padding: 12px 16px;
+                margin-bottom: 10px;
+                transition: background 0.3s ease, transform 0.3s ease;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            }
+
+            .command-item:hover {
+                background: var(--primary-color);
+                color: #fff;
+                transform: translateX(5px);
+            }
+
+            .footer {
+                background: rgba(255, 255, 255, 0.9);
+                border-top: 2px solid var(--primary-color);
+                padding: 20px 0;
+                margin-top: 40px;
+                font-size: 0.9rem;
+                color: var(--text-color);
+            }
+
+            .animate-float {
+                animation: float 3s ease-in-out infinite;
             }
 
             @keyframes float {
@@ -229,44 +278,9 @@ app.get("/", (req, res) => {
                 50% { transform: translateY(-10px); }
             }
 
-            .animate-float {
-                animation: float 3s ease-in-out infinite;
-            }
-
-            @keyframes pulse {
-                0%, 100% { opacity: 1; }
-                50% { opacity: 0.6; }
-            }
-
-            .animate-pulse {
-                animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-            }
-
-            .command-list {
-                background: var(--glass-bg);
-                border-radius: 12px;
-                padding: 16px;
-            }
-
-            .command-item {
-                background: rgba(30, 41, 59, 0.5);
-                border-radius: 8px;
-                padding: 12px;
-                margin-bottom: 8px;
-                transition: all 0.3s ease;
-            }
-
-            .command-item:hover {
-                background: rgba(30, 41, 59, 0.8);
-                transform: translateX(5px);
-            }
-
-            .footer {
-                background: rgba(15, 23, 42, 0.8);
-                backdrop-filter: blur(10px);
-                border-top: 1px solid var(--glass-border);
-                padding: 20px 0;
-                margin-top: 40px;
+            .runtime {
+                font-weight: 500;
+                color: var(--info-color);
             }
 
             @media (max-width: 768px) {
@@ -280,10 +294,10 @@ app.get("/", (req, res) => {
         </style>
     </head>
     <body>
-        <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+        <nav class="navbar navbar-expand-lg navbar-light mb-4">
             <div class="container">
                 <a class="navbar-brand d-flex align-items-center" href="#">
-                    <i class="fas fa-robot me-2 animate-float"></i>
+                    <i class="fas fa-robot fa-lg me-2 animate-float" style="color: var(--primary-color);"></i>
                     ระบบจัดการบอท
                 </a>
             </div>
@@ -294,21 +308,21 @@ app.get("/", (req, res) => {
             <div class="row mb-4">
                 <div class="col-md-4">
                     <div class="stats-card">
-                        <i class="fas fa-robot fa-2x mb-3"></i>
+                        <i class="fas fa-robot fa-2x mb-3" style="color: var(--primary-color);"></i>
                         <div class="stats-number" id="totalBots">${totalBots}</div>
                         <div class="stats-label">บอททั้งหมด</div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="stats-card">
-                        <i class="fas fa-signal fa-2x mb-3"></i>
+                        <i class="fas fa-signal fa-2x mb-3" style="color: var(--info-color);"></i>
                         <div class="stats-number" id="onlineBots">${onlineBots}</div>
                         <div class="stats-label">บอทออนไลน์</div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="stats-card">
-                        <i class="fas fa-clock fa-2x mb-3"></i>
+                        <i class="fas fa-clock fa-2x mb-3" style="color: var(--secondary-color);"></i>
                         <div class="stats-number" id="activeBots">${activeBots}</div>
                         <div class="stats-label">บอททำงานแล้ว</div>
                     </div>
@@ -320,7 +334,7 @@ app.get("/", (req, res) => {
                 <div class="col-md-6 mb-4">
                     <div class="glass-card">
                         <h5 class="mb-4">
-                            <i class="fas fa-plus-circle me-2"></i>
+                            <i class="fas fa-plus-circle me-2" style="color: var(--primary-color);"></i>
                             เพิ่มบอทใหม่
                         </h5>
                         <form class="add-bot-form" method="POST" action="/start">
@@ -347,7 +361,7 @@ app.get("/", (req, res) => {
                 <div class="col-md-6 mb-4">
                     <div class="glass-card">
                         <h5 class="mb-4">
-                            <i class="fas fa-list me-2"></i>
+                            <i class="fas fa-list me-2" style="color: var(--info-color);"></i>
                             บอทที่กำลังทำงาน
                         </h5>
                         <div class="table-responsive">
@@ -363,7 +377,7 @@ app.get("/", (req, res) => {
                                     ${Object.entries(botSessions).map(([token, bot]) => `
                                         <tr>
                                             <td>
-                                                <i class="fas fa-robot me-2 animate-float"></i>
+                                                <i class="fas fa-robot me-2" style="color: var(--primary-color);"></i>
                                                 ${bot.name}
                                             </td>
                                             <td>
@@ -395,14 +409,14 @@ app.get("/", (req, res) => {
                 <div class="col-12">
                     <div class="glass-card">
                         <h5 class="mb-4">
-                            <i class="fas fa-terminal me-2"></i>
+                            <i class="fas fa-terminal me-2" style="color: var(--secondary-color);"></i>
                             คำสั่งที่ใช้ได้
                         </h5>
                         <div class="command-list">
                             ${commandDescriptions.map(cmd => `
                                 <div class="command-item">
                                     <strong>${prefix}${cmd.name}</strong>
-                                    <p class="mb-0 text-muted">${cmd.description}</p>
+                                    <p class="mb-0">${cmd.description}</p>
                                 </div>
                             `).join('') || `
                                 <div class="command-item">
@@ -465,7 +479,7 @@ app.get("/", (req, res) => {
   `);
 });
 
-// Start bot endpoint
+// จุดเริ่มต้นของบอท
 app.post('/start', async (req, res) => {
     const tokenInput = req.body.token.trim();
 
@@ -483,13 +497,13 @@ app.post('/start', async (req, res) => {
         res.redirect('/');
         io.emit('updateBots', generateBotData());
     } catch (err) {
-        console.error(chalk.red(`❌ Error starting bot: ${err.message}`));
+        console.error(chalk.red(`❌ เกิดข้อผิดพลาดในการเริ่มบอท: ${err.message}`));
         botCount--;
         res.redirect('/?error=invalid-token');
     }
 });
 
-// Helper function to generate bot data for socket updates
+// ฟังก์ชันช่วยเหลือในการสร้างข้อมูลบอทสำหรับการอัปเดตแบบเรียลไทม์
 function generateBotData() {
     const totalBots = Object.keys(botSessions).length;
     const onlineBots = Object.values(botSessions).filter(bot => bot.status === 'online').length;
@@ -498,71 +512,71 @@ function generateBotData() {
     const botRows = Object.entries(botSessions).map(([token, bot]) => `
         <tr>
             <td>
-                <i class="fas fa-robot me-2"></i>
+                <i class="fas fa-robot me-2" style="color: var(--primary-color);"></i>
                 ${bot.name}
             </td>
             <td>
-                <span class="bot-status ${bot.status === 'online' ? 'status-online' : 'status-offline'}">
-                    <i class="fas fa-circle me-1"></i>
-                    ${bot.status === 'online' ? 'Online' : 'Offline'}
+                <span class="${bot.status === 'online' ? 'status-online' : 'status-offline'}">
+                    <i class="fas fa-circle"></i>
+                    ${bot.status === 'online' ? 'ออนไลน์' : 'ออฟไลน์'}
                 </span>
             </td>
             <td>
                 <span class="runtime" data-start-time="${bot.startTime}">
-                    Calculating...
+                    กำลังคำนวณ...
                 </span>
             </td>
         </tr>
     `).join('') || `
         <tr>
-            <td colspan="3" class="text-center">No active bots</td>
+            <td colspan="3" class="text-center">ไม่มีบอทที่กำลังทำงาน</td>
         </tr>
     `;
 
     return { totalBots, onlineBots, activeBots, botRows, commandDescriptions };
 }
 
-// Bot startup function
+// ฟังก์ชันเริ่มต้นบอท
 async function startBot(appState, token, name, startTime) {
     return new Promise((resolve, reject) => {
         login({ appState }, (err, api) => {
             if (err) {
-                console.error(chalk.red(`❌ Login failed for token: ${token}`));
+                console.error(chalk.red(`❌ การเข้าสู่ระบบล้มเหลวสำหรับโทเค็น: ${token}`));
                 return reject(err);
             }
 
             if (botSessions[token]) {
-                console.log(chalk.yellow(`⚠️ Bot already running with token: ${token}`));
-                return reject(new Error('Bot already running'));
+                console.log(chalk.yellow(`⚠️ บอทกำลังทำงานอยู่กับโทเค็น: ${token}`));
+                return reject(new Error('บอทกำลังทำงานอยู่'));
             }
 
             botSessions[token] = { api, name, startTime, status: 'online' };
             console.log(chalk.green(figlet.textSync("Bot Started!", { horizontalLayout: "full" })));
-            console.log(chalk.green(`✅ ${name} is running with token: ${token}`));
+            console.log(chalk.green(`✅ ${name} กำลังทำงานด้วยโทเค็น: ${token}`));
 
             api.setOptions({ listenEvents: true });
 
             api.listenMqtt(async (err, event) => {
                 if (err) {
-                    console.error(chalk.red(`❌ Error: ${err}`));
+                    console.error(chalk.red(`❌ เกิดข้อผิดพลาด: ${err}`));
                     botSessions[token].status = 'offline';
                     io.emit('updateBots', generateBotData());
                     return;
                 }
 
-                // Handle events
+                // จัดการอีเวนต์
                 if (event.logMessageType && events[event.logMessageType]) {
                     for (const eventHandler of events[event.logMessageType]) {
                         try {
                             await eventHandler.run({ api, event });
-                            console.log(chalk.blue(`🔄 Processed event: ${eventHandler.config.name}`));
+                            console.log(chalk.blue(`🔄 ประมวลผลอีเวนต์: ${eventHandler.config.name}`));
                         } catch (error) {
-                            console.error(chalk.red(`❌ Error in event ${eventHandler.config.name}:`, error));
+                            console.error(chalk.red(`❌ เกิดข้อผิดพลาดในอีเวนต์ ${eventHandler.config.name}:`, error));
                         }
                     }
                 }
 
-                // Handle messages
+                // จัดการข้อความ
                 if (event.type === "message") {
                     const message = event.body ? event.body.trim() : "";
                     
@@ -575,13 +589,13 @@ async function startBot(appState, token, name, startTime) {
                     if (command && typeof command.run === "function") {
                         try {
                             await command.run({ api, event, args });
-                            console.log(chalk.green(`✅ Executed command: ${commandName}`));
+                            console.log(chalk.green(`✅ รันคำสั่ง: ${commandName}`));
                         } catch (error) {
-                            console.error(chalk.red(`❌ Error in command ${commandName}:`, error));
-                            api.sendMessage("❗ Command execution failed", event.threadID);
+                            console.error(chalk.red(`❌ เกิดข้อผิดพลาดในคำสั่ง ${commandName}:`, error));
+                            api.sendMessage("❗ การรันคำสั่งล้มเหลว", event.threadID);
                         }
                     } else {
-                        api.sendMessage("❗ Command not found", event.threadID);
+                        api.sendMessage("❗ ไม่พบคำสั่งที่ระบุ", event.threadID);
                     }
                 }
             });
@@ -592,8 +606,8 @@ async function startBot(appState, token, name, startTime) {
     });
 }
 
-// Start server
+// เริ่มต้นเซิร์ฟเวอร์
 server.listen(PORT, () => {
-    console.log(chalk.blue(`🌐 Server running at http://localhost:${PORT}`));
+    console.log(chalk.blue(`🌐 เซิร์ฟเวอร์กำลังทำงานที่ http://localhost:${PORT}`));
     console.log(chalk.green(figlet.textSync("Bot Management", { horizontalLayout: "full" })));
 });
