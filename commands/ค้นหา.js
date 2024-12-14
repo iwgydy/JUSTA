@@ -3,7 +3,7 @@ const axios = require('axios');
 module.exports = {
     config: {
         name: "ค้นหา",
-        description: "ค้นหาวิดีโอ TikTok และแสดงลิงก์ดาวน์โหลด",
+        description: "ค้นหาวิดีโอ TikTok และแสดงผลลัพธ์แบบไม่มีลายน้ำ",
         usage: "/tiktok <คำค้นหา>",
         access: "ทุกคน"
     },
@@ -34,19 +34,23 @@ module.exports = {
                 });
 
                 // ตรวจสอบข้อมูลที่ได้รับจาก API
-                if (response.data) {
-                    const { title, cover, no_watermark, watermark, music } = response.data;
+                if (response.data && response.data.no_watermark) {
+                    const { title, no_watermark } = response.data;
 
-                    // ส่งข้อความข้อมูล TikTok
-                    const message = `
-🎥 **${title}**
-🌟 **ดาวน์โหลดวิดีโอ:**
-    - [ไม่มีลายน้ำ](${no_watermark})
-    - [มีลายน้ำ](${watermark})
-🎵 **เพลง:** [ฟังเพลงนี้](${music})
-📸 **ภาพหน้าปก:** [ดูภาพปก](${cover})
-                    `;
-                    api.sendMessage(message, threadID);
+                    // ดาวน์โหลดวิดีโอแบบไม่มีลายน้ำและส่งกลับ
+                    const videoStream = await axios({
+                        url: no_watermark,
+                        method: 'GET',
+                        responseType: 'stream'
+                    });
+
+                    api.sendMessage(
+                        {
+                            body: `🎥 **${title}**`,
+                            attachment: videoStream.data
+                        },
+                        threadID
+                    );
                 } else {
                     api.sendMessage("❗ ไม่พบวิดีโอ TikTok ที่ตรงกับคำค้นหาของคุณ", threadID);
                 }
