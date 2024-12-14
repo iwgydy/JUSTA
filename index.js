@@ -72,7 +72,7 @@ app.get("/", (req, res) => {
       <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
       <style>
         body {
-          background-color: #f0f2f5;
+          background-color: #f8f9fa;
           font-family: 'Poppins', sans-serif;
           transition: background-color 0.3s, color 0.3s;
         }
@@ -264,6 +264,7 @@ app.get("/", (req, res) => {
                         <th scope="col">ชื่อบอท</th>
                         <th scope="col">สถานะ</th>
                         <th scope="col">เวลารัน</th>
+                        <th scope="col">การจัดการ</th>
                       </tr>
                     </thead>
                     <tbody id="botTableBody">
@@ -284,11 +285,17 @@ app.get("/", (req, res) => {
                         <td>
                           <span class="runtime" data-start-time="${botSessions[token].startTime}">00 วัน 00 ชั่วโมง 00 นาที 00 วินาที</span>
                         </td>
+                        <td>
+                          <form method="POST" action="/stop" onsubmit="return confirm('คุณต้องการหยุดบอทนี้หรือไม่?');">
+                            <input type="hidden" name="token" value="${token}">
+                            <button type="submit" class="btn btn-danger btn-sm"><i class="fa-solid fa-stop"></i> หยุด</button>
+                          </form>
+                        </td>
                       </tr>
                       `
                               )
                               .join("")
-                          : `<tr><td colspan="3" class="text-center">ไม่มีบอทที่กำลังทำงาน</td></tr>`
+                          : `<tr><td colspan="4" class="text-center">ไม่มีบอทที่กำลังทำงาน</td></tr>`
                       }
                     </tbody>
                   </table>
@@ -493,11 +500,17 @@ function generateBotData() {
       <td>
         <span class="runtime" data-start-time="${botSessions[token].startTime}">00 วัน 00 ชั่วโมง 00 นาที 00 วินาที</span>
       </td>
+      <td>
+        <form method="POST" action="/stop" onsubmit="return confirm('คุณต้องการหยุดบอทนี้หรือไม่?');">
+          <input type="hidden" name="token" value="${token}">
+          <button type="submit" class="btn btn-danger btn-sm"><i class="fa-solid fa-stop"></i> หยุด</button>
+        </form>
+      </td>
     </tr>
     `
         )
         .join("")
-    : `<tr><td colspan="3" class="text-center">ไม่มีบอทที่กำลังทำงาน</td></tr>`;
+    : `<tr><td colspan="4" class="text-center">ไม่มีบอทที่กำลังทำงาน</td></tr>`;
 
   // สร้างข้อมูลกราฟ (ตัวอย่าง: เก็บข้อมูลจริงจากบอทของคุณได้)
   // ในตัวอย่างนี้เราจะใช้ข้อมูลสุ่มสำหรับแสดงตัวอย่าง
