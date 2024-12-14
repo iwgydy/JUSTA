@@ -72,8 +72,9 @@ app.get("/", (req, res) => {
       <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
       <style>
         body {
-          background-color: #f8f9fa;
+          background-color: #121212;
           font-family: 'Poppins', sans-serif;
+          color: #ffffff;
           transition: background-color 0.3s, color 0.3s;
         }
         .navbar-brand {
@@ -126,49 +127,45 @@ app.get("/", (req, res) => {
           border-radius: 15px;
           box-shadow: 0 4px 8px rgba(0,0,0,0.1);
           transition: transform 0.2s, box-shadow 0.2s;
+          background-color: #1e1e1e;
+          color: #ffffff;
         }
         .card:hover {
           transform: translateY(-5px);
-          box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+          box-shadow: 0 8px 16px rgba(255,255,255,0.2);
         }
         .footer {
           position: fixed;
           bottom: 0;
           width: 100%;
           height: 60px;
-          background-color: #f8f9fa;
-        }
-        /* Dark Mode Styles */
-        body.dark-mode {
-          background-color: #121212;
-          color: #ffffff;
-        }
-        body.dark-mode .card {
           background-color: #1e1e1e;
           color: #ffffff;
-          box-shadow: 0 4px 8px rgba(255,255,255,0.1);
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
-        body.dark-mode .navbar {
-          background-color: #1f1f1f;
+        /* Light Mode Styles */
+        .light-mode {
+          background-color: #f8f9fa;
+          color: #121212;
         }
-        body.dark-mode .footer {
-          background-color: #1f1f1f;
+        .light-mode .card {
+          background-color: #ffffff;
+          color: #121212;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
-        body.dark-mode .status-online {
-          color: #28a745;
-        }
-        body.dark-mode .status-offline {
-          color: #dc3545;
-        }
-        body.dark-mode .bot-name i {
-          color: #28a745;
-        }
-        body.dark-mode .runtime {
-          color: #adb5bd;
+        .light-mode .footer {
+          background-color: #ffffff;
+          color: #121212;
         }
         .toggle-switch {
           cursor: pointer;
           transition: color 0.3s;
+          color: #ffffff;
+        }
+        .light-mode .toggle-switch {
+          color: #121212;
         }
         .toggle-switch:hover {
           color: #ffc107;
@@ -195,41 +192,29 @@ app.get("/", (req, res) => {
         <!-- Dashboard Statistics -->
         <div class="row mb-4">
           <div class="col-md-4 mb-3">
-            <div class="card text-white bg-primary">
+            <div class="card text-center">
               <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                  <div>
-                    <h5 class="card-title">บอททั้งหมด</h5>
-                    <p class="card-text display-4" id="totalBots">${totalBots}</p>
-                  </div>
-                  <i class="fa-solid fa-robot fa-3x"></i>
-                </div>
+                <h5 class="card-title">บอททั้งหมด</h5>
+                <p class="card-text display-4" id="totalBots">${totalBots}</p>
+                <i class="fa-solid fa-robot fa-2x"></i>
               </div>
             </div>
           </div>
           <div class="col-md-4 mb-3">
-            <div class="card text-white bg-success">
+            <div class="card text-center">
               <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                  <div>
-                    <h5 class="card-title">บอทออนไลน์</h5>
-                    <p class="card-text display-4" id="onlineBots">${onlineBots}</p>
-                  </div>
-                  <i class="fa-solid fa-check-circle fa-3x"></i>
-                </div>
+                <h5 class="card-title">บอทออนไลน์</h5>
+                <p class="card-text display-4" id="onlineBots">${onlineBots}</p>
+                <i class="fa-solid fa-check-circle fa-2x"></i>
               </div>
             </div>
           </div>
           <div class="col-md-4 mb-3">
-            <div class="card text-white bg-warning">
+            <div class="card text-center">
               <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                  <div>
-                    <h5 class="card-title">บอททำงานแล้ว</h5>
-                    <p class="card-text display-4" id="activeBots">${activeBots}</p>
-                  </div>
-                  <i class="fa-solid fa-clock fa-3x"></i>
-                </div>
+                <h5 class="card-title">บอททำงานแล้ว</h5>
+                <p class="card-text display-4" id="activeBots">${activeBots}</p>
+                <i class="fa-solid fa-clock fa-2x"></i>
               </div>
             </div>
           </div>
@@ -237,7 +222,7 @@ app.get("/", (req, res) => {
 
         <div class="row">
           <!-- ฟอร์มเพิ่มบอทใหม่ -->
-          <div class="col-lg-5 mb-4">
+          <div class="col-lg-6 mb-4">
             <div class="card shadow">
               <div class="card-body">
                 <h5 class="card-title"><i class="fa-solid fa-plus-circle"></i> เพิ่มบอทใหม่</h5>
@@ -253,7 +238,7 @@ app.get("/", (req, res) => {
           </div>
 
           <!-- ตารางแสดงบอทที่กำลังทำงาน -->
-          <div class="col-lg-7 mb-4">
+          <div class="col-lg-6 mb-4">
             <div class="card shadow">
               <div class="card-body">
                 <h5 class="card-title"><i class="fa-solid fa-tachometer-alt-fast"></i> บอทที่กำลังทำงาน</h5>
@@ -264,7 +249,6 @@ app.get("/", (req, res) => {
                         <th scope="col">ชื่อบอท</th>
                         <th scope="col">สถานะ</th>
                         <th scope="col">เวลารัน</th>
-                        <th scope="col">การจัดการ</th>
                       </tr>
                     </thead>
                     <tbody id="botTableBody">
@@ -285,17 +269,11 @@ app.get("/", (req, res) => {
                         <td>
                           <span class="runtime" data-start-time="${botSessions[token].startTime}">00 วัน 00 ชั่วโมง 00 นาที 00 วินาที</span>
                         </td>
-                        <td>
-                          <form method="POST" action="/stop" onsubmit="return confirm('คุณต้องการหยุดบอทนี้หรือไม่?');">
-                            <input type="hidden" name="token" value="${token}">
-                            <button type="submit" class="btn btn-danger btn-sm"><i class="fa-solid fa-stop"></i> หยุด</button>
-                          </form>
-                        </td>
                       </tr>
                       `
                               )
                               .join("")
-                          : `<tr><td colspan="4" class="text-center">ไม่มีบอทที่กำลังทำงาน</td></tr>`
+                          : `<tr><td colspan="3" class="text-center">ไม่มีบอทที่กำลังทำงาน</td></tr>`
                       }
                     </tbody>
                   </table>
@@ -320,10 +298,8 @@ app.get("/", (req, res) => {
         </div>
       </div>
 
-      <footer class="footer py-3 bg-light">
-        <div class="container text-center">
-          <span class="text-muted">&copy; 2024 Bot Management System</span>
-        </div>
+      <footer class="footer">
+        <span>&copy; 2024 Bot Management System</span>
       </footer>
 
       <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -331,11 +307,12 @@ app.get("/", (req, res) => {
       <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
       <script src="/socket.io/socket.io.js"></script>
       <script>
-        // สลับโหมดมืด
+        // สลับโหมดมืด/สว่าง
         const toggleSwitch = document.getElementById('darkModeToggle');
         toggleSwitch.addEventListener('click', () => {
-          document.body.classList.toggle('dark-mode');
+          document.body.classList.toggle('light-mode');
           toggleSwitch.classList.toggle('fa-sun');
+          toggleSwitch.classList.toggle('fa-moon');
         });
 
         // ฟังก์ชันอัปเดตเวลารัน
@@ -345,6 +322,8 @@ app.get("/", (req, res) => {
 
           runtimeElements.forEach(el => {
             const startTime = parseInt(el.getAttribute('data-start-time'));
+            if (!startTime) return;
+
             const elapsed = now - startTime;
 
             const seconds = Math.floor((elapsed / 1000) % 60);
@@ -500,17 +479,11 @@ function generateBotData() {
       <td>
         <span class="runtime" data-start-time="${botSessions[token].startTime}">00 วัน 00 ชั่วโมง 00 นาที 00 วินาที</span>
       </td>
-      <td>
-        <form method="POST" action="/stop" onsubmit="return confirm('คุณต้องการหยุดบอทนี้หรือไม่?');">
-          <input type="hidden" name="token" value="${token}">
-          <button type="submit" class="btn btn-danger btn-sm"><i class="fa-solid fa-stop"></i> หยุด</button>
-        </form>
-      </td>
     </tr>
     `
         )
         .join("")
-    : `<tr><td colspan="4" class="text-center">ไม่มีบอทที่กำลังทำงาน</td></tr>`;
+    : `<tr><td colspan="3" class="text-center">ไม่มีบอทที่กำลังทำงาน</td></tr>`;
 
   // สร้างข้อมูลกราฟ (ตัวอย่าง: เก็บข้อมูลจริงจากบอทของคุณได้)
   // ในตัวอย่างนี้เราจะใช้ข้อมูลสุ่มสำหรับแสดงตัวอย่าง
