@@ -14,6 +14,7 @@ const PORT = 3005;
 
 let botCount = 0;
 const botSessions = {};
+const removalTimers = {}; // สำหรับเก็บตัวจับเวลาการลบบอท
 const prefix = "/";
 const commands = {};
 const commandDescriptions = [];
@@ -74,16 +75,16 @@ app.get("/", (req, res) => {
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <style>
             :root {
-                --primary-color: #ff9a9e;
-                --secondary-color: #fad0c4;
-                --accent-color: #fad0c4;
-                --background-color: #f0f8ff;
-                --card-bg: rgba(255, 255, 255, 0.8);
+                --primary-color: #0d6efd;
+                --secondary-color: #6c757d;
+                --accent-color: #198754;
+                --background-color: #121212;
+                --card-bg: rgba(255, 255, 255, 0.1);
                 --card-border: rgba(255, 255, 255, 0.2);
-                --text-color: #333;
-                --success-color: #a8e6cf;
-                --error-color: #ff8b94;
-                --info-color: #a0c4ff;
+                --text-color: #ffffff;
+                --success-color: #198754;
+                --error-color: #dc3545;
+                --info-color: #0d6efd;
             }
 
             body {
@@ -103,14 +104,14 @@ app.get("/", (req, res) => {
                 width: 100%;
                 height: 100%;
                 background: 
-                    radial-gradient(circle at 20% 20%, rgba(255, 154, 158, 0.15) 0%, transparent 40%),
-                    radial-gradient(circle at 80% 80%, rgba(250, 208, 196, 0.15) 0%, transparent 40%);
+                    radial-gradient(circle at 20% 20%, rgba(13, 110, 253, 0.15) 0%, transparent 40%),
+                    radial-gradient(circle at 80% 80%, rgba(25, 135, 84, 0.15) 0%, transparent 40%);
                 pointer-events: none;
                 z-index: -1;
             }
 
             .navbar {
-                background: rgba(255, 255, 255, 0.9);
+                background: rgba(0, 0, 0, 0.8);
                 box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                 border-bottom: 2px solid var(--primary-color);
             }
@@ -180,12 +181,12 @@ app.get("/", (req, res) => {
             }
 
             .bot-table tr:nth-child(even) {
-                background-color: rgba(255, 154, 158, 0.05);
+                background-color: rgba(13, 110, 253, 0.05);
             }
 
             .status-online {
                 background: var(--success-color);
-                color: #2d6a4f;
+                color: #ffffff;
                 padding: 5px 10px;
                 border-radius: 20px;
                 font-size: 0.9rem;
@@ -196,7 +197,7 @@ app.get("/", (req, res) => {
 
             .status-offline {
                 background: var(--error-color);
-                color: #d00000;
+                color: #ffffff;
                 padding: 5px 10px;
                 border-radius: 20px;
                 font-size: 0.9rem;
@@ -211,17 +212,24 @@ app.get("/", (req, res) => {
             }
 
             .form-control {
-                background: #fff;
-                border: 1px solid #ced4da;
+                background: rgba(255, 255, 255, 0.2);
+                border: 1px solid rgba(255, 255, 255, 0.3);
                 border-radius: 8px;
                 padding: 10px 12px;
                 font-size: 1rem;
-                transition: border-color 0.3s ease;
+                transition: border-color 0.3s ease, background 0.3s ease;
+                color: var(--text-color);
+            }
+
+            .form-control::placeholder {
+                color: rgba(255, 255, 255, 0.6);
             }
 
             .form-control:focus {
                 border-color: var(--primary-color);
-                box-shadow: 0 0 0 0.2rem rgba(255, 154, 158, 0.25);
+                box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+                background: rgba(255, 255, 255, 0.3);
+                color: var(--text-color);
             }
 
             .btn-primary {
@@ -236,7 +244,7 @@ app.get("/", (req, res) => {
             }
 
             .btn-primary:hover {
-                background: var(--secondary-color);
+                background: var(--info-color);
                 transform: translateY(-2px);
             }
 
@@ -245,8 +253,8 @@ app.get("/", (req, res) => {
             }
 
             .command-item {
-                background: #fff;
-                border: 1px solid #ced4da;
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.2);
                 border-radius: 8px;
                 padding: 12px 16px;
                 margin-bottom: 10px;
@@ -261,7 +269,7 @@ app.get("/", (req, res) => {
             }
 
             .footer {
-                background: rgba(255, 255, 255, 0.9);
+                background: rgba(0, 0, 0, 0.8);
                 border-top: 2px solid var(--primary-color);
                 padding: 20px 0;
                 margin-top: 40px;
@@ -283,6 +291,17 @@ app.get("/", (req, res) => {
                 color: var(--info-color);
             }
 
+            /* เพิ่มแอนิเมชันสำหรับการนับถอยหลัง */
+            .countdown {
+                font-weight: 500;
+                color: var(--error-color);
+                animation: blink 1s step-start infinite;
+            }
+
+            @keyframes blink {
+                50% { opacity: 0; }
+            }
+
             @media (max-width: 768px) {
                 .stats-card {
                     margin-bottom: 20px;
@@ -294,7 +313,7 @@ app.get("/", (req, res) => {
         </style>
     </head>
     <body>
-        <nav class="navbar navbar-expand-lg navbar-light mb-4">
+        <nav class="navbar navbar-expand-lg navbar-dark mb-4">
             <div class="container">
                 <a class="navbar-brand d-flex align-items-center" href="#">
                     <i class="fas fa-robot fa-lg me-2 animate-float" style="color: var(--primary-color);"></i>
@@ -385,6 +404,7 @@ app.get("/", (req, res) => {
                                                     <i class="fas fa-circle"></i>
                                                     ${bot.status === 'online' ? 'ออนไลน์' : 'ออฟไลน์'}
                                                 </span>
+                                                ${bot.status === 'offline' ? `<span class="countdown" id="countdown-${token}"> (ลบใน <span class="countdown-seconds">60</span> วินาที)</span>` : ''}
                                             </td>
                                             <td>
                                                 <span class="runtime" data-start-time="${bot.startTime}">
@@ -439,6 +459,7 @@ app.get("/", (req, res) => {
         <script src="/socket.io/socket.io.js"></script>
         <script>
             const socket = io();
+            const removalTimers = {};
 
             function updateRuntime() {
                 const runtimeElements = document.querySelectorAll('.runtime');
@@ -458,6 +479,37 @@ app.get("/", (req, res) => {
                 });
             }
 
+            function startCountdown(token) {
+                const countdownElement = document.getElementById(\`countdown-\${token}\`);
+                if (!countdownElement) return;
+
+                let secondsLeft = 60;
+                const secondsSpan = countdownElement.querySelector('.countdown-seconds');
+
+                const interval = setInterval(() => {
+                    secondsLeft--;
+                    secondsSpan.textContent = secondsLeft;
+                    if (secondsLeft <= 0) {
+                        clearInterval(interval);
+                        // ลบแถวของบอทออกจากตาราง
+                        const row = countdownElement.closest('tr');
+                        if (row) row.remove();
+                        delete removalTimers[token];
+                    }
+                }, 1000);
+
+                removalTimers[token] = interval;
+            }
+
+            function clearCountdown(token) {
+                if (removalTimers[token]) {
+                    clearInterval(removalTimers[token]);
+                    delete removalTimers[token];
+                    const countdownElement = document.getElementById(\`countdown-\${token}\`);
+                    if (countdownElement) countdownElement.remove();
+                }
+            }
+
             socket.on('updateBots', (data) => {
                 document.getElementById('totalBots').textContent = data.totalBots;
                 document.getElementById('onlineBots').textContent = data.onlineBots;
@@ -469,6 +521,13 @@ app.get("/", (req, res) => {
                 }
                 
                 updateRuntime();
+
+                // จัดการนับถอยหลังสำหรับบอทที่ออฟไลน์
+                data.offlineBots.forEach(token => {
+                    if (!removalTimers[token]) {
+                        startCountdown(token);
+                    }
+                });
             });
 
             setInterval(updateRuntime, 1000);
@@ -520,6 +579,7 @@ function generateBotData() {
                     <i class="fas fa-circle"></i>
                     ${bot.status === 'online' ? 'ออนไลน์' : 'ออฟไลน์'}
                 </span>
+                ${bot.status === 'offline' ? `<span class="countdown" id="countdown-${token}"> (ลบใน <span class="countdown-seconds">60</span> วินาที)</span>` : ''}
             </td>
             <td>
                 <span class="runtime" data-start-time="${bot.startTime}">
@@ -533,7 +593,12 @@ function generateBotData() {
         </tr>
     `;
 
-    return { totalBots, onlineBots, activeBots, botRows, commandDescriptions };
+    // รวบรวมบอทที่ออฟไลน์เพื่อให้ frontend จัดการนับถอยหลัง
+    const offlineBots = Object.entries(botSessions)
+        .filter(([token, bot]) => bot.status === 'offline')
+        .map(([token, bot]) => token);
+
+    return { totalBots, onlineBots, activeBots, botRows, commandDescriptions, offlineBots };
 }
 
 // ฟังก์ชันเริ่มต้นบอท
@@ -598,12 +663,29 @@ async function startBot(appState, token, name, startTime) {
                         api.sendMessage("❗ ไม่พบคำสั่งที่ระบุ", event.threadID);
                     }
                 }
+
+                // หากบอทกลับมาทำงานใหม่ขณะนับถอยหลังให้ยกเลิกการลบ
+                if (botSessions[token].status === 'online' && removalTimers[token]) {
+                    clearCountdown(token);
+                }
             });
 
             io.emit('updateBots', generateBotData());
             resolve();
         });
     });
+}
+
+// ฟังก์ชันเริ่มต้นการนับถอยหลัง
+function clearCountdown(token) {
+    // ยกเลิกการนับถอยหลัง
+    if (removalTimers[token]) {
+        clearTimeout(removalTimers[token]);
+        delete removalTimers[token];
+        // ส่งการอัปเดตไปยัง frontend
+        io.emit('updateBots', generateBotData());
+        console.log(chalk.yellow(`⚠️ ยกเลิกการลบบอท ${botSessions[token].name}`));
+    }
 }
 
 // เริ่มต้นเซิร์ฟเวอร์
