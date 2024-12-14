@@ -14,14 +14,15 @@ const PORT = 3005;
 
 let botCount = 0;
 const botSessions = {};
-const removalTimers = {}; // สำหรับเก็บตัวจับเวลาการลบบอท
+const removalTimers = {}; // เก็บตัวจับเวลาการลบบอท
 const prefix = "/";
 const commands = {};
 const commandDescriptions = [];
 
 // โหลดคำสั่งจากโฟลเดอร์ commands
-if (fs.existsSync("./commands")) {
-  fs.readdirSync("./commands").forEach((file) => {
+const commandsPath = path.join(__dirname, 'commands');
+if (fs.existsSync(commandsPath)) {
+  fs.readdirSync(commandsPath).forEach((file) => {
     if (file.endsWith(".js")) {
       const command = require(`./commands/${file}`);
       if (command.config && command.config.name) {
@@ -38,8 +39,9 @@ if (fs.existsSync("./commands")) {
 
 // โหลดอีเวนต์จากโฟลเดอร์ events
 const events = {};
-if (fs.existsSync("./events")) {
-  fs.readdirSync("./events").forEach((file) => {
+const eventsPath = path.join(__dirname, 'events');
+if (fs.existsSync(eventsPath)) {
+  fs.readdirSync(eventsPath).forEach((file) => {
     if (file.endsWith(".js")) {
       const event = require(`./events/${file}`);
       if (event.config && event.config.eventType) {
@@ -74,6 +76,7 @@ app.get("/", (req, res) => {
         <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <style>
+            /* CSS เดิมที่คุณมี และเพิ่มการปรับปรุงเพิ่มเติมที่นี่ */
             :root {
                 --primary-color: #0d6efd;
                 --secondary-color: #6c757d;
@@ -394,7 +397,7 @@ app.get("/", (req, res) => {
                                 </thead>
                                 <tbody id="botTableBody">
                                     ${Object.entries(botSessions).map(([token, bot]) => `
-                                        <tr>
+                                        <tr id="bot-${token}">
                                             <td>
                                                 <i class="fas fa-robot me-2" style="color: var(--primary-color);"></i>
                                                 ${bot.name}
@@ -501,15 +504,6 @@ app.get("/", (req, res) => {
                 removalTimers[token] = interval;
             }
 
-            function clearCountdown(token) {
-                if (removalTimers[token]) {
-                    clearInterval(removalTimers[token]);
-                    delete removalTimers[token];
-                    const countdownElement = document.getElementById(\`countdown-\${token}\`);
-                    if (countdownElement) countdownElement.remove();
-                }
-            }
-
             socket.on('updateBots', (data) => {
                 document.getElementById('totalBots').textContent = data.totalBots;
                 document.getElementById('onlineBots').textContent = data.onlineBots;
@@ -569,7 +563,7 @@ function generateBotData() {
     const activeBots = Object.values(botSessions).filter(bot => bot.status === 'active').length;
     
     const botRows = Object.entries(botSessions).map(([token, bot]) => `
-        <tr>
+        <tr id="bot-${token}">
             <td>
                 <i class="fas fa-robot me-2" style="color: var(--primary-color);"></i>
                 ${bot.name}
@@ -626,6 +620,7 @@ async function startBot(appState, token, name, startTime) {
                     console.error(chalk.red(`❌ เกิดข้อผิดพลาด: ${err}`));
                     botSessions[token].status = 'offline';
                     io.emit('updateBots', generateBotData());
+                    scheduleBotRemoval(token); // เริ่มการลบบอทหลังจากออฟไลน์
                     return;
                 }
 
@@ -676,7 +671,19 @@ async function startBot(appState, token, name, startTime) {
     });
 }
 
-// ฟังก์ชันเริ่มต้นการนับถอยหลัง
+// ฟังก์ชันเริ่มต้นการนับถอยหลังและลบบอทจากเซิร์ฟเวอร์หลังจาก 60 วินาที
+function scheduleBotRemoval(token) {
+    if (removalTimers[token]) return; // ถ้ามีการนับถอยหลังอยู่แล้ว
+
+    removalTimers[token] = setTimeout(() => {
+        delete botSessions[token];
+        delete removalTimers[token];
+        console.log(chalk.yellow(`⚠️ ลบบอทที่ออฟไลน์: ${token}`));
+        io.emit('updateBots', generateBotData());
+    }, 60000); // 60 วินาที
+}
+
+// ฟังก์ชันยกเลิกการลบบอท
 function clearCountdown(token) {
     // ยกเลิกการนับถอยหลัง
     if (removalTimers[token]) {
