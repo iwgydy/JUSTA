@@ -17,22 +17,25 @@ module.exports = {
 
         const query = args.join(' '); // รวบรวมคำถามจากผู้ใช้
 
-        try {
-            // ส่งคำถามไปยัง API
-            const response = await axios.get(`https://nash-api.onrender.com/api/gpt4`, {
-                params: { query: query },
-                timeout: 20000 // กำหนดเวลารอ 20 วินาที
-            });
+        // ตอบกลับทันทีว่า "กำลังถาม..."
+        api.sendMessage("⏳ กำลังถาม...", threadID, async () => {
+            try {
+                // ส่งคำถามไปยัง API
+                const response = await axios.get(`https://nash-api.onrender.com/api/gpt4`, {
+                    params: { query: query },
+                    timeout: 0 // ไม่มีการจำกัดเวลา
+                });
 
-            // ตรวจสอบว่ามี `response` ในข้อมูลที่ได้รับ
-            if (response.data && response.data.response) {
-                api.sendMessage(response.data.response, threadID, messageID); // ส่งข้อความตอบกลับผู้ใช้
-            } else {
-                api.sendMessage("❗ ไม่สามารถรับคำตอบจาก GPT ได้ โปรดลองใหม่ภายหลัง", threadID, messageID);
+                // ตรวจสอบว่ามี `response` ในข้อมูลที่ได้รับ
+                if (response.data && response.data.response) {
+                    api.sendMessage(response.data.response, threadID);
+                } else {
+                    api.sendMessage("❗ ไม่สามารถรับคำตอบจาก GPT ได้ โปรดลองใหม่ภายหลัง", threadID);
+                }
+            } catch (error) {
+                console.error(`❌ เกิดข้อผิดพลาดในการติดต่อ GPT API: ${error.message}`);
+                api.sendMessage("❗ เกิดข้อผิดพลาดในการติดต่อ GPT API โปรดลองใหม่ภายหลัง", threadID);
             }
-        } catch (error) {
-            console.error(`❌ เกิดข้อผิดพลาดในการติดต่อ GPT API: ${error.message}`);
-            api.sendMessage("❗ เกิดข้อผิดพลาดในการติดต่อ GPT API โปรดลองใหม่ภายหลัง", threadID, messageID);
-        }
+        });
     }
 };
