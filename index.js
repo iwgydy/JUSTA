@@ -10,7 +10,7 @@ const path = require("path");
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
-const PORT = process.env.PORT || 3001;
+const PORT = 3005; // เปลี่ยนพอร์ตเป็น 3005
 
 let botCount = 0; // ตัวนับจำนวนบอท
 const botSessions = {}; // เก็บสถานะ ชื่อ และเวลาเริ่มต้นของบอทแต่ละตัวตามโทเค็น
@@ -57,6 +57,9 @@ app.use(express.urlencoded({ extended: true }));
 // หน้าแสดงสถานะบอท
 app.get("/", (req, res) => {
   const totalBots = Object.keys(botSessions).length;
+  const onlineBots = Object.values(botSessions).filter(bot => bot.status === 'online').length;
+  const activeBots = Object.values(botSessions).filter(bot => bot.status === 'active').length;
+
   res.send(`
     <!DOCTYPE html>
     <html lang="th">
@@ -87,6 +90,14 @@ app.get("/", (req, res) => {
         }
         .status-online i {
           color: #28a745;
+          margin-right: 5px;
+        }
+        .status-offline {
+          color: #dc3545;
+          font-weight: bold;
+        }
+        .status-offline i {
+          color: #dc3545;
           margin-right: 5px;
         }
         .bot-table th, .bot-table td {
@@ -146,6 +157,9 @@ app.get("/", (req, res) => {
         body.dark-mode .status-online {
           color: #28a745;
         }
+        body.dark-mode .status-offline {
+          color: #dc3545;
+        }
         body.dark-mode .bot-name i {
           color: #28a745;
         }
@@ -193,14 +207,13 @@ app.get("/", (req, res) => {
               </div>
             </div>
           </div>
-          <!-- เพิ่มสถิติอื่น ๆ ได้ที่นี่ -->
           <div class="col-md-4 mb-3">
             <div class="card text-white bg-success">
               <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                   <div>
                     <h5 class="card-title">บอทออนไลน์</h5>
-                    <p class="card-text display-4" id="onlineBots">${totalBots}</p>
+                    <p class="card-text display-4" id="onlineBots">${onlineBots}</p>
                   </div>
                   <i class="fa-solid fa-check-circle fa-3x"></i>
                 </div>
@@ -213,7 +226,7 @@ app.get("/", (req, res) => {
                 <div class="d-flex justify-content-between align-items-center">
                   <div>
                     <h5 class="card-title">บอททำงานแล้ว</h5>
-                    <p class="card-text display-4" id="activeBots">${totalBots}</p>
+                    <p class="card-text display-4" id="activeBots">${activeBots}</p>
                   </div>
                   <i class="fa-solid fa-clock fa-3x"></i>
                 </div>
@@ -266,7 +279,7 @@ app.get("/", (req, res) => {
                           </div>
                         </td>
                         <td>
-                          <span class="status-online"><i class="fa-solid fa-circle"></i> ออนไลน์</span>
+                          <span class="${botSessions[token].status === 'online' ? 'status-online' : 'status-offline'}"><i class="fa-solid fa-circle"></i> ${botSessions[token].status === 'online' ? 'ออนไลน์' : 'ออฟไลน์'}</span>
                         </td>
                         <td>
                           <span class="runtime" data-start-time="${botSessions[token].startTime}">00 วัน 00 ชั่วโมง 00 นาที 00 วินาที</span>
@@ -434,9 +447,10 @@ app.get("/", (req, res) => {
 });
 
 // เริ่มบอทเมื่อมีการใส่โทเค็น
-app.post("/start", (req, res) => {
+app.post("/start", async (req, res) => {
   const token = req.body.token.trim();
 
+  // ตรวจสอบว่าโทเค็นนี้ถูกใช้แล้วหรือไม่
   if (botSessions[token]) {
     return res.redirect("/?error=already-running");
   }
@@ -447,11 +461,12 @@ app.post("/start", (req, res) => {
 
   try {
     const appState = JSON.parse(token);
-    startBot(appState, token, botName, startTime);
+    await startBot(appState, token, botName, startTime);
     res.redirect("/");
     // อัปเดตสถิติผ่าน Socket.io
     io.emit('updateBots', generateBotData());
   } catch (err) {
+    console.error(chalk.red(`❌ ไม่สามารถเริ่มบอท: ${err.message}`));
     botCount -= 1; // ลดจำนวนบอทหากเกิดข้อผิดพลาด
     res.redirect("/?error=invalid-token");
   }
@@ -460,8 +475,8 @@ app.post("/start", (req, res) => {
 // ฟังก์ชันสร้างข้อมูลสำหรับ Socket.io
 function generateBotData() {
   const totalBots = Object.keys(botSessions).length;
-  const onlineBots = totalBots; // สมมุติว่าทุกบอทออนไลน์
-  const activeBots = totalBots; // สมมุติว่าทุกบอททำงานแล้ว
+  const onlineBots = Object.values(botSessions).filter(bot => bot.status === 'online').length;
+  const activeBots = Object.values(botSessions).filter(bot => bot.status === 'active').length;
   const botRows = Object.keys(botSessions).length > 0
     ? Object.keys(botSessions)
         .map(
@@ -473,7 +488,7 @@ function generateBotData() {
         </div>
       </td>
       <td>
-        <span class="status-online"><i class="fa-solid fa-circle"></i> ออนไลน์</span>
+        <span class="${botSessions[token].status === 'online' ? 'status-online' : 'status-offline'}"><i class="fa-solid fa-circle"></i> ${botSessions[token].status === 'online' ? 'ออนไลน์' : 'ออฟไลน์'}</span>
       </td>
       <td>
         <span class="runtime" data-start-time="${botSessions[token].startTime}">00 วัน 00 ชั่วโมง 00 นาที 00 วินาที</span>
@@ -495,64 +510,77 @@ function generateBotData() {
 }
 
 // ฟังก์ชันเริ่มบอท
-function startBot(appState, token, name, startTime) {
-  login({ appState }, (err, api) => {
-    if (err) {
-      console.error(chalk.red(`❌ ไม่สามารถเข้าสู่ระบบด้วยโทเค็น: ${token}`));
-      botCount -= 1; // ลดจำนวนบอทหากเกิดข้อผิดพลาด
-      return;
-    }
-
-    botSessions[token] = { api, name, startTime };
-    console.log(
-      chalk.green(figlet.textSync("Bot Started!", { horizontalLayout: "full" }))
-    );
-    console.log(chalk.green(`✅ ${name} กำลังทำงานสำหรับโทเค็น: ${token}`));
-
-    api.setOptions({ listenEvents: true });
-
-    api.listenMqtt(async (err, event) => {
-      if (err) return console.error(`❌ เกิดข้อผิดพลาด: ${err}`);
-
-      // จัดการเหตุการณ์
-      if (event.logMessageType && events[event.logMessageType]) {
-        for (const eventCommand of events[event.logMessageType]) {
-          try {
-            await eventCommand.run({ api, event });
-            console.log(`🔄 ประมวลผลเหตุการณ์: ${eventCommand.config.name}`);
-          } catch (error) {
-            console.error(`❌ เกิดข้อผิดพลาดในเหตุการณ์ ${eventCommand.config.name}:`, error);
-          }
-        }
+async function startBot(appState, token, name, startTime) {
+  return new Promise((resolve, reject) => {
+    login({ appState }, (err, api) => {
+      if (err) {
+        console.error(chalk.red(`❌ ไม่สามารถเข้าสู่ระบบด้วยโทเค็น: ${token}`));
+        return reject(err);
       }
 
-      // จัดการข้อความ
-      if (event.type === "message") {
-        const senderID = event.senderID;
-        const message = event.body ? event.body.trim() : "";
-
-        if (!message.startsWith(prefix)) return;
-
-        const args = message.slice(prefix.length).trim().split(/ +/);
-        const commandName = args.shift().toLowerCase();
-        const command = commands[commandName];
-
-        if (command && typeof command.run === "function") {
-          try {
-            await command.run({ api, event, args });
-            console.log(`✅ รันคำสั่ง: ${commandName}`);
-          } catch (error) {
-            console.error(`❌ เกิดข้อผิดพลาดในคำสั่ง ${commandName}:`, error);
-            api.sendMessage("❗ เกิดข้อผิดพลาดในการรันคำสั่ง", event.threadID);
-          }
-        } else {
-          api.sendMessage("❗ ไม่พบคำสั่งนี้", event.threadID);
-        }
+      // ตรวจสอบว่าบอทนี้กำลังทำงานอยู่แล้วหรือไม่
+      if (botSessions[token]) {
+        console.log(chalk.yellow(`⚠️ บอทด้วยโทเค็นนี้กำลังทำงานอยู่แล้ว: ${token}`));
+        return reject(new Error('Bot already running with this token'));
       }
+
+      botSessions[token] = { api, name, startTime, status: 'online' };
+      console.log(
+        chalk.green(figlet.textSync("Bot Started!", { horizontalLayout: "full" }))
+      );
+      console.log(chalk.green(`✅ ${name} กำลังทำงานสำหรับโทเค็น: ${token}`));
+
+      api.setOptions({ listenEvents: true });
+
+      api.listenMqtt(async (err, event) => {
+        if (err) {
+          console.error(`❌ เกิดข้อผิดพลาด: ${err}`);
+          botSessions[token].status = 'offline';
+          io.emit('updateBots', generateBotData());
+          return;
+        }
+
+        // จัดการเหตุการณ์
+        if (event.logMessageType && events[event.logMessageType]) {
+          for (const eventCommand of events[event.logMessageType]) {
+            try {
+              await eventCommand.run({ api, event });
+              console.log(`🔄 ประมวลผลเหตุการณ์: ${eventCommand.config.name}`);
+            } catch (error) {
+              console.error(`❌ เกิดข้อผิดพลาดในเหตุการณ์ ${eventCommand.config.name}:`, error);
+            }
+          }
+        }
+
+        // จัดการข้อความ
+        if (event.type === "message") {
+          const senderID = event.senderID;
+          const message = event.body ? event.body.trim() : "";
+
+          if (!message.startsWith(prefix)) return;
+
+          const args = message.slice(prefix.length).trim().split(/ +/);
+          const commandName = args.shift().toLowerCase();
+          const command = commands[commandName];
+
+          if (command && typeof command.run === "function") {
+            try {
+              await command.run({ api, event, args });
+              console.log(`✅ รันคำสั่ง: ${commandName}`);
+            } catch (error) {
+              console.error(`❌ เกิดข้อผิดพลาดในคำสั่ง ${commandName}:`, error);
+              api.sendMessage("❗ เกิดข้อผิดพลาดในการรันคำสั่ง", event.threadID);
+            }
+          } else {
+            api.sendMessage("❗ ไม่พบคำสั่งนี้", event.threadID);
+          }
+        }
+      });
+
+      // อัปเดตสถิติผ่าน Socket.io เมื่อเริ่มบอท
+      io.emit('updateBots', generateBotData());
+      resolve();
     });
-
-    // อัปเดตสถิติผ่าน Socket.io เมื่อเริ่มบอท
-    io.emit('updateBots', generateBotData());
   });
 }
 
@@ -562,6 +590,7 @@ app.post("/stop", (req, res) => {
 
   if (botSessions[token]) {
     botSessions[token].api.logout();
+    botSessions[token].status = 'offline'; // เปลี่ยนสถานะเป็นออฟไลน์ก่อนที่จะลบ
     delete botSessions[token];
     res.redirect("/");
     // อัปเดตสถิติผ่าน Socket.io
