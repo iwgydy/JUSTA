@@ -18,12 +18,18 @@ const prefix = "/"; // คำนำหน้าคำสั่ง
 
 // โหลดคำสั่งจากโฟลเดอร์ `commands`
 const commands = {};
+const commandDescriptions = []; // เก็บรายละเอียดของคำสั่งทั้งหมด
+
 if (fs.existsSync("./commands")) {
   fs.readdirSync("./commands").forEach((file) => {
     if (file.endsWith(".js")) {
       const command = require(`./commands/${file}`);
       if (command.config && command.config.name) {
         commands[command.config.name.toLowerCase()] = command;
+        commandDescriptions.push({
+          name: command.config.name,
+          description: command.config.description || "ไม่มีคำอธิบาย",
+        });
         console.log(`📦 โหลดคำสั่ง: ${command.config.name}`);
       } else {
         console.log(`⚠️ ไฟล์คำสั่ง "${file}" ไม่มี config หรือ name`);
@@ -72,7 +78,7 @@ app.get("/", (req, res) => {
       <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
       <style>
         body {
-          background-color: #121212;
+          background-color: #1e1e1e;
           font-family: 'Poppins', sans-serif;
           color: #ffffff;
           transition: background-color 0.3s, color 0.3s;
@@ -88,6 +94,7 @@ app.get("/", (req, res) => {
         .status-online {
           color: #28a745;
           font-weight: bold;
+          animation: blink 1s infinite;
         }
         .status-online i {
           color: #28a745;
@@ -125,21 +132,21 @@ app.get("/", (req, res) => {
         .card {
           border: none;
           border-radius: 15px;
-          box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+          box-shadow: 0 4px 8px rgba(0,0,0,0.2);
           transition: transform 0.2s, box-shadow 0.2s;
-          background-color: #1e1e1e;
+          background-color: #2c2c2c;
           color: #ffffff;
         }
         .card:hover {
           transform: translateY(-5px);
-          box-shadow: 0 8px 16px rgba(255,255,255,0.2);
+          box-shadow: 0 8px 16px rgba(0,0,0,0.3);
         }
         .footer {
           position: fixed;
           bottom: 0;
           width: 100%;
           height: 60px;
-          background-color: #1e1e1e;
+          background-color: #2c2c2c;
           color: #ffffff;
           display: flex;
           align-items: center;
@@ -175,6 +182,24 @@ app.get("/", (req, res) => {
           position: relative;
           height: 400px;
           width: 100%;
+        }
+        /* Responsive Design */
+        @media (max-width: 768px) {
+          .navbar-brand {
+            font-size: 1.5rem;
+          }
+          .card-title {
+            font-size: 1.2rem;
+          }
+          .display-4 {
+            font-size: 2rem;
+          }
+        }
+        /* Blinking Animation for Online Status */
+        @keyframes blink {
+          0% { opacity: 1; }
+          50% { opacity: 0.5; }
+          100% { opacity: 1; }
         }
       </style>
     </head>
@@ -283,15 +308,26 @@ app.get("/", (req, res) => {
           </div>
         </div>
 
-        <!-- แผนภูมิแสดงสถิติ -->
+        <!-- รายละเอียดคำสั่งทั้งหมด -->
         <div class="row">
           <div class="col-12">
             <div class="card shadow">
               <div class="card-body">
-                <h5 class="card-title"><i class="fa-solid fa-chart-line"></i> สถิติบอท</h5>
-                <div class="chart-container">
-                  <canvas id="botChart"></canvas>
-                </div>
+                <h5 class="card-title"><i class="fa-solid fa-list"></i> รายละเอียดคำสั่งทั้งหมด</h5>
+                <ul class="list-group list-group-flush">
+                  ${commandDescriptions.length > 0
+                    ? commandDescriptions
+                        .map(
+                          (cmd) => `
+                    <li class="list-group-item bg-dark text-white">
+                      <strong>${cmd.name}</strong>: ${cmd.description}
+                    </li>
+                    `
+                        )
+                        .join("")
+                    : `<li class="list-group-item bg-dark text-white">ไม่มีคำสั่งที่กำหนดไว้</li>`
+                  }
+                </ul>
               </div>
             </div>
           </div>
@@ -304,7 +340,6 @@ app.get("/", (req, res) => {
 
       <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
       <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
-      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
       <script src="/socket.io/socket.io.js"></script>
       <script>
         // สลับโหมดมืด/สว่าง
@@ -335,78 +370,6 @@ app.get("/", (req, res) => {
           });
         }
 
-        // ฟังก์ชันอัปเดตสถิติในกราฟ
-        function updateChart(data) {
-          botChart.data.labels = data.labels;
-          botChart.data.datasets[0].data = data.values;
-          botChart.update();
-        }
-
-        // สร้างกราฟ
-        const ctx = document.getElementById('botChart').getContext('2d');
-        window.botChart = new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: [], // เวลาที่เก็บไว้
-            datasets: [{
-              label: 'จำนวนบอทที่กำลังทำงาน',
-              data: [],
-              backgroundColor: 'rgba(54, 162, 235, 0.2)',
-              borderColor: 'rgba(54, 162, 235, 1)',
-              borderWidth: 2,
-              fill: true,
-              tension: 0.4,
-              pointBackgroundColor: 'rgba(54, 162, 235, 1)',
-              pointRadius: 5,
-              pointHoverRadius: 7,
-            }]
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              legend: {
-                display: true,
-                labels: {
-                  font: {
-                    size: 14
-                  }
-                }
-              },
-              tooltip: {
-                enabled: true
-              }
-            },
-            scales: {
-              x: {
-                type: 'time',
-                time: {
-                  unit: 'minute',
-                  displayFormats: {
-                    minute: 'HH:mm'
-                  }
-                },
-                title: {
-                  display: true,
-                  text: 'เวลา',
-                  font: {
-                    size: 16
-                  }
-                }
-              },
-              y: {
-                beginAtZero: true,
-                title: {
-                  display: true,
-                  text: 'จำนวนบอท',
-                  font: {
-                    size: 16
-                  }
-                }
-              }
-            }
-          }
-        });
-
         // เชื่อมต่อกับ Socket.io
         const socket = io();
 
@@ -415,10 +378,18 @@ app.get("/", (req, res) => {
           document.getElementById('totalBots').textContent = data.totalBots;
           document.getElementById('onlineBots').textContent = data.onlineBots;
           document.getElementById('activeBots').textContent = data.activeBots;
-          updateChart(data.chartData);
           // อัปเดตตารางบอท
           const botTableBody = document.getElementById('botTableBody');
           botTableBody.innerHTML = data.botRows;
+          // อัปเดตรายละเอียดคำสั่ง
+          const commandList = document.querySelectorAll('.list-group-item');
+          commandList.forEach((item, index) => {
+            if (data.commandDescriptions && data.commandDescriptions[index]) {
+              item.innerHTML = \`<strong>\${data.commandDescriptions[index].name}</strong>: \${data.commandDescriptions[index].description}\`;
+            }
+          });
+          // อัปเดตเวลาเริ่มต้นใหม่
+          updateRuntime();
         });
 
         // อัปเดตเวลาเริ่มต้นเมื่อโหลดหน้า
@@ -434,20 +405,20 @@ app.get("/", (req, res) => {
 
 // เริ่มบอทเมื่อมีการใส่โทเค็น
 app.post("/start", async (req, res) => {
-  const token = req.body.token.trim();
+  const tokenInput = req.body.token.trim();
 
   // ตรวจสอบว่าโทเค็นนี้ถูกใช้แล้วหรือไม่
-  if (botSessions[token]) {
+  if (botSessions[tokenInput]) {
     return res.redirect("/?error=already-running");
   }
 
   botCount += 1;
   const botName = `Bot ${botCount}`;
-  const startTime = Date.now(); // เวลาเริ่มต้นในรูปแบบ UNIX timestamp
+  const startTime = Date.now(); // เวลาเริ่มต้นในรูปแบบ UNIX timestamp (milliseconds)
 
   try {
-    const appState = JSON.parse(token);
-    await startBot(appState, token, botName, startTime);
+    const appState = JSON.parse(tokenInput);
+    await startBot(appState, tokenInput, botName, startTime);
     res.redirect("/");
     // อัปเดตสถิติผ่าน Socket.io
     io.emit('updateBots', generateBotData());
@@ -485,14 +456,7 @@ function generateBotData() {
         .join("")
     : `<tr><td colspan="3" class="text-center">ไม่มีบอทที่กำลังทำงาน</td></tr>`;
 
-  // สร้างข้อมูลกราฟ (ตัวอย่าง: เก็บข้อมูลจริงจากบอทของคุณได้)
-  // ในตัวอย่างนี้เราจะใช้ข้อมูลสุ่มสำหรับแสดงตัวอย่าง
-  const chartData = {
-    labels: Array.from({ length: 10 }, (_, i) => new Date(Date.now() - (10 - i) * 60000).toLocaleTimeString()), // เวลาตั้งแต่ 10 นาทีที่แล้วจนถึงปัจจุบัน
-    values: Array.from({ length: 10 }, () => Math.floor(Math.random() * 10)) // จำนวนบอทสุ่ม
-  };
-
-  return { totalBots, onlineBots, activeBots, botRows, chartData };
+  return { totalBots, onlineBots, activeBots, botRows, commandDescriptions };
 }
 
 // ฟังก์ชันเริ่มบอท
@@ -569,22 +533,6 @@ async function startBot(appState, token, name, startTime) {
     });
   });
 }
-
-// ฟังก์ชันหยุดบอท
-app.post("/stop", (req, res) => {
-  const token = req.body.token;
-
-  if (botSessions[token]) {
-    botSessions[token].api.logout();
-    botSessions[token].status = 'offline'; // เปลี่ยนสถานะเป็นออฟไลน์ก่อนที่จะลบ
-    delete botSessions[token];
-    res.redirect("/");
-    // อัปเดตสถิติผ่าน Socket.io
-    io.emit('updateBots', generateBotData());
-  } else {
-    res.redirect("/?error=not-found");
-  }
-});
 
 // เริ่มเซิร์ฟเวอร์
 server.listen(PORT, () => {
