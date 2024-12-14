@@ -76,7 +76,7 @@ app.get("/", (req, res) => {
         <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <style>
-            /* CSS เดิมที่คุณมี และเพิ่มการปรับปรุงเพิ่มเติมที่นี่ */
+            /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
             :root {
                 --primary-color: #0d6efd;
                 --secondary-color: #6c757d;
@@ -312,6 +312,9 @@ app.get("/", (req, res) => {
                 .glass-card {
                     margin-bottom: 20px;
                 }
+                .bot-table th, .bot-table td {
+                    padding: 8px 10px;
+                }
             }
         </style>
     </head>
@@ -328,21 +331,21 @@ app.get("/", (req, res) => {
         <div class="container">
             <!-- สถิติ -->
             <div class="row mb-4">
-                <div class="col-md-4">
+                <div class="col-md-4 col-sm-6 mb-3">
                     <div class="stats-card">
                         <i class="fas fa-robot fa-2x mb-3" style="color: var(--primary-color);"></i>
                         <div class="stats-number" id="totalBots">${totalBots}</div>
                         <div class="stats-label">บอททั้งหมด</div>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-4 col-sm-6 mb-3">
                     <div class="stats-card">
                         <i class="fas fa-signal fa-2x mb-3" style="color: var(--info-color);"></i>
                         <div class="stats-number" id="onlineBots">${onlineBots}</div>
                         <div class="stats-label">บอทออนไลน์</div>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-4 col-sm-6 mb-3">
                     <div class="stats-card">
                         <i class="fas fa-clock fa-2x mb-3" style="color: var(--secondary-color);"></i>
                         <div class="stats-number" id="activeBots">${activeBots}</div>
@@ -393,6 +396,9 @@ app.get("/", (req, res) => {
                                         <th>ชื่อบอท</th>
                                         <th>สถานะ</th>
                                         <th>เวลารัน</th>
+                                        <th>คำสั่งที่ใช้</th>
+                                        <th>ผู้ใช้</th>
+                                        <th>กลุ่ม</th>
                                     </tr>
                                 </thead>
                                 <tbody id="botTableBody">
@@ -414,10 +420,19 @@ app.get("/", (req, res) => {
                                                     กำลังคำนวณ...
                                                 </span>
                                             </td>
+                                            <td>
+                                                ${bot.commandsUsed || 0}
+                                            </td>
+                                            <td>
+                                                ${bot.users || 0}
+                                            </td>
+                                            <td>
+                                                ${bot.groups || 0}
+                                            </td>
                                         </tr>
                                     `).join('') || `
                                         <tr>
-                                            <td colspan="3" class="text-center">ไม่มีบอทที่กำลังทำงาน</td>
+                                            <td colspan="6" class="text-center">ไม่มีบอทที่กำลังทำงาน</td>
                                         </tr>
                                     `}
                                 </tbody>
@@ -464,6 +479,7 @@ app.get("/", (req, res) => {
             const socket = io();
             const removalTimers = {};
 
+            // ฟังก์ชันอัปเดตเวลารัน
             function updateRuntime() {
                 const runtimeElements = document.querySelectorAll('.runtime');
                 const now = Date.now();
@@ -482,6 +498,7 @@ app.get("/", (req, res) => {
                 });
             }
 
+            // ฟังก์ชันเริ่มนับถอยหลังการลบบอท
             function startCountdown(token) {
                 const countdownElement = document.getElementById(\`countdown-\${token}\`);
                 if (!countdownElement) return;
@@ -504,6 +521,7 @@ app.get("/", (req, res) => {
                 removalTimers[token] = interval;
             }
 
+            // รับข้อมูลอัปเดตจากเซิร์ฟเวอร์
             socket.on('updateBots', (data) => {
                 document.getElementById('totalBots').textContent = data.totalBots;
                 document.getElementById('onlineBots').textContent = data.onlineBots;
@@ -513,7 +531,7 @@ app.get("/", (req, res) => {
                 if (botTableBody) {
                     botTableBody.innerHTML = data.botRows;
                 }
-                
+
                 updateRuntime();
 
                 // จัดการนับถอยหลังสำหรับบอทที่ออฟไลน์
@@ -524,6 +542,7 @@ app.get("/", (req, res) => {
                 });
             });
 
+            // อัปเดตเวลารันทุกวินาที
             setInterval(updateRuntime, 1000);
             document.addEventListener('DOMContentLoaded', updateRuntime);
         </script>
@@ -580,10 +599,19 @@ function generateBotData() {
                     กำลังคำนวณ...
                 </span>
             </td>
+            <td>
+                ${bot.commandsUsed || 0}
+            </td>
+            <td>
+                ${bot.users || 0}
+            </td>
+            <td>
+                ${bot.groups || 0}
+            </td>
         </tr>
     `).join('') || `
         <tr>
-            <td colspan="3" class="text-center">ไม่มีบอทที่กำลังทำงาน</td>
+            <td colspan="6" class="text-center">ไม่มีบอทที่กำลังทำงาน</td>
         </tr>
     `;
 
@@ -609,7 +637,15 @@ async function startBot(appState, token, name, startTime) {
                 return reject(new Error('บอทกำลังทำงานอยู่'));
             }
 
-            botSessions[token] = { api, name, startTime, status: 'online' };
+            botSessions[token] = { 
+                api, 
+                name, 
+                startTime, 
+                status: 'online',
+                commandsUsed: 0, // เพิ่มตัวนับคำสั่ง
+                users: 0,         // เพิ่มตัวนับผู้ใช้
+                groups: 0         // เพิ่มตัวนับกลุ่ม
+            };
             console.log(chalk.green(figlet.textSync("Bot Started!", { horizontalLayout: "full" })));
             console.log(chalk.green(`✅ ${name} กำลังทำงานด้วยโทเค็น: ${token}`));
 
@@ -650,6 +686,16 @@ async function startBot(appState, token, name, startTime) {
                         try {
                             await command.run({ api, event, args });
                             console.log(chalk.green(`✅ รันคำสั่ง: ${commandName}`));
+                            botSessions[token].commandsUsed += 1; // เพิ่มตัวนับคำสั่ง
+
+                            // สมมติว่าเราสามารถนับผู้ใช้และกลุ่มได้จาก event
+                            if (event.threadID) {
+                                botSessions[token].users += 1;  // เพิ่มตัวนับผู้ใช้
+                                // สมมติว่ามีการเข้าถึงข้อมูลกลุ่ม
+                                // botSessions[token].groups += 1;
+                            }
+
+                            io.emit('updateBots', generateBotData());
                         } catch (error) {
                             console.error(chalk.red(`❌ เกิดข้อผิดพลาดในคำสั่ง ${commandName}:`, error));
                             api.sendMessage("❗ การรันคำสั่งล้มเหลว", event.threadID);
