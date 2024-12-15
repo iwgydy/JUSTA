@@ -84,8 +84,6 @@ function generateBotData() {
     const activeBots = Object.values(botSessions).filter(bot => bot.status === 'active').length;
 
     const botRows = Object.entries(botSessions).map(([token, bot]) => {
-        // คำนวณปิงของบอท
-        const ping = bot.ping || '-';
         return `
             <tr id="bot-${encodeURIComponent(token)}">
                 <td>
@@ -104,9 +102,6 @@ function generateBotData() {
                     </span>
                 </td>
                 <td>
-                    <span class="ping-time">${ping}</span>
-                </td>
-                <td>
                     <button class="btn btn-warning btn-sm edit-btn" data-token="${encodeURIComponent(token)}"><i class="fas fa-edit"></i> แก้ไข</button>
                     <button class="btn btn-danger btn-sm delete-btn" data-token="${encodeURIComponent(token)}"><i class="fas fa-trash-alt"></i> ลบ</button>
                 </td>
@@ -114,7 +109,7 @@ function generateBotData() {
         `;
     }).join('') || `
         <tr>
-            <td colspan="5" class="text-center">ไม่มีบอทที่กำลังทำงาน</td>
+            <td colspan="4" class="text-center">ไม่มีบอทที่กำลังทำงาน</td>
         </tr>
     `;
 
@@ -246,26 +241,24 @@ app.get("/", (req, res) => {
                     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
                 }
 
-                .bot-table, .command-table {
+                .bot-table {
                     width: 100%;
                     border-collapse: collapse;
                     margin-top: 20px;
                 }
 
-                .bot-table th, .bot-table td,
-                .command-table th, .command-table td {
+                .bot-table th, .bot-table td {
                     padding: 12px 15px;
                     text-align: left;
                 }
 
-                .bot-table th, .command-table th {
+                .bot-table th {
                     background-color: var(--primary-color);
                     color: #fff;
                     font-weight: 600;
                 }
 
-                .bot-table tr:nth-child(even),
-                .command-table tr:nth-child(even) {
+                .bot-table tr:nth-child(even) {
                     background-color: #f1f1f1;
                 }
 
@@ -320,8 +313,23 @@ app.get("/", (req, res) => {
                     font-size: 1.1rem;
                 }
 
-                .ping-time {
-                    font-weight: 500;
+                /* ปรับแต่งตำแหน่งและสไตล์ของปิงเว็บไซต์ */
+                .website-ping {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background-color: rgba(255, 255, 255, 0.8);
+                    padding: 10px 15px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    font-size: 1rem;
+                    color: var(--text-color);
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .ping-icon {
                     color: var(--info-color);
                 }
 
@@ -332,9 +340,14 @@ app.get("/", (req, res) => {
                     .glass-card {
                         margin-bottom: 20px;
                     }
-                    .bot-table th, .bot-table td,
-                    .command-table th, .command-table td {
+                    .bot-table th, .bot-table td {
                         padding: 8px 10px;
+                    }
+                    .website-ping {
+                        top: 10px;
+                        right: 10px;
+                        font-size: 0.9rem;
+                        padding: 8px 12px;
                     }
                 }
 
@@ -345,6 +358,12 @@ app.get("/", (req, res) => {
             </style>
         </head>
         <body>
+            <!-- ปิงเว็บไซต์ที่มุมขวาบนสุด -->
+            <div class="website-ping">
+                <i class="fas fa-tachometer-alt ping-icon"></i>
+                <span id="websitePing">- ms</span>
+            </div>
+
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
@@ -394,13 +413,7 @@ app.get("/", (req, res) => {
                             <div class="stats-label">บอททำงานแล้ว</div>
                         </div>
                     </div>
-                    <div class="col-md-3 col-sm-6 mb-3">
-                        <div class="stats-card">
-                            <i class="fas fa-network-wired fa-2x mb-3" style="color: var(--accent-color);"></i>
-                            <div class="stats-number" id="websitePing">- ms</div>
-                            <div class="stats-label">ปิงเว็บไซต์</div>
-                        </div>
-                    </div>
+                    <!-- ลบคอลัมน์ปิงเว็บไซต์จากสถิติ -->
                 </div>
 
                 <div class="row">
@@ -418,7 +431,6 @@ app.get("/", (req, res) => {
                                             <th>ชื่อบอท</th>
                                             <th>สถานะ</th>
                                             <th>เวลารัน</th>
-                                            <th>ปิง</th>
                                             <th>การจัดการ</th>
                                         </tr>
                                     </thead>
@@ -459,17 +471,6 @@ app.get("/", (req, res) => {
                         const days = Math.floor(elapsed / (1000 * 60 * 60 * 24));
 
                         el.textContent = \`\${days} วัน \${hours} ชั่วโมง \${minutes} นาที \${seconds} วินาที\`;
-                    });
-                }
-
-                // ฟังก์ชันอัปเดตปิงของบอท (ถ้ามีการปรับแต่งเพิ่มเติม)
-                function updateBotPing() {
-                    const pingElements = document.querySelectorAll('.ping-time');
-                    pingElements.forEach(el => {
-                        const ping = el.textContent.replace(' ms', '');
-                        if (ping !== '-' && !isNaN(ping)) {
-                            // คุณสามารถเพิ่มฟังก์ชันเพิ่มเติมที่นี่หากต้องการ
-                        }
                     });
                 }
 
@@ -1001,7 +1002,6 @@ app.get("/bots", (req, res) => {
                                     <th>ชื่อบอท</th>
                                     <th>สถานะ</th>
                                     <th>เวลารัน</th>
-                                    <th>ปิง</th>
                                     <th>การจัดการ</th>
                                 </tr>
                             </thead>
@@ -1040,17 +1040,6 @@ app.get("/bots", (req, res) => {
                         const days = Math.floor(elapsed / (1000 * 60 * 60 * 24));
 
                         el.textContent = \`\${days} วัน \${hours} ชั่วโมง \${minutes} นาที \${seconds} วินาที\`;
-                    });
-                }
-
-                // ฟังก์ชันอัปเดตปิงของบอท
-                function updateBotPing() {
-                    const pingElements = document.querySelectorAll('.ping-time');
-                    pingElements.forEach(el => {
-                        const ping = el.textContent.replace(' ms', '');
-                        if (ping !== '-' && !isNaN(ping)) {
-                            // สามารถปรับแต่งได้หากต้องการ
-                        }
                     });
                 }
 
@@ -1339,7 +1328,7 @@ app.get("/debug/bots", (req, res) => {
         name: bot.name,
         status: bot.status,
         password: bot.password,
-        ping: bot.ping
+        // ลบ ping ออกเพราะไม่ต้องการตรวจสอบปิงแต่ละบอทแล้ว
     }));
     res.json(bots);
 });
@@ -1397,9 +1386,8 @@ async function startBot(appState, token, name, startTime, password, saveToFile =
                 name, 
                 startTime, 
                 status: 'online',
-                password: password.toString(), // แปลงเป็น string เพื่อความแน่ใจ
-                lastEventTime: Date.now(), // เพิ่มเวลาของเหตุการณ์ล่าสุด
-                ping: 0 // เริ่มต้นปิงเป็น 0
+                password: password.toString() // แปลงเป็น string เพื่อความแน่ใจ
+                // ลบ lastEventTime และ ping ออก
             };
             botCount = Math.max(botCount, parseInt(name.replace(/✨/g, '').replace('Bot ', '') || '0')); // ปรับ botCount ให้สูงสุด
 
@@ -1416,12 +1404,6 @@ async function startBot(appState, token, name, startTime, password, saveToFile =
                     io.emit('updateBots', generateBotData());
                     return;
                 }
-
-                // เพิ่มเวลาของเหตุการณ์ล่าสุด
-                botSessions[token].lastEventTime = Date.now();
-
-                // คำนวณปิงของบอท
-                botSessions[token].ping = Date.now() - botSessions[token].lastEventTime;
 
                 // เพิ่มล็อกเมื่อได้รับอีเวนต์
                 console.log(chalk.blue(`📩 รับอีเวนต์: ${event.type}`));
@@ -1466,12 +1448,7 @@ async function startBot(appState, token, name, startTime, password, saveToFile =
                     }
                 }
 
-                // หากบอทกลับมาทำงานใหม่ขณะนับถอยหลังให้ยกเลิกการลบ
-                if (botSessions[token].status === 'online') {
-                    // ไม่มีการนับถอยหลังในโค้ดที่ปรับปรุง
-                }
-
-                // อัปเดตปิงของบอททันที
+                // อัปเดตปิงของเว็บไซต์ทันที
                 io.emit('updateBots', generateBotData());
             });
 
