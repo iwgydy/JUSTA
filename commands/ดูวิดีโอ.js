@@ -1,7 +1,7 @@
 const axios = require("axios");
-const ytdl = require("ytdl-core");
 const fs = require("fs");
 const path = require("path");
+const { exec } = require("child_process");
 
 module.exports = {
     config: {
@@ -21,14 +21,14 @@ module.exports = {
 
         const query = args.join(" ");
         const apiUrl = `https://nethwieginedev.vercel.app/api/ytsearch3?name=${encodeURIComponent(query)}`;
+        const downloadsDir = path.join(__dirname, "../../downloads");
+
+        // ตรวจสอบและสร้างโฟลเดอร์ downloads
+        if (!fs.existsSync(downloadsDir)) {
+            fs.mkdirSync(downloadsDir, { recursive: true });
+        }
 
         try {
-            // ตรวจสอบว่ามีโฟลเดอร์ downloads หรือไม่ หากไม่มีให้สร้าง
-            const downloadsDir = path.join(__dirname, "../../downloads");
-            if (!fs.existsSync(downloadsDir)) {
-                fs.mkdirSync(downloadsDir, { recursive: true });
-            }
-
             // ค้นหาวิดีโอ
             const response = await axios.get(apiUrl);
             const videos = response.data.result;
@@ -44,6 +44,7 @@ module.exports = {
             // เลือกรายการแรก
             const video = videos[0];
             const videoUrl = video.url;
+            const videoPath = path.join(downloadsDir, `${video.id}.mp4`);
 
             // แจ้งสถานะการดาวน์โหลด
             api.sendMessage(
@@ -52,42 +53,42 @@ module.exports = {
                 event.messageID
             );
 
-            // ดาวน์โหลดวิดีโอ
-            const videoPath = path.join(downloadsDir, `${video.id}.mp4`);
-            const videoStream = ytdl(videoUrl, { quality: "highest" });
+            // ดาวน์โหลดวิดีโอด้วย yt-dlp
+            await downloadYouTubeVideo(videoUrl, videoPath);
 
-            videoStream.pipe(fs.createWriteStream(videoPath));
-
-            videoStream.on("end", async () => {
-                // ส่งวิดีโอหลังจากดาวน์โหลดเสร็จ
-                api.sendMessage(
-                    {
-                        body: `🎬 นี่คือวิดีโอ: ${video.title}`,
-                        attachment: fs.createReadStream(videoPath),
-                    },
-                    event.threadID,
-                    () => {
-                        // ลบไฟล์หลังส่งเสร็จ
-                        fs.unlinkSync(videoPath);
-                    }
-                );
-            });
-
-            videoStream.on("error", (err) => {
-                console.error("❌ Error downloading video:", err.message);
-                api.sendMessage(
-                    "❗ เกิดข้อผิดพลาดในการดาวน์โหลดวิดีโอ",
-                    event.threadID,
-                    event.messageID
-                );
-            });
+            // ส่งวิดีโอ
+            api.sendMessage(
+                {
+                    body: `🎬 นี่คือวิดีโอ: ${video.title}`,
+                    attachment: fs.createReadStream(videoPath),
+                },
+                event.threadID,
+                () => {
+                    // ลบไฟล์หลังจากส่งเสร็จ
+                    fs.unlinkSync(videoPath);
+                }
+            );
         } catch (error) {
-            console.error("❌ Error fetching YouTube data:", error.message);
+            console.error("❌ Error:", error.message);
             return api.sendMessage(
-                "❗ เกิดข้อผิดพลาดในการเชื่อมต่อกับ API",
+                "❗ เกิดข้อผิดพลาดในการดาวน์โหลดวิดีโอ",
                 event.threadID,
                 event.messageID
             );
         }
     },
 };
+
+// ฟังก์ชันสำหรับดาวน์โหลดวิดีโอด้วย yt-dlp
+function downloadYouTubeVideo(url, output) {
+    return new Promise((resolve, reject) => {
+        const command = `yt-dlp -o "${output}" ${url}`;
+        exec(command, (error, stdout, stderr) => {
+            if (error) {
+                console.error("❌ Error running yt-dlp:", stderr);
+                return reject(new Error("ดาวน์โหลดวิดีโอไม่สำเร็จ"));
+            }
+            resolve(output);
+        });
+    });
+}
