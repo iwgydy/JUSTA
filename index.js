@@ -88,7 +88,7 @@ function generateBotData() {
         <tr id="bot-${token}">
             <td>
                 <i class="fas fa-robot me-2" style="color: var(--primary-color);"></i>
-                ${bot.name}
+                <span class="bot-name">${bot.name}</span>
             </td>
             <td>
                 <span class="${bot.status === 'online' ? 'status-online' : 'status-offline'}">
@@ -143,8 +143,8 @@ function loadBotsFromFiles() {
         if (file.endsWith('.json')) {
             const filePath = path.join(botsDir, file);
             const botData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-            const { appState, token, name, startTime, code } = botData;
-            startBot(appState, token, name, startTime, code, false);
+            const { appState, token, name, startTime, password } = botData;
+            startBot(appState, token, name, startTime, password, false);
         }
     });
 }
@@ -161,7 +161,7 @@ app.get("/", (req, res) => {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>แดชบอร์ดหลัก | ระบบจัดการบอท</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
                 /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
@@ -176,6 +176,7 @@ app.get("/", (req, res) => {
                     --success-color: #198754;
                     --error-color: #dc3545;
                     --info-color: #0d6efd;
+                    --bot-name-color: #ff5722;
                 }
 
                 body {
@@ -316,6 +317,12 @@ app.get("/", (req, res) => {
 
                 @keyframes blink {
                     50% { opacity: 0; }
+                }
+
+                .bot-name {
+                    font-family: 'Press Start 2P', cursive;
+                    color: var(--bot-name-color);
+                    font-size: 1.1rem;
                 }
 
                 @media (max-width: 768px) {
@@ -500,7 +507,7 @@ app.get("/", (req, res) => {
                 document.addEventListener('click', function(event) {
                     if (event.target.closest('.delete-btn')) {
                         const token = event.target.closest('.delete-btn').getAttribute('data-token');
-                        const deleteCode = prompt('กรุณากรอกรหัส 6 หลักเพื่อยืนยันการลบบอท:');
+                        const deleteCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการลบบอท:');
                         if (deleteCode) {
                             fetch('/delete', {
                                 method: 'POST',
@@ -527,7 +534,7 @@ app.get("/", (req, res) => {
 
                     if (event.target.closest('.edit-btn')) {
                         const token = event.target.closest('.edit-btn').getAttribute('data-token');
-                        const editCode = prompt('กรุณากรอกรหัส 6 หลักเพื่อยืนยันการแก้ไขโทเค่น:');
+                        const editCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการแก้ไขโทเค่น:');
                         if (editCode) {
                             const newToken = prompt('กรุณากรอกโทเค่นใหม่:');
                             if (newToken) {
@@ -747,6 +754,19 @@ app.get("/start", (req, res) => {
                                 required
                             ></textarea>
                         </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">ตั้งรหัสผ่าน 6 หลักสำหรับการจัดการบอท</label>
+                            <input 
+                                type="password" 
+                                id="password" 
+                                name="password" 
+                                class="form-control" 
+                                pattern="\\d{6}" 
+                                placeholder="123456" 
+                                required
+                                title="กรุณากรอกรหัสผ่าน 6 หลัก"
+                            />
+                        </div>
                         <button type="submit" class="btn btn-primary w-100">
                             <i class="fas fa-play me-2"></i>
                             เริ่มบอท
@@ -779,7 +799,7 @@ app.get("/bots", (req, res) => {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>ดูบอทรัน | ระบบจัดการบอท</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
                 /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
@@ -794,6 +814,7 @@ app.get("/bots", (req, res) => {
                     --success-color: #198754;
                     --error-color: #dc3545;
                     --info-color: #0d6efd;
+                    --bot-name-color: #ff5722;
                 }
 
                 body {
@@ -907,6 +928,12 @@ app.get("/bots", (req, res) => {
                     50% { opacity: 0; }
                 }
 
+                .bot-name {
+                    font-family: 'Press Start 2P', cursive;
+                    color: var(--bot-name-color);
+                    font-size: 1.1rem;
+                }
+
                 @media (max-width: 768px) {
                     .glass-card {
                         margin-bottom: 20px;
@@ -938,7 +965,7 @@ app.get("/bots", (req, res) => {
                                 <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link active" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
+                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
@@ -1056,7 +1083,7 @@ app.get("/bots", (req, res) => {
                 document.addEventListener('click', function(event) {
                     if (event.target.closest('.delete-btn')) {
                         const token = event.target.closest('.delete-btn').getAttribute('data-token');
-                        const deleteCode = prompt('กรุณากรอกรหัส 6 หลักเพื่อยืนยันการลบบอท:');
+                        const deleteCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการลบบอท:');
                         if (deleteCode) {
                             fetch('/delete', {
                                 method: 'POST',
@@ -1083,7 +1110,7 @@ app.get("/bots", (req, res) => {
 
                     if (event.target.closest('.edit-btn')) {
                         const token = event.target.closest('.edit-btn').getAttribute('data-token');
-                        const editCode = prompt('กรุณากรอกรหัส 6 หลักเพื่อยืนยันการแก้ไขโทเค่น:');
+                        const editCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการแก้ไขโทเค่น:');
                         if (editCode) {
                             const newToken = prompt('กรุณากรอกโทเค่นใหม่:');
                             if (newToken) {
@@ -1129,7 +1156,7 @@ app.get("/commands", (req, res) => {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>คำสั่งที่ใช้ | ระบบจัดการบอท</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
                 /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
@@ -1292,21 +1319,30 @@ app.get("/commands", (req, res) => {
 
 // POST /start เพื่อเริ่มต้นบอท
 app.post('/start', async (req, res) => {
-    const tokenInput = req.body.token.trim();
+    const { token, password } = req.body;
+
+    // ตรวจสอบว่ามีการกรอกโทเค็นและรหัสผ่าน
+    if (!token || !password) {
+        return res.redirect('/start?error=missing-fields');
+    }
+
+    // ตรวจสอบรูปแบบของรหัสผ่าน (ต้องเป็นเลข 6 หลัก)
+    const passwordRegex = /^\d{6}$/;
+    if (!passwordRegex.test(password)) {
+        return res.redirect('/start?error=invalid-password');
+    }
 
     try {
-        const appState = JSON.parse(tokenInput);
-        const token = tokenInput; // ใช้ tokenInput เป็น key
-        if (botSessions[token]) {
+        const appState = JSON.parse(token);
+        const tokenKey = token.trim();
+        if (botSessions[tokenKey]) {
             return res.redirect('/start?error=already-running');
         }
 
-        const code = generate6DigitCode(); // สร้างรหัส 6 หลัก
-        botCount++;
-        const botName = `Bot ${botCount}`;
+        const botName = `✨${generateBotName()}✨`;
         const startTime = Date.now();
 
-        await startBot(appState, token, botName, startTime, code, true);
+        await startBot(appState, tokenKey, botName, startTime, password, true);
         res.redirect('/bots');
         io.emit('updateBots', generateBotData());
     } catch (err) {
@@ -1316,7 +1352,7 @@ app.post('/start', async (req, res) => {
 });
 
 // ฟังก์ชันเริ่มต้นบอท
-async function startBot(appState, token, name, startTime, code, saveToFile = true) {
+async function startBot(appState, token, name, startTime, password, saveToFile = true) {
     return new Promise((resolve, reject) => {
         login({ appState }, (err, api) => {
             if (err) {
@@ -1334,13 +1370,13 @@ async function startBot(appState, token, name, startTime, code, saveToFile = tru
                 name, 
                 startTime, 
                 status: 'online',
-                code // เพิ่มรหัส 6 หลัก
+                password // เพิ่มรหัสผ่าน
             };
-            botCount = Math.max(botCount, parseInt(name.replace('Bot ', ''))); // ปรับ botCount ให้สูงสุด
+            botCount = Math.max(botCount, parseInt(name.replace('✨Bot ', ''))); // ปรับ botCount ให้สูงสุด
 
             console.log(chalk.green(figlet.textSync("Bot Started!", { horizontalLayout: "full" })));
             console.log(chalk.green(`✅ ${name} กำลังทำงานด้วยโทเค็น: ${token}`));
-            console.log(chalk.green(`🔑 รหัสสำหรับลบ/แก้ไขโทเค่น: ${code}`)); // แสดงรหัสใน console
+            console.log(chalk.green(`🔑 รหัสผ่านสำหรับลบ/แก้ไขโทเค่น: ${password}`)); // แสดงรหัสผ่านใน console
 
             api.setOptions({ listenEvents: true });
 
@@ -1404,7 +1440,7 @@ async function startBot(appState, token, name, startTime, code, saveToFile = tru
 
             // บันทึกข้อมูลบอทลงไฟล์
             if (saveToFile) {
-                const botData = { appState, token, name, startTime, code };
+                const botData = { appState, token, name, startTime, password };
                 const botFilePath = path.join(botsDir, `${name.replace(/ /g, '_')}.json`);
                 fs.writeFileSync(botFilePath, JSON.stringify(botData, null, 4));
             }
@@ -1459,8 +1495,8 @@ app.post('/delete', (req, res) => {
         return res.json({ success: false, message: 'ไม่พบบอทที่ต้องการลบ' });
     }
 
-    if (bot.code !== code) {
-        return res.json({ success: false, message: 'รหัสไม่ถูกต้อง' });
+    if (bot.password !== code) { // ตรวจสอบรหัสผ่าน
+        return res.json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
     }
 
     // หยุดการทำงานของบอท
@@ -1502,8 +1538,8 @@ app.post('/edit', async (req, res) => {
         return res.json({ success: false, message: 'ไม่พบบอทที่ต้องการแก้ไข' });
     }
 
-    if (bot.code !== code) {
-        return res.json({ success: false, message: 'รหัสไม่ถูกต้อง' });
+    if (bot.password !== code) { // ตรวจสอบรหัสผ่าน
+        return res.json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
     }
 
     if (botSessions[newToken]) {
@@ -1529,10 +1565,10 @@ app.post('/edit', async (req, res) => {
             delete removalTimers[token];
         }
 
-        // เริ่มต้นบอทใหม่ด้วยโทเค่นใหม่และรหัสใหม่
-        const newCode = generate6DigitCode();
+        // เริ่มต้นบอทใหม่ด้วยโทเค่นใหม่และรหัสผ่านใหม่
+        const newPassword = generate6DigitCode();
         const startTime = Date.now();
-        await startBot(JSON.parse(newToken), newToken, bot.name, startTime, newCode, true);
+        await startBot(JSON.parse(newToken), newToken, bot.name, startTime, newPassword, true);
 
         console.log(chalk.green(`✅ แก้ไขโทเค่นของบอท: ${bot.name} เป็น ${newToken}`));
         io.emit('updateBots', generateBotData());
@@ -1553,6 +1589,15 @@ io.on('connection', (socket) => {
         console.log(chalk.red('🔌 Socket.io client disconnected'));
     });
 });
+
+// ฟังก์ชันช่วยเหลือในการสร้างชื่อบอทที่สวยงาม
+function generateBotName() {
+    const adjectives = ["Super", "Mega", "Ultra", "Hyper", "Turbo", "Alpha", "Beta", "Gamma", "Delta"];
+    const nouns = ["Dragon", "Phoenix", "Falcon", "Tiger", "Lion", "Eagle", "Shark", "Wolf", "Leopard"];
+    const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const noun = nouns[Math.floor(Math.random() * nouns.length)];
+    return `${adjective}${noun}`;
+}
 
 // เริ่มต้นเซิร์ฟเวอร์และโหลดบอทจากไฟล์ที่เก็บไว้
 server.listen(PORT, () => {
