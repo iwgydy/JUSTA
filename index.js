@@ -86,7 +86,7 @@ function generateBotData() {
     const botRows = Object.entries(botSessions).map(([token, bot]) => `
         <tr id="bot-${encodeURIComponent(token)}">
             <td>
-                <i class="fas fa-robot me-2" style="color: var(--accent-color);"></i>
+                <i class="fas fa-robot me-2" style="color: var(--primary-color);"></i>
                 <span class="bot-name">${bot.name}</span>
             </td>
             <td>
@@ -160,53 +160,42 @@ app.get("/", (req, res) => {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>แดชบอร์ดหลัก | ระบบจัดการบอท</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-            <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* CSS สำหรับธีมแฮกเกอร์ */
+                /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
                 :root {
                     --primary-color: #0d6efd;
                     --secondary-color: #6c757d;
-                    --accent-color: #00ff00;
-                    --background-color: #121212;
-                    --card-bg: #1e1e1e;
-                    --card-border: #333333;
-                    --text-color: #00ff00;
-                    --success-color: #00ff00;
-                    --error-color: #ff0000;
-                    --info-color: #1e90ff;
-                    --bot-name-color: #ff69b4;
-                    --font-family: 'Roboto Mono', monospace;
+                    --accent-color: #198754;
+                    --background-color: #f8f9fa;
+                    --card-bg: #ffffff;
+                    --card-border: #dee2e6;
+                    --text-color: #212529;
+                    --success-color: #198754;
+                    --error-color: #dc3545;
+                    --info-color: #0d6efd;
+                    --bot-name-color: #ff5722;
                 }
 
                 body {
                     background: var(--background-color);
                     color: var(--text-color);
-                    font-family: var(--font-family);
+                    font-family: 'Roboto', sans-serif;
                     min-height: 100vh;
                     position: relative;
                     overflow-x: hidden;
-                    transition: background 0.5s ease;
                 }
 
                 .navbar {
-                    background: var(--card-bg);
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+                    background: var(--primary-color);
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                 }
 
                 .navbar-brand {
-                    font-family: 'Press Start 2P', cursive;
+                    font-family: 'Kanit', sans-serif;
                     font-weight: 600;
-                    color: var(--accent-color) !important;
-                }
-
-                .navbar-nav .nav-link {
-                    color: var(--text-color) !important;
-                    transition: color 0.3s ease;
-                }
-
-                .navbar-nav .nav-link:hover {
-                    color: var(--accent-color) !important;
+                    color: #ffffff !important;
                 }
 
                 .stats-card {
@@ -215,20 +204,20 @@ app.get("/", (req, res) => {
                     border-radius: 12px;
                     padding: 20px;
                     text-align: center;
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
 
                 .stats-card:hover {
                     transform: translateY(-5px);
-                    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.7);
+                    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
                 }
 
                 .stats-number {
                     font-size: 2.5rem;
                     font-weight: 700;
                     margin: 10px 0;
-                    color: var(--accent-color);
+                    color: var(--primary-color);
                 }
 
                 .stats-label {
@@ -241,13 +230,13 @@ app.get("/", (req, res) => {
                     border: 1px solid var(--card-border);
                     border-radius: 16px;
                     padding: 24px;
-                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
 
                 .glass-card:hover {
                     transform: translateY(-5px);
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.7);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
                 }
 
                 .bot-table, .command-table {
@@ -263,14 +252,14 @@ app.get("/", (req, res) => {
                 }
 
                 .bot-table th, .command-table th {
-                    background-color: var(--card-border);
-                    color: var(--accent-color);
+                    background-color: var(--primary-color);
+                    color: #fff;
                     font-weight: 600;
                 }
 
                 .bot-table tr:nth-child(even),
                 .command-table tr:nth-child(even) {
-                    background-color: #2c2c2c;
+                    background-color: #f1f1f1;
                 }
 
                 .status-online {
@@ -296,12 +285,12 @@ app.get("/", (req, res) => {
                 }
 
                 .footer {
-                    background: var(--card-bg);
-                    border-top: 2px solid var(--card-border);
+                    background: var(--primary-color);
+                    border-top: 2px solid var(--primary-color);
                     padding: 20px 0;
                     margin-top: 40px;
                     font-size: 0.9rem;
-                    color: var(--accent-color);
+                    color: #ffffff;
                 }
 
                 .animate-float {
@@ -341,62 +330,13 @@ app.get("/", (req, res) => {
                 .btn-edit, .btn-delete {
                     margin-right: 5px;
                 }
-
-                /* Custom Scrollbar */
-                ::-webkit-scrollbar {
-                    width: 12px;
-                }
-
-                ::-webkit-scrollbar-track {
-                    background: #1e1e1e;
-                }
-
-                ::-webkit-scrollbar-thumb {
-                    background-color: var(--accent-color);
-                    border-radius: 6px;
-                    border: 3px solid #1e1e1e;
-                }
-
-                /* Additional Styles for Hacker Theme */
-                body::before {
-                    content: "";
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: url('https://i.imgur.com/3Z8dM7V.png') repeat;
-                    opacity: 0.05;
-                    pointer-events: none;
-                    z-index: -1;
-                }
-
-                /* Button Styles */
-                .btn-warning {
-                    background-color: #ffc107;
-                    border: none;
-                    color: #212529;
-                }
-
-                .btn-danger {
-                    background-color: #dc3545;
-                    border: none;
-                }
-
-                .btn-warning:hover {
-                    background-color: #e0a800;
-                }
-
-                .btn-danger:hover {
-                    background-color: #c82333;
-                }
             </style>
         </head>
         <body>
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
-                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: var(--accent-color);"></i>
+                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: #ffffff;"></i>
                         ระบบจัดการบอท
                     </a>
                     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -423,7 +363,7 @@ app.get("/", (req, res) => {
                 <div class="row mb-4">
                     <div class="col-md-4 col-sm-6 mb-3">
                         <div class="stats-card">
-                            <i class="fas fa-robot fa-2x mb-3" style="color: var(--accent-color);"></i>
+                            <i class="fas fa-robot fa-2x mb-3" style="color: var(--primary-color);"></i>
                             <div class="stats-number" id="totalBots">${data.totalBots}</div>
                             <div class="stats-label">บอททั้งหมด</div>
                         </div>
@@ -449,7 +389,7 @@ app.get("/", (req, res) => {
                     <div class="col-12">
                         <div class="glass-card">
                             <h5 class="mb-4">
-                                <i class="fas fa-robot me-2" style="color: var(--accent-color);"></i>
+                                <i class="fas fa-robot me-2" style="color: var(--primary-color);"></i>
                                 บอทที่กำลังทำงาน
                             </h5>
                             <div class="table-responsive">
@@ -616,52 +556,41 @@ app.get("/start", (req, res) => {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>เพิ่มบอท | ระบบจัดการบอท</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-            <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* CSS สำหรับธีมแฮกเกอร์ */
+                /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
                 :root {
                     --primary-color: #0d6efd;
                     --secondary-color: #6c757d;
-                    --accent-color: #00ff00;
-                    --background-color: #121212;
-                    --card-bg: #1e1e1e;
-                    --card-border: #333333;
-                    --text-color: #00ff00;
-                    --success-color: #00ff00;
-                    --error-color: #ff0000;
-                    --info-color: #1e90ff;
-                    --font-family: 'Roboto Mono', monospace;
+                    --accent-color: #198754;
+                    --background-color: #f8f9fa;
+                    --card-bg: #ffffff;
+                    --card-border: #dee2e6;
+                    --text-color: #212529;
+                    --success-color: #198754;
+                    --error-color: #dc3545;
+                    --info-color: #0d6efd;
                 }
 
                 body {
                     background: var(--background-color);
                     color: var(--text-color);
-                    font-family: var(--font-family);
+                    font-family: 'Roboto', sans-serif;
                     min-height: 100vh;
                     position: relative;
                     overflow-x: hidden;
-                    transition: background 0.5s ease;
                 }
 
                 .navbar {
-                    background: var(--card-bg);
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+                    background: var(--primary-color);
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                 }
 
                 .navbar-brand {
-                    font-family: 'Press Start 2P', cursive;
+                    font-family: 'Kanit', sans-serif;
                     font-weight: 600;
-                    color: var(--accent-color) !important;
-                }
-
-                .navbar-nav .nav-link {
-                    color: var(--text-color) !important;
-                    transition: color 0.3s ease;
-                }
-
-                .navbar-nav .nav-link:hover {
-                    color: var(--accent-color) !important;
+                    color: #ffffff !important;
                 }
 
                 .glass-card {
@@ -669,13 +598,13 @@ app.get("/start", (req, res) => {
                     border: 1px solid var(--card-border);
                     border-radius: 16px;
                     padding: 24px;
-                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
 
                 .glass-card:hover {
                     transform: translateY(-5px);
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.7);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
                 }
 
                 .add-bot-form .form-label {
@@ -684,8 +613,8 @@ app.get("/start", (req, res) => {
                 }
 
                 .form-control {
-                    background: #2c2c2c;
-                    border: 1px solid #444444;
+                    background: #f1f1f1;
+                    border: 1px solid #ced4da;
                     border-radius: 8px;
                     padding: 10px 12px;
                     font-size: 1rem;
@@ -698,35 +627,35 @@ app.get("/start", (req, res) => {
                 }
 
                 .form-control:focus {
-                    border-color: var(--accent-color);
-                    box-shadow: 0 0 0 0.2rem rgba(0, 255, 0, 0.25);
-                    background: #3c3c3c;
+                    border-color: var(--primary-color);
+                    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+                    background: #e9ecef;
                     color: var(--text-color);
                 }
 
                 .btn-primary {
-                    background: var(--accent-color);
+                    background: var(--primary-color);
                     border: none;
                     padding: 10px 20px;
                     font-size: 1rem;
                     border-radius: 8px;
                     transition: background 0.3s ease, transform 0.2s ease;
-                    color: #000;
+                    color: #fff;
                     font-weight: 600;
                 }
 
                 .btn-primary:hover {
-                    background: #00e600;
+                    background: #0b5ed7;
                     transform: translateY(-2px);
                 }
 
                 .footer {
-                    background: var(--card-bg);
-                    border-top: 2px solid var(--card-border);
+                    background: var(--primary-color);
+                    border-top: 2px solid var(--primary-color);
                     padding: 20px 0;
                     margin-top: 40px;
                     font-size: 0.9rem;
-                    color: var(--accent-color);
+                    color: #ffffff;
                 }
 
                 .animate-float {
@@ -743,62 +672,13 @@ app.get("/start", (req, res) => {
                         margin-bottom: 20px;
                     }
                 }
-
-                /* Custom Scrollbar */
-                ::-webkit-scrollbar {
-                    width: 12px;
-                }
-
-                ::-webkit-scrollbar-track {
-                    background: #1e1e1e;
-                }
-
-                ::-webkit-scrollbar-thumb {
-                    background-color: var(--accent-color);
-                    border-radius: 6px;
-                    border: 3px solid #1e1e1e;
-                }
-
-                /* Additional Styles for Hacker Theme */
-                body::before {
-                    content: "";
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: url('https://i.imgur.com/3Z8dM7V.png') repeat;
-                    opacity: 0.05;
-                    pointer-events: none;
-                    z-index: -1;
-                }
-
-                /* Button Styles */
-                .btn-warning {
-                    background-color: #ffc107;
-                    border: none;
-                    color: #212529;
-                }
-
-                .btn-danger {
-                    background-color: #dc3545;
-                    border: none;
-                }
-
-                .btn-warning:hover {
-                    background-color: #e0a800;
-                }
-
-                .btn-danger:hover {
-                    background-color: #c82333;
-                }
             </style>
         </head>
         <body>
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
-                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: var(--accent-color);"></i>
+                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: #ffffff;"></i>
                         ระบบจัดการบอท
                     </a>
                     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -821,56 +701,42 @@ app.get("/start", (req, res) => {
             </nav>
 
             <div class="container">
-                <!-- สถิติ -->
-                <div class="row mb-4">
-                    <div class="col-md-4 col-sm-6 mb-3">
-                        <div class="stats-card">
-                            <i class="fas fa-robot fa-2x mb-3" style="color: var(--accent-color);"></i>
-                            <div class="stats-number" id="totalBots">${data.totalBots}</div>
-                            <div class="stats-label">บอททั้งหมด</div>
+                <div class="glass-card">
+                    <h5 class="mb-4">
+                        <i class="fas fa-plus-circle me-2" style="color: var(--primary-color);"></i>
+                        เพิ่มบอทใหม่
+                    </h5>
+                    ${errorMessage}
+                    <form class="add-bot-form" method="POST" action="/start">
+                        <div class="mb-3">
+                            <label for="token" class="form-label">โทเค็นของคุณ</label>
+                            <textarea 
+                                id="token" 
+                                name="token" 
+                                class="form-control" 
+                                rows="4" 
+                                placeholder='{"appState": "YOUR_APP_STATE"}'
+                                required
+                            ></textarea>
                         </div>
-                    </div>
-                    <div class="col-md-4 col-sm-6 mb-3">
-                        <div class="stats-card">
-                            <i class="fas fa-signal fa-2x mb-3" style="color: var(--info-color);"></i>
-                            <div class="stats-number" id="onlineBots">${data.onlineBots}</div>
-                            <div class="stats-label">บอทออนไลน์</div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">ตั้งรหัสผ่าน 6 หลักสำหรับการจัดการบอท</label>
+                            <input 
+                                type="password" 
+                                id="password" 
+                                name="password" 
+                                class="form-control" 
+                                pattern="\\d{6}" 
+                                placeholder="123456" 
+                                required
+                                title="กรุณากรอกรหัสผ่าน 6 หลัก"
+                            />
                         </div>
-                    </div>
-                    <div class="col-md-4 col-sm-6 mb-3">
-                        <div class="stats-card">
-                            <i class="fas fa-clock fa-2x mb-3" style="color: var(--secondary-color);"></i>
-                            <div class="stats-number" id="activeBots">${data.activeBots}</div>
-                            <div class="stats-label">บอททำงานแล้ว</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <!-- ตารางบอท -->
-                    <div class="col-12">
-                        <div class="glass-card">
-                            <h5 class="mb-4">
-                                <i class="fas fa-robot me-2" style="color: var(--accent-color);"></i>
-                                บอทที่กำลังทำงาน
-                            </h5>
-                            <div class="table-responsive">
-                                <table class="table bot-table">
-                                    <thead>
-                                        <tr>
-                                            <th>ชื่อบอท</th>
-                                            <th>สถานะ</th>
-                                            <th>เวลารัน</th>
-                                            <th>การจัดการ</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="botTableBody">
-                                        ${data.botRows}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-play me-2"></i>
+                            เริ่มบอท
+                        </button>
+                    </form>
                 </div>
             </div>
 
@@ -881,107 +747,6 @@ app.get("/start", (req, res) => {
             </footer>
 
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-            <script src="/socket.io/socket.io.js"></script>
-            <script>
-                const socket = io();
-
-                // ฟังก์ชันอัปเดตเวลารัน
-                function updateRuntime() {
-                    const runtimeElements = document.querySelectorAll('.runtime');
-                    const now = Date.now();
-
-                    runtimeElements.forEach(el => {
-                        const startTime = parseInt(el.getAttribute('data-start-time'));
-                        if (!startTime) return;
-
-                        const elapsed = now - startTime;
-                        const seconds = Math.floor((elapsed / 1000) % 60);
-                        const minutes = Math.floor((elapsed / (1000 * 60)) % 60);
-                        const hours = Math.floor((elapsed / (1000 * 60 * 60)) % 24);
-                        const days = Math.floor(elapsed / (1000 * 60 * 60 * 24));
-
-                        el.textContent = \`\${days} วัน \${hours} ชั่วโมง \${minutes} นาที \${seconds} วินาที\`;
-                    });
-                }
-
-                // รับข้อมูลอัปเดตจากเซิร์ฟเวอร์
-                socket.on('updateBots', (data) => {
-                    document.getElementById('totalBots').textContent = data.totalBots;
-                    document.getElementById('onlineBots').textContent = data.onlineBots;
-                    document.getElementById('activeBots').textContent = data.activeBots;
-                    
-                    const botTableBody = document.getElementById('botTableBody');
-                    if (botTableBody) {
-                        botTableBody.innerHTML = data.botRows;
-                    }
-
-                    updateRuntime();
-                });
-
-                // อัปเดตเวลารันทุกวินาที
-                setInterval(updateRuntime, 1000);
-                document.addEventListener('DOMContentLoaded', updateRuntime);
-
-                // Event Delegation สำหรับปุ่มลบและแก้ไข
-                document.addEventListener('click', function(event) {
-                    if (event.target.closest('.delete-btn')) {
-                        const token = decodeURIComponent(event.target.closest('.delete-btn').getAttribute('data-token'));
-                        const deleteCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการลบบอท:');
-                        if (deleteCode) {
-                            fetch('/delete', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({ token, code: deleteCode })
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    alert('ลบบอทสำเร็จ');
-                                    // การอัปเดตจะถูกจัดการผ่าน Socket.io
-                                } else {
-                                    alert(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด');
-                                }
-                            })
-                            .catch(err => {
-                                console.error(err);
-                                alert('เกิดข้อผิดพลาดในการลบบอท');
-                            });
-                        }
-                    }
-
-                    if (event.target.closest('.edit-btn')) {
-                        const token = decodeURIComponent(event.target.closest('.edit-btn').getAttribute('data-token'));
-                        const editCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการแก้ไขโทเค่น:');
-                        if (editCode) {
-                            const newToken = prompt('กรุณากรอกโทเค่นใหม่:');
-                            if (newToken) {
-                                fetch('/edit', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json'
-                                    },
-                                    body: JSON.stringify({ token, code: editCode, newToken })
-                                })
-                                .then(response => response.json())
-                                .then(data => {
-                                    if (data.success) {
-                                        alert('แก้ไขโทเค่นสำเร็จ');
-                                        // การอัปเดตจะถูกจัดการผ่าน Socket.io
-                                    } else {
-                                        alert(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด');
-                                    }
-                                })
-                                .catch(err => {
-                                    console.error(err);
-                                    alert('เกิดข้อผิดพลาดในการแก้ไขโทเค่น');
-                                });
-                            }
-                        }
-                    }
-                });
-            </script>
         </body>
         </html>
     `);
@@ -999,53 +764,42 @@ app.get("/bots", (req, res) => {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>ดูบอทรัน | ระบบจัดการบอท</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-            <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* CSS สำหรับธีมแฮกเกอร์ */
+                /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
                 :root {
                     --primary-color: #0d6efd;
                     --secondary-color: #6c757d;
-                    --accent-color: #00ff00;
-                    --background-color: #121212;
-                    --card-bg: #1e1e1e;
-                    --card-border: #333333;
-                    --text-color: #00ff00;
-                    --success-color: #00ff00;
-                    --error-color: #ff0000;
-                    --info-color: #1e90ff;
-                    --bot-name-color: #ff69b4;
-                    --font-family: 'Roboto Mono', monospace;
+                    --accent-color: #198754;
+                    --background-color: #f8f9fa;
+                    --card-bg: #ffffff;
+                    --card-border: #dee2e6;
+                    --text-color: #212529;
+                    --success-color: #198754;
+                    --error-color: #dc3545;
+                    --info-color: #0d6efd;
+                    --bot-name-color: #ff5722;
                 }
 
                 body {
                     background: var(--background-color);
                     color: var(--text-color);
-                    font-family: var(--font-family);
+                    font-family: 'Roboto', sans-serif;
                     min-height: 100vh;
                     position: relative;
                     overflow-x: hidden;
-                    transition: background 0.5s ease;
                 }
 
                 .navbar {
-                    background: var(--card-bg);
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+                    background: var(--primary-color);
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                 }
 
                 .navbar-brand {
-                    font-family: 'Press Start 2P', cursive;
+                    font-family: 'Kanit', sans-serif;
                     font-weight: 600;
-                    color: var(--accent-color) !important;
-                }
-
-                .navbar-nav .nav-link {
-                    color: var(--text-color) !important;
-                    transition: color 0.3s ease;
-                }
-
-                .navbar-nav .nav-link:hover {
-                    color: var(--accent-color) !important;
+                    color: #ffffff !important;
                 }
 
                 .glass-card {
@@ -1053,13 +807,13 @@ app.get("/bots", (req, res) => {
                     border: 1px solid var(--card-border);
                     border-radius: 16px;
                     padding: 24px;
-                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
 
                 .glass-card:hover {
                     transform: translateY(-5px);
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.7);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
                 }
 
                 .bot-table {
@@ -1074,13 +828,13 @@ app.get("/bots", (req, res) => {
                 }
 
                 .bot-table th {
-                    background-color: var(--card-border);
-                    color: var(--accent-color);
+                    background-color: var(--primary-color);
+                    color: #fff;
                     font-weight: 600;
                 }
 
                 .bot-table tr:nth-child(even) {
-                    background-color: #2c2c2c;
+                    background-color: #f1f1f1;
                 }
 
                 .status-online {
@@ -1106,12 +860,12 @@ app.get("/bots", (req, res) => {
                 }
 
                 .footer {
-                    background: var(--card-bg);
-                    border-top: 2px solid var(--card-border);
+                    background: var(--primary-color);
+                    border-top: 2px solid var(--primary-color);
                     padding: 20px 0;
                     margin-top: 40px;
                     font-size: 0.9rem;
-                    color: var(--accent-color);
+                    color: #ffffff;
                 }
 
                 .animate-float {
@@ -1147,62 +901,13 @@ app.get("/bots", (req, res) => {
                 .btn-edit, .btn-delete {
                     margin-right: 5px;
                 }
-
-                /* Custom Scrollbar */
-                ::-webkit-scrollbar {
-                    width: 12px;
-                }
-
-                ::-webkit-scrollbar-track {
-                    background: #1e1e1e;
-                }
-
-                ::-webkit-scrollbar-thumb {
-                    background-color: var(--accent-color);
-                    border-radius: 6px;
-                    border: 3px solid #1e1e1e;
-                }
-
-                /* Additional Styles for Hacker Theme */
-                body::before {
-                    content: "";
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: url('https://i.imgur.com/3Z8dM7V.png') repeat;
-                    opacity: 0.05;
-                    pointer-events: none;
-                    z-index: -1;
-                }
-
-                /* Button Styles */
-                .btn-warning {
-                    background-color: #ffc107;
-                    border: none;
-                    color: #212529;
-                }
-
-                .btn-danger {
-                    background-color: #dc3545;
-                    border: none;
-                }
-
-                .btn-warning:hover {
-                    background-color: #e0a800;
-                }
-
-                .btn-danger:hover {
-                    background-color: #c82333;
-                }
             </style>
         </head>
         <body>
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
-                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: var(--accent-color);"></i>
+                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: #ffffff;"></i>
                         ระบบจัดการบอท
                     </a>
                     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -1214,7 +919,7 @@ app.get("/bots", (req, res) => {
                                 <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
+                                <a class="nav-link active" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
@@ -1374,52 +1079,41 @@ app.get("/commands", (req, res) => {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>คำสั่งที่ใช้ | ระบบจัดการบอท</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-            <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* CSS สำหรับธีมแฮกเกอร์ */
+                /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
                 :root {
                     --primary-color: #0d6efd;
                     --secondary-color: #6c757d;
-                    --accent-color: #00ff00;
-                    --background-color: #121212;
-                    --card-bg: #1e1e1e;
-                    --card-border: #333333;
-                    --text-color: #00ff00;
-                    --success-color: #00ff00;
-                    --error-color: #ff0000;
-                    --info-color: #1e90ff;
-                    --font-family: 'Roboto Mono', monospace;
+                    --accent-color: #198754;
+                    --background-color: #f8f9fa;
+                    --card-bg: #ffffff;
+                    --card-border: #dee2e6;
+                    --text-color: #212529;
+                    --success-color: #198754;
+                    --error-color: #dc3545;
+                    --info-color: #0d6efd;
                 }
 
                 body {
                     background: var(--background-color);
                     color: var(--text-color);
-                    font-family: var(--font-family);
+                    font-family: 'Roboto', sans-serif;
                     min-height: 100vh;
                     position: relative;
                     overflow-x: hidden;
-                    transition: background 0.5s ease;
                 }
 
                 .navbar {
-                    background: var(--card-bg);
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+                    background: var(--primary-color);
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                 }
 
                 .navbar-brand {
-                    font-family: 'Press Start 2P', cursive;
+                    font-family: 'Kanit', sans-serif;
                     font-weight: 600;
-                    color: var(--accent-color) !important;
-                }
-
-                .navbar-nav .nav-link {
-                    color: var(--text-color) !important;
-                    transition: color 0.3s ease;
-                }
-
-                .navbar-nav .nav-link:hover {
-                    color: var(--accent-color) !important;
+                    color: #ffffff !important;
                 }
 
                 .glass-card {
@@ -1427,13 +1121,13 @@ app.get("/commands", (req, res) => {
                     border: 1px solid var(--card-border);
                     border-radius: 16px;
                     padding: 24px;
-                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
 
                 .glass-card:hover {
                     transform: translateY(-5px);
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.7);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
                 }
 
                 .command-table {
@@ -1448,22 +1142,22 @@ app.get("/commands", (req, res) => {
                 }
 
                 .command-table th {
-                    background-color: var(--card-border);
-                    color: var(--accent-color);
+                    background-color: var(--primary-color);
+                    color: #fff;
                     font-weight: 600;
                 }
 
                 .command-table tr:nth-child(even) {
-                    background-color: #2c2c2c;
+                    background-color: #f1f1f1;
                 }
 
                 .footer {
-                    background: var(--card-bg);
-                    border-top: 2px solid var(--card-border);
+                    background: var(--primary-color);
+                    border-top: 2px solid var(--primary-color);
                     padding: 20px 0;
                     margin-top: 40px;
                     font-size: 0.9rem;
-                    color: var(--accent-color);
+                    color: #ffffff;
                 }
 
                 .animate-float {
@@ -1483,62 +1177,13 @@ app.get("/commands", (req, res) => {
                         padding: 8px 10px;
                     }
                 }
-
-                /* Custom Scrollbar */
-                ::-webkit-scrollbar {
-                    width: 12px;
-                }
-
-                ::-webkit-scrollbar-track {
-                    background: #1e1e1e;
-                }
-
-                ::-webkit-scrollbar-thumb {
-                    background-color: var(--accent-color);
-                    border-radius: 6px;
-                    border: 3px solid #1e1e1e;
-                }
-
-                /* Additional Styles for Hacker Theme */
-                body::before {
-                    content: "";
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: url('https://i.imgur.com/3Z8dM7V.png') repeat;
-                    opacity: 0.05;
-                    pointer-events: none;
-                    z-index: -1;
-                }
-
-                /* Button Styles */
-                .btn-warning {
-                    background-color: #ffc107;
-                    border: none;
-                    color: #212529;
-                }
-
-                .btn-danger {
-                    background-color: #dc3545;
-                    border: none;
-                }
-
-                .btn-warning:hover {
-                    background-color: #e0a800;
-                }
-
-                .btn-danger:hover {
-                    background-color: #c82333;
-                }
             </style>
         </head>
         <body>
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
-                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: var(--accent-color);"></i>
+                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: #ffffff;"></i>
                         ระบบจัดการบอท
                     </a>
                     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
