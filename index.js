@@ -11,7 +11,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "*",
+        origin: "*", // ปรับตามความต้องการ
         methods: ["GET", "POST"]
     }
 });
@@ -71,7 +71,7 @@ function generateBotData() {
     const totalBots = Object.keys(botSessions).length;
     const onlineBots = Object.values(botSessions).filter(bot => bot.status === 'online').length;
     const activeBots = Object.values(botSessions).filter(bot => bot.status === 'active').length;
-
+    
     const botRows = Object.entries(botSessions).map(([token, bot]) => `
         <tr id="bot-${token}">
             <td>
@@ -123,6 +123,10 @@ function generateCommandData() {
 
 // หน้าแดชบอร์ดหลัก
 app.get("/", (req, res) => {
+    const totalBots = Object.keys(botSessions).length;
+    const onlineBots = Object.values(botSessions).filter(bot => bot.status === 'online').length;
+    const activeBots = Object.values(botSessions).filter(bot => bot.status === 'active').length;
+
     res.send(`
         <!DOCTYPE html>
         <html lang="th">
@@ -330,7 +334,7 @@ app.get("/", (req, res) => {
                                 <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
+                                <a class="nav-link active" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
@@ -346,21 +350,21 @@ app.get("/", (req, res) => {
                     <div class="col-md-4 col-sm-6 mb-3">
                         <div class="stats-card">
                             <i class="fas fa-robot fa-2x mb-3" style="color: var(--primary-color);"></i>
-                            <div class="stats-number" id="totalBots">${Object.keys(botSessions).length}</div>
+                            <div class="stats-number" id="totalBots">${totalBots}</div>
                             <div class="stats-label">บอททั้งหมด</div>
                         </div>
                     </div>
                     <div class="col-md-4 col-sm-6 mb-3">
                         <div class="stats-card">
                             <i class="fas fa-signal fa-2x mb-3" style="color: var(--info-color);"></i>
-                            <div class="stats-number" id="onlineBots">${Object.values(botSessions).filter(bot => bot.status === 'online').length}</div>
+                            <div class="stats-number" id="onlineBots">${onlineBots}</div>
                             <div class="stats-label">บอทออนไลน์</div>
                         </div>
                     </div>
                     <div class="col-md-4 col-sm-6 mb-3">
                         <div class="stats-card">
                             <i class="fas fa-clock fa-2x mb-3" style="color: var(--secondary-color);"></i>
-                            <div class="stats-number" id="activeBots">${Object.values(botSessions).filter(bot => bot.status === 'active').length}</div>
+                            <div class="stats-number" id="activeBots">${activeBots}</div>
                             <div class="stats-label">บอททำงานแล้ว</div>
                         </div>
                     </div>
@@ -425,11 +429,7 @@ app.get("/", (req, res) => {
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
             <script src="/socket.io/socket.io.js"></script>
             <script>
-                const socket = io({
-                    reconnectionAttempts: 5, // จำนวนครั้งที่ลองเชื่อมต่อใหม่
-                    reconnectionDelay: 1000, // เวลาระหว่างการลองเชื่อมต่อใหม่ (มิลลิวินาที)
-                });
-
+                const socket = io();
                 const removalTimers = {};
 
                 // ฟังก์ชันอัปเดตเวลารัน
@@ -498,19 +498,6 @@ app.get("/", (req, res) => {
                 // อัปเดตเวลารันทุกวินาที
                 setInterval(updateRuntime, 1000);
                 document.addEventListener('DOMContentLoaded', updateRuntime);
-
-                // จัดการการเชื่อมต่อใหม่
-                socket.on('reconnect_attempt', () => {
-                    console.log('🔄 กำลังลองเชื่อมต่อใหม่...');
-                });
-
-                socket.on('reconnect_failed', () => {
-                    console.log('🔌 การเชื่อมต่อใหม่ล้มเหลว');
-                });
-
-                socket.on('connect_error', (err) => {
-                    console.log(`🔌 การเชื่อมต่อล้มเหลว: ${err.message}`);
-                });
             </script>
         </body>
         </html>
@@ -519,6 +506,8 @@ app.get("/", (req, res) => {
 
 // หน้าเพิ่มบอท
 app.get("/start", (req, res) => {
+    const error = req.query.error ? `<div class="alert alert-danger" role="alert">${req.query.error === 'already-running' ? 'บอทนี้กำลังทำงานอยู่แล้ว' : 'โทเค็นไม่ถูกต้อง'}</div>` : '';
+
     res.send(`
         <!DOCTYPE html>
         <html lang="th">
@@ -658,6 +647,10 @@ app.get("/start", (req, res) => {
                         margin-bottom: 20px;
                     }
                 }
+
+                .alert {
+                    margin-bottom: 20px;
+                }
             </style>
         </head>
         <body>
@@ -687,6 +680,7 @@ app.get("/start", (req, res) => {
             </nav>
 
             <div class="container">
+                ${error}
                 <div class="glass-card">
                     <h5 class="mb-4">
                         <i class="fas fa-plus-circle me-2" style="color: var(--primary-color);"></i>
@@ -903,7 +897,7 @@ app.get("/bots", (req, res) => {
                                 <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
+                                <a class="nav-link active" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
@@ -969,11 +963,7 @@ app.get("/bots", (req, res) => {
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
             <script src="/socket.io/socket.io.js"></script>
             <script>
-                const socket = io({
-                    reconnectionAttempts: 5, // จำนวนครั้งที่ลองเชื่อมต่อใหม่
-                    reconnectionDelay: 1000, // เวลาระหว่างการลองเชื่อมต่อใหม่ (มิลลิวินาที)
-                });
-
+                const socket = io();
                 const removalTimers = {};
 
                 // ฟังก์ชันอัปเดตเวลารัน
@@ -1042,19 +1032,6 @@ app.get("/bots", (req, res) => {
                 // อัปเดตเวลารันทุกวินาที
                 setInterval(updateRuntime, 1000);
                 document.addEventListener('DOMContentLoaded', updateRuntime);
-
-                // จัดการการเชื่อมต่อใหม่
-                socket.on('reconnect_attempt', () => {
-                    console.log('🔄 กำลังลองเชื่อมต่อใหม่...');
-                });
-
-                socket.on('reconnect_failed', () => {
-                    console.log('🔌 การเชื่อมต่อใหม่ล้มเหลว');
-                });
-
-                socket.on('connect_error', (err) => {
-                    console.log(`🔌 การเชื่อมต่อล้มเหลว: ${err.message}`);
-                });
             </script>
         </body>
         </html>
@@ -1266,7 +1243,6 @@ app.post('/start', async (req, res) => {
         await startBot(appState, tokenInput, botName, startTime);
         res.redirect('/bots');
         io.emit('updateBots', generateBotData());
-        io.emit('updateCommands', generateCommandData());
     } catch (err) {
         console.error(chalk.red(`❌ เกิดข้อผิดพลาดในการเริ่มบอท: ${err.message}`));
         botCount--;
@@ -1299,7 +1275,8 @@ async function startBot(appState, token, name, startTime) {
 
             api.setOptions({ listenEvents: true });
 
-            api.listenMqtt(async (err, event) => {
+            // เพิ่มฟังก์ชันเพื่อจัดการการเชื่อมต่อบอท
+            function handleBotEvents(err, event) {
                 if (err) {
                     console.error(chalk.red(`❌ เกิดข้อผิดพลาด: ${err}`));
                     botSessions[token].status = 'offline';
@@ -1315,7 +1292,7 @@ async function startBot(appState, token, name, startTime) {
                 if (event.logMessageType && events[event.logMessageType]) {
                     for (const eventHandler of events[event.logMessageType]) {
                         try {
-                            await eventHandler.run({ api, event });
+                            eventHandler.run({ api, event });
                             console.log(chalk.blue(`🔄 ประมวลผลอีเวนต์: ${eventHandler.config.name}`));
                         } catch (error) {
                             console.error(chalk.red(`❌ เกิดข้อผิดพลาดในอีเวนต์ ${eventHandler.config.name}:`, error));
@@ -1335,7 +1312,7 @@ async function startBot(appState, token, name, startTime) {
 
                     if (command && typeof command.run === "function") {
                         try {
-                            await command.run({ api, event, args });
+                            command.run({ api, event, args });
                             console.log(chalk.green(`✅ รันคำสั่ง: ${commandName}`));
                             // เพิ่มตัวนับการใช้คำสั่ง
                             commandUsage[commandName] = (commandUsage[commandName] || 0) + 1;
@@ -1355,7 +1332,10 @@ async function startBot(appState, token, name, startTime) {
                 if (botSessions[token].status === 'online' && removalTimers[token]) {
                     clearCountdown(token);
                 }
-            });
+            }
+
+            // เริ่มฟังอีเวนต์ของบอท
+            api.listenMqtt(handleBotEvents);
 
             io.emit('updateBots', generateBotData());
             resolve();
@@ -1386,6 +1366,194 @@ function clearCountdown(token) {
         console.log(chalk.yellow(`⚠️ ยกเลิกการลบบอท ${botSessions[token].name}`));
     }
 }
+
+// หน้าแสดงคำสั่งที่ใช้
+app.get("/commands", (req, res) => {
+    const commandsData = generateCommandData();
+
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="th">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>คำสั่งที่ใช้ | ระบบจัดการบอท</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <style>
+                /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
+                :root {
+                    --primary-color: #0d6efd;
+                    --secondary-color: #6c757d;
+                    --accent-color: #198754;
+                    --background-color: #121212;
+                    --card-bg: rgba(255, 255, 255, 0.1);
+                    --card-border: rgba(255, 255, 255, 0.2);
+                    --text-color: #ffffff;
+                    --success-color: #198754;
+                    --error-color: #dc3545;
+                    --info-color: #0d6efd;
+                }
+
+                body {
+                    background: var(--background-color);
+                    color: var(--text-color);
+                    font-family: 'Roboto', sans-serif;
+                    min-height: 100vh;
+                    position: relative;
+                    overflow-x: hidden;
+                }
+
+                body::before {
+                    content: '';
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: 
+                        radial-gradient(circle at 20% 20%, rgba(13, 110, 253, 0.15) 0%, transparent 40%),
+                        radial-gradient(circle at 80% 80%, rgba(25, 135, 84, 0.15) 0%, transparent 40%);
+                    pointer-events: none;
+                    z-index: -1;
+                }
+
+                .navbar {
+                    background: rgba(0, 0, 0, 0.8);
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    border-bottom: 2px solid var(--primary-color);
+                }
+
+                .navbar-brand {
+                    font-family: 'Kanit', sans-serif;
+                    font-weight: 600;
+                    color: var(--text-color) !important;
+                }
+
+                .glass-card {
+                    background: var(--card-bg);
+                    border: 1px solid var(--card-border);
+                    border-radius: 16px;
+                    padding: 24px;
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                }
+
+                .glass-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+                }
+
+                .command-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 20px;
+                }
+
+                .command-table th, .command-table td {
+                    padding: 12px 15px;
+                    text-align: left;
+                }
+
+                .command-table th {
+                    background-color: var(--primary-color);
+                    color: #fff;
+                    font-weight: 600;
+                }
+
+                .command-table tr:nth-child(even) {
+                    background-color: rgba(13, 110, 253, 0.05);
+                }
+
+                .footer {
+                    background: rgba(0, 0, 0, 0.8);
+                    border-top: 2px solid var(--primary-color);
+                    padding: 20px 0;
+                    margin-top: 40px;
+                    font-size: 0.9rem;
+                    color: var(--text-color);
+                }
+
+                .animate-float {
+                    animation: float 3s ease-in-out infinite;
+                }
+
+                @keyframes float {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-10px); }
+                }
+
+                @media (max-width: 768px) {
+                    .glass-card {
+                        margin-bottom: 20px;
+                    }
+                    .command-table th, .command-table td {
+                        padding: 8px 10px;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+                <div class="container">
+                    <a class="navbar-brand d-flex align-items-center" href="/">
+                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: var(--primary-color);"></i>
+                        ระบบจัดการบอท
+                    </a>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav ms-auto">
+                            <li class="nav-item">
+                                <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link active" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="container">
+                <!-- ตารางคำสั่งที่ใช้ -->
+                <div class="glass-card">
+                    <h5 class="mb-4">
+                        <i class="fas fa-terminal me-2" style="color: var(--secondary-color);"></i>
+                        คำสั่งที่ใช้
+                    </h5>
+                    <div class="table-responsive">
+                        <table class="table command-table">
+                            <thead>
+                                <tr>
+                                    <th>ชื่อคำสั่ง</th>
+                                    <th>จำนวนที่ใช้</th>
+                                </tr>
+                            </thead>
+                            <tbody id="commandTableBody">
+                                ${commandsData}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="footer text-center">
+                <div class="container">
+                    <p class="mb-0">© ${new Date().getFullYear()} ระบบจัดการบอท | พัฒนาด้วย ❤️</p>
+                </div>
+            </footer>
+
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        </body>
+        </html>
+    `);
+});
 
 // Socket.io สำหรับหน้าแดชบอร์ดหลักและดูบอทรัน
 io.on('connection', (socket) => {
