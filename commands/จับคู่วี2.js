@@ -1,3 +1,6 @@
+const axios = require("axios");
+const fs = require("fs-extra");
+
 module.exports.config = {
   name: "จับคู่วี2",
   version: "2.0.0", 
@@ -10,14 +13,12 @@ module.exports.config = {
 };
 
 module.exports.run = async function({ api, event, Threads, Users }) {
-        const axios = global.nodemodule["axios"];
-        const fs = global.nodemodule["fs-extra"];
-
+    try {
         var { participantIDs } = (await Threads.getData(event.threadID)).threadInfo;
         var tle = Math.floor(Math.random() * 101); // สุ่มเปอร์เซ็นต์ความรัก
         var namee = (await Users.getData(event.senderID)).name;
         const botID = api.getCurrentUserID();
-        const listUserID = event.participantIDs.filter(ID => ID != botID && ID != event.senderID); // กรองรายชื่อผู้ใช้
+        const listUserID = participantIDs.filter(ID => ID != botID && ID != event.senderID); // กรองรายชื่อผู้ใช้
         var id = listUserID[Math.floor(Math.random() * listUserID.length)];
         var name = (await Users.getData(id)).name;
 
@@ -58,4 +59,8 @@ module.exports.run = async function({ api, event, Threads, Users }) {
         };
 
         return api.sendMessage(msg, event.threadID, event.messageID);
-}
+    } catch (err) {
+        console.error(err);
+        return api.sendMessage("❌ เกิดข้อผิดพลาดในการจับคู่ ลองใหม่อีกครั้ง!", event.threadID, event.messageID);
+    }
+};
