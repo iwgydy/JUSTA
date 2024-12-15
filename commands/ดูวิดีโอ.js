@@ -1,9 +1,12 @@
 const axios = require("axios");
+const ytdl = require("ytdl-core");
+const fs = require("fs");
+const path = require("path");
 
 module.exports = {
     config: {
         name: "ดูวิดีโอยูทูป",
-        description: "ค้นหาและแสดงวิดีโอ YouTube ผลลัพธ์แรก",
+        description: "ค้นหาและส่งวิดีโอ YouTube เป็นไฟล์",
         usage: "!ดูวิดีโอยูทูป <ชื่อวิดีโอ>",
         permissions: "everyone",
     },
@@ -20,6 +23,7 @@ module.exports = {
         const apiUrl = `https://nethwieginedev.vercel.app/api/ytsearch3?name=${encodeURIComponent(query)}`;
 
         try {
+            // ค้นหาวิดีโอ
             const response = await axios.get(apiUrl);
             const videos = response.data.result;
 
@@ -33,11 +37,44 @@ module.exports = {
 
             // เลือกรายการแรก
             const video = videos[0];
+            const videoUrl = video.url;
 
-            // ส่งลิงก์วิดีโอโดยตรงเพื่อให้แพลตฟอร์มแสดงตัวอย่างคลิป
-            const message = `🎬 ${video.title}\n⏱️ ระยะเวลา: ${video.duration}\n\n${video.url}`;
+            // แจ้งสถานะการดาวน์โหลด
+            api.sendMessage(
+                `🎬 กำลังดาวน์โหลดวิดีโอ: ${video.title}\n⏱️ ระยะเวลา: ${video.duration}`,
+                event.threadID,
+                event.messageID
+            );
 
-            return api.sendMessage(message, event.threadID, event.messageID);
+            // ดาวน์โหลดวิดีโอ
+            const videoPath = path.join(__dirname, `../../downloads/${video.id}.mp4`);
+            const videoStream = ytdl(videoUrl, { quality: "highest" });
+
+            videoStream.pipe(fs.createWriteStream(videoPath));
+
+            videoStream.on("end", async () => {
+                // ส่งวิดีโอหลังจากดาวน์โหลดเสร็จ
+                api.sendMessage(
+                    {
+                        body: `🎬 นี่คือวิดีโอ: ${video.title}`,
+                        attachment: fs.createReadStream(videoPath),
+                    },
+                    event.threadID,
+                    () => {
+                        // ลบไฟล์หลังส่งเสร็จ
+                        fs.unlinkSync(videoPath);
+                    }
+                );
+            });
+
+            videoStream.on("error", (err) => {
+                console.error("❌ Error downloading video:", err.message);
+                api.sendMessage(
+                    "❗ เกิดข้อผิดพลาดในการดาวน์โหลดวิดีโอ",
+                    event.threadID,
+                    event.messageID
+                );
+            });
         } catch (error) {
             console.error("❌ Error fetching YouTube data:", error.message);
             return api.sendMessage(
