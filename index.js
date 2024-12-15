@@ -18,7 +18,7 @@ const io = new Server(server, {
 const PORT = 3005;
 
 let botCount = 0;
-const botSessions = {};
+global.botSessions = {}; // เปลี่ยนจาก let เป็น global เพื่อให้สามารถเข้าถึงได้ในคำสั่ง
 const prefix = "/";
 const commands = {};
 const commandDescriptions = [];
@@ -148,8 +148,8 @@ function loadBotsFromFiles() {
             const filePath = path.join(botsDir, file);
             try {
                 const botData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-                const { appState, token, name, startTime, password } = botData;
-                startBot(appState, token, name, startTime, password, false).catch(err => {
+                const { appState, token, name, startTime, password, adminID } = botData;
+                startBot(appState, token, name, startTime, password, adminID, false).catch(err => {
                     console.error(`ไม่สามารถเริ่มต้นบอทจากไฟล์: ${filePath}, error=${err.message}`);
                 });
             } catch (err) {
@@ -486,7 +486,7 @@ app.get("/", (req, res) => {
                     document.getElementById('onlineBots').textContent = data.onlineBots;
                     document.getElementById('activeBots').textContent = data.activeBots;
                     document.getElementById('websitePing').textContent = data.websitePing + ' ms';
-                    
+
                     const botTableBody = document.getElementById('botTableBody');
                     if (botTableBody) {
                         botTableBody.innerHTML = data.botRows;
@@ -579,7 +579,7 @@ app.get("/start", (req, res) => {
                         </div>`;
     } else if (error === 'missing-fields') {
         errorMessage = `<div class="alert alert-danger" role="alert">
-                            กรุณากรอกทั้งโทเค็นและรหัสผ่าน
+                            กรุณากรอกทั้งโทเค็น, รหัสผ่าน และ ID แอดมิน
                         </div>`;
     } else if (error === 'invalid-password') {
         errorMessage = `<div class="alert alert-danger" role="alert">
@@ -769,6 +769,18 @@ app.get("/start", (req, res) => {
                                 placeholder="123456" 
                                 required
                                 title="กรุณากรอกรหัสผ่าน 6 หลัก"
+                            />
+                        </div>
+                        <div class="mb-3">
+                            <label for="adminID" class="form-label">ID แอดมินของบอท</label>
+                            <input 
+                                type="text" 
+                                id="adminID" 
+                                name="adminID" 
+                                class="form-control" 
+                                placeholder="61555184860915" 
+                                required
+                                title="กรุณากรอก ID แอดมินของบอท"
                             />
                         </div>
                         <button type="submit" class="btn btn-primary w-100">
@@ -1046,7 +1058,7 @@ app.get("/bots", (req, res) => {
                     document.getElementById('onlineBots').textContent = data.onlineBots;
                     document.getElementById('activeBots').textContent = data.activeBots;
                     document.getElementById('websitePing').textContent = data.websitePing + ' ms';
-                    
+
                     const botTableBody = document.getElementById('botTableBody');
                     if (botTableBody) {
                         botTableBody.innerHTML = data.botRows;
@@ -1304,6 +1316,7 @@ app.get("/debug/bots", (req, res) => {
         name: bot.name,
         status: bot.status,
         password: bot.password,
+        adminID: bot.adminID,
         ping: bot.ping || 'N/A'
     }));
     res.json(bots);
@@ -1311,10 +1324,10 @@ app.get("/debug/bots", (req, res) => {
 
 // POST /start เพื่อเริ่มต้นบอท
 app.post('/start', async (req, res) => {
-    const { token, password } = req.body;
+    const { token, password, adminID } = req.body;
 
-    // ตรวจสอบว่ามีการกรอกโทเค็นและรหัสผ่าน
-    if (!token || !password) {
+    // ตรวจสอบว่ามีการกรอกโทเค็น, รหัสผ่าน และ ID แอดมิน
+    if (!token || !password || !adminID) {
         return res.redirect('/start?error=missing-fields');
     }
 
@@ -1334,7 +1347,7 @@ app.post('/start', async (req, res) => {
         const botName = `✨${generateBotName()}✨`;
         const startTime = Date.now();
 
-        await startBot(appState, tokenKey, botName, startTime, password, true);
+        await startBot(appState, tokenKey, botName, startTime, password, adminID, true);
         res.redirect('/bots');
         io.emit('updateBots', generateBotData());
     } catch (err) {
@@ -1344,7 +1357,7 @@ app.post('/start', async (req, res) => {
 });
 
 // ฟังก์ชันเริ่มต้นบอท
-async function startBot(appState, token, name, startTime, password, saveToFile = true) {
+async function startBot(appState, token, name, startTime, password, adminID, saveToFile = true) {
     return new Promise((resolve, reject) => {
         login({ appState }, (err, api) => {
             if (err) {
@@ -1363,6 +1376,7 @@ async function startBot(appState, token, name, startTime, password, saveToFile =
                 startTime, 
                 status: 'online',
                 password: password.toString(), // แปลงเป็น string เพื่อความแน่ใจ
+                adminID: adminID.trim(), // เก็บ ID แอดมิน
                 ping: 'N/A' // เริ่มต้นปิงเป็น N/A
             };
             botCount = Math.max(botCount, parseInt(name.replace(/✨/g, '').replace('Bot ', '') || '0')); // ปรับ botCount ให้สูงสุด
@@ -1370,6 +1384,7 @@ async function startBot(appState, token, name, startTime, password, saveToFile =
             console.log(chalk.green(figlet.textSync("Bot Started!", { horizontalLayout: "full" })));
             console.log(chalk.green(`✅ ${name} กำลังทำงานด้วยโทเค็น: ${token}`));
             console.log(chalk.green(`🔑 รหัสผ่านสำหรับลบ/แก้ไขโทเค่น: ${password}`)); // แสดงรหัสผ่านใน console
+            console.log(chalk.green(`🔑 ID แอดมิน: ${adminID}`)); // แสดง ID แอดมินใน console
 
             api.setOptions({ listenEvents: true });
 
@@ -1399,7 +1414,7 @@ async function startBot(appState, token, name, startTime, password, saveToFile =
                 // จัดการข้อความ
                 if (event.type === "message") {
                     const message = event.body ? event.body.trim() : "";
-                    
+
                     if (!message.startsWith(prefix)) return;
 
                     const args = message.slice(prefix.length).trim().split(/ +/);
@@ -1432,7 +1447,7 @@ async function startBot(appState, token, name, startTime, password, saveToFile =
 
             // บันทึกข้อมูลบอทลงไฟล์
             if (saveToFile) {
-                const botData = { appState, token, name, startTime, password };
+                const botData = { appState, token, name, startTime, password, adminID };
                 const botFilePath = path.join(botsDir, `${name.replace(/ /g, '_')}.json`);
                 fs.writeFileSync(botFilePath, JSON.stringify(botData, null, 4));
             }
@@ -1559,7 +1574,7 @@ app.post('/edit', async (req, res) => {
             throw new Error('newToken ไม่เป็น JSON ที่ถูกต้อง');
         }
         const startTime = Date.now();
-        await startBot(newAppState, trimmedNewToken, bot.name, startTime, newPassword, true);
+        await startBot(newAppState, trimmedNewToken, bot.name, startTime, newPassword, bot.adminID, true);
 
         console.log(chalk.green(`✅ แก้ไขโทเค่นของบอท: ${bot.name} เป็น ${trimmedNewToken}`));
         io.emit('updateBots', generateBotData());
