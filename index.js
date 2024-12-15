@@ -19,7 +19,6 @@ const PORT = 3005;
 
 let botCount = 0;
 const botSessions = {};
-const pendingDeletions = {}; // เพิ่มวัตถุสำหรับติดตามการลบบอทที่กำลังดำเนินการ
 const prefix = "/";
 const commands = {};
 const commandDescriptions = [];
@@ -151,66 +150,6 @@ function loadBotsFromFiles() {
     });
 }
 
-// ฟังก์ชันช่วยเหลือในการสร้างชื่อบอทที่สวยงาม
-function generateBotName() {
-    const adjectives = ["Super", "Mega", "Ultra", "Hyper", "Turbo", "Alpha", "Beta", "Gamma", "Delta"];
-    const nouns = ["Dragon", "Phoenix", "Falcon", "Tiger", "Lion", "Eagle", "Shark", "Wolf", "Leopard"];
-    const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const noun = nouns[Math.floor(Math.random() * nouns.length)];
-    return `${adjective}${noun}`;
-}
-
-// ฟังก์ชันลบบอทแบบบังคับ (ใช้สำหรับการลบอัตโนมัติเมื่อบอทเป็นออฟไลน์)
-async function forceDeleteBot(token) {
-    const bot = botSessions[token];
-    if (!bot) return;
-
-    try {
-        if (typeof bot.api.logout === 'function') {
-            await new Promise((resolve, reject) => {
-                bot.api.logout((err) => {
-                    if (err) return reject(err);
-                    resolve();
-                });
-            });
-            console.log(`บอทถูกหยุดทำงาน: ${bot.name}`);
-        }
-
-        // ลบไฟล์บอท
-        const botFilePath = path.join(botsDir, `${bot.name.replace(/ /g, '_')}.json`);
-        if (fs.existsSync(botFilePath)) {
-            fs.unlinkSync(botFilePath);
-            console.log(`ลบไฟล์บอท: ${botFilePath}`);
-        }
-
-        // ลบจาก botSessions
-        delete botSessions[token];
-        console.log(`ลบบอทจาก botSessions: ${token}`);
-
-        io.emit('updateBots', generateBotData());
-    } catch (err) {
-        console.error(`ไม่สามารถหยุดบอท: ${err.message}`);
-    }
-}
-
-// ฟังก์ชันเพื่อกำหนดเวลาในการลบบอทหลังจากเป็นออฟไลน์
-function scheduleDeletion(token) {
-    if (pendingDeletions[token]) return; // มีการตั้งเวลาไว้แล้ว
-    const timer = setTimeout(() => {
-        forceDeleteBot(token);
-        delete pendingDeletions[token];
-    }, 60000); // 60 วินาที
-    pendingDeletions[token] = timer;
-}
-
-// ฟังก์ชันเพื่อยกเลิกการตั้งเวลาในการลบบอท
-function cancelDeletion(token) {
-    if (pendingDeletions[token]) {
-        clearTimeout(pendingDeletions[token]);
-        delete pendingDeletions[token];
-    }
-}
-
 // หน้าแดชบอร์ดหลัก
 app.get("/", (req, res) => {
     const data = generateBotData(); // เรียกใช้ generateBotData()
@@ -226,7 +165,7 @@ app.get("/", (req, res) => {
             <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
+                /* CSS */
                 :root {
                     --primary-color: #0d6efd;
                     --secondary-color: #6c757d;
@@ -374,7 +313,6 @@ app.get("/", (req, res) => {
                     font-size: 1.1rem;
                 }
 
-                /* ปรับแต่งตำแหน่งและสไตล์ของปิงเว็บไซต์ */
                 .website-ping {
                     position: fixed;
                     top: 20px;
@@ -410,11 +348,6 @@ app.get("/", (req, res) => {
                         font-size: 0.9rem;
                         padding: 8px 12px;
                     }
-                }
-
-                /* Styles for Edit and Delete Buttons */
-                .btn-edit, .btn-delete {
-                    margin-right: 5px;
                 }
             </style>
         </head>
@@ -474,7 +407,6 @@ app.get("/", (req, res) => {
                             <div class="stats-label">บอททำงานแล้ว</div>
                         </div>
                     </div>
-                    <!-- ลบคอลัมน์ปิงเว็บไซต์จากสถิติ -->
                 </div>
 
                 <div class="row">
@@ -592,7 +524,6 @@ app.get("/", (req, res) => {
                             .then(data => {
                                 if (data.success) {
                                     alert('ลบบอทสำเร็จ');
-                                    // การอัปเดตจะถูกจัดการผ่าน Socket.io
                                 } else {
                                     alert(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด');
                                 }
@@ -621,7 +552,6 @@ app.get("/", (req, res) => {
                                 .then(data => {
                                     if (data.success) {
                                         alert('แก้ไขโทเค่นสำเร็จ');
-                                        // การอัปเดตจะถูกจัดการผ่าน Socket.io
                                     } else {
                                         alert(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด');
                                     }
@@ -674,7 +604,7 @@ app.get("/start", (req, res) => {
             <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
+                /* CSS */
                 :root {
                     --primary-color: #0d6efd;
                     --secondary-color: #6c757d;
@@ -781,12 +711,6 @@ app.get("/start", (req, res) => {
                     0%, 100% { transform: translateY(0); }
                     50% { transform: translateY(-10px); }
                 }
-
-                @media (max-width: 768px) {
-                    .glass-card {
-                        margin-bottom: 20px;
-                    }
-                }
             </style>
         </head>
         <body>
@@ -882,7 +806,7 @@ app.get("/bots", (req, res) => {
             <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
+                /* CSS */
                 :root {
                     --primary-color: #0d6efd;
                     --secondary-color: #6c757d;
@@ -1007,20 +931,6 @@ app.get("/bots", (req, res) => {
                     color: var(--bot-name-color);
                     font-size: 1.1rem;
                 }
-
-                @media (max-width: 768px) {
-                    .glass-card {
-                        margin-bottom: 20px;
-                    }
-                    .bot-table th, .bot-table td {
-                        padding: 8px 10px;
-                    }
-                }
-
-                /* Styles for Edit and Delete Buttons */
-                .btn-edit, .btn-delete {
-                    margin-right: 5px;
-                }
             </style>
         </head>
         <body>
@@ -1085,7 +995,6 @@ app.get("/bots", (req, res) => {
             <script>
                 const socket = io();
 
-                // ฟังก์ชันอัปเดตเวลารัน
                 function updateRuntime() {
                     const runtimeElements = document.querySelectorAll('.runtime');
                     const now = Date.now();
@@ -1104,17 +1013,11 @@ app.get("/bots", (req, res) => {
                     });
                 }
 
-                // รับข้อมูลอัปเดตจากเซิร์ฟเวอร์
                 socket.on('updateBots', (data) => {
-                    document.getElementById('totalBots').textContent = data.totalBots;
-                    document.getElementById('onlineBots').textContent = data.onlineBots;
-                    document.getElementById('activeBots').textContent = data.activeBots;
-
                     const botTableBody = document.getElementById('botTableBody');
                     if (botTableBody) {
                         botTableBody.innerHTML = data.botRows;
                     }
-
                     updateRuntime();
                 });
 
@@ -1125,7 +1028,6 @@ app.get("/bots", (req, res) => {
                     }
                 });
 
-                // ฟังก์ชันอัปเดตปิงเว็บไซต์
                 function sendPing() {
                     const startTime = Date.now();
                     socket.emit('customPing', startTime);
@@ -1133,18 +1035,19 @@ app.get("/bots", (req, res) => {
 
                 socket.on('customPong', (pongTime) => {
                     const latency = Date.now() - pongTime;
-                    document.getElementById('websitePing').textContent = latency + ' ms';
+                    // อาจไม่มี websitePing ในหน้านี้ ดังนั้นตรวจสอบก่อน
+                    const websitePingEl = document.getElementById('websitePing');
+                    if (websitePingEl) {
+                        websitePingEl.textContent = latency + ' ms';
+                    }
                 });
 
-                // ส่ง ping ทุกๆ 1 วินาที
                 setInterval(sendPing, 1000);
-                sendPing(); // ส่ง ping ทันทีเมื่อโหลดหน้า
+                sendPing();
 
-                // อัปเดตเวลารันทุกวินาที
                 setInterval(updateRuntime, 1000);
                 document.addEventListener('DOMContentLoaded', updateRuntime);
 
-                // Event Delegation สำหรับปุ่มลบและแก้ไข
                 document.addEventListener('click', function(event) {
                     if (event.target.closest('.delete-btn')) {
                         const token = decodeURIComponent(event.target.closest('.delete-btn').getAttribute('data-token'));
@@ -1161,7 +1064,6 @@ app.get("/bots", (req, res) => {
                             .then(data => {
                                 if (data.success) {
                                     alert('ลบบอทสำเร็จ');
-                                    // การอัปเดตจะถูกจัดการผ่าน Socket.io
                                 } else {
                                     alert(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด');
                                 }
@@ -1190,7 +1092,6 @@ app.get("/bots", (req, res) => {
                                 .then(data => {
                                     if (data.success) {
                                         alert('แก้ไขโทเค่นสำเร็จ');
-                                        // การอัปเดตจะถูกจัดการผ่าน Socket.io
                                     } else {
                                         alert(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด');
                                     }
@@ -1224,7 +1125,7 @@ app.get("/commands", (req, res) => {
             <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
+                /* CSS */
                 :root {
                     --primary-color: #0d6efd;
                     --secondary-color: #6c757d;
@@ -1310,15 +1211,6 @@ app.get("/commands", (req, res) => {
                     0%, 100% { transform: translateY(0); }
                     50% { transform: translateY(-10px); }
                 }
-
-                @media (max-width: 768px) {
-                    .glass-card {
-                        margin-bottom: 20px;
-                    }
-                    .command-table th, .command-table td {
-                        padding: 8px 10px;
-                    }
-                }
             </style>
         </head>
         <body>
@@ -1389,7 +1281,6 @@ app.get("/debug/bots", (req, res) => {
         name: bot.name,
         status: bot.status,
         password: bot.password,
-        // ลบ ping ออกเพราะไม่ต้องการตรวจสอบปิงแต่ละบอทแล้ว
     }));
     res.json(bots);
 });
@@ -1398,12 +1289,10 @@ app.get("/debug/bots", (req, res) => {
 app.post('/start', async (req, res) => {
     const { token, password } = req.body;
 
-    // ตรวจสอบว่ามีการกรอกโทเค็นและรหัสผ่าน
     if (!token || !password) {
         return res.redirect('/start?error=missing-fields');
     }
 
-    // ตรวจสอบรูปแบบของรหัสผ่าน (ต้องเป็นเลข 6 หลัก)
     const passwordRegex = /^\d{6}$/;
     if (!passwordRegex.test(password)) {
         return res.redirect('/start?error=invalid-password');
@@ -1428,7 +1317,6 @@ app.post('/start', async (req, res) => {
     }
 });
 
-// ฟังก์ชันเริ่มต้นบอท
 async function startBot(appState, token, name, startTime, password, saveToFile = true) {
     return new Promise((resolve, reject) => {
         login({ appState }, (err, api) => {
@@ -1447,32 +1335,34 @@ async function startBot(appState, token, name, startTime, password, saveToFile =
                 name, 
                 startTime, 
                 status: 'online',
-                password: password.toString() // แปลงเป็น string เพื่อความแน่ใจ
-                // ลบ lastEventTime และ ping ออก
+                password: password.toString()
             };
-            botCount = Math.max(botCount, parseInt(name.replace(/✨/g, '').replace('Bot ', '') || '0')); // ปรับ botCount ให้สูงสุด
+            botCount = Math.max(botCount, parseInt(name.replace(/✨/g, '').replace('Bot ', '') || '0'));
 
             console.log(chalk.green(figlet.textSync("Bot Started!", { horizontalLayout: "full" })));
             console.log(chalk.green(`✅ ${name} กำลังทำงานด้วยโทเค็น: ${token}`));
-            console.log(chalk.green(`🔑 รหัสผ่านสำหรับลบ/แก้ไขโทเค่น: ${password}`)); // แสดงรหัสผ่านใน console
-
-            // ยกเลิกการตั้งเวลาในการลบถ้าบอทกลับมาออนไลน์
-            cancelDeletion(token);
+            console.log(chalk.green(`🔑 รหัสผ่านสำหรับลบ/แก้ไขโทเค่น: ${password}`));
 
             api.setOptions({ listenEvents: true });
 
             api.listenMqtt(async (err, event) => {
                 if (err) {
                     console.error(chalk.red(`❌ เกิดข้อผิดพลาด: ${err}`));
-                    botSessions[token].status = 'offline';
-                    io.emit('updateBots', generateBotData());
+                    // บอทออฟไลน์
+                    if (botSessions[token]) {
+                        botSessions[token].status = 'offline';
+                        io.emit('updateBots', generateBotData());
 
-                    // กำหนดเวลาในการลบบอทหลังจากเป็นออฟไลน์
-                    scheduleDeletion(token);
+                        // ตั้งเวลา 60 วินาทีเพื่อลบอัตโนมัติหากยังคงออฟไลน์
+                        setTimeout(() => {
+                            if (botSessions[token] && botSessions[token].status === 'offline') {
+                                deleteBotServer(token); 
+                            }
+                        }, 60000);
+                    }
                     return;
                 }
 
-                // เพิ่มล็อกเมื่อได้รับอีเวนต์
                 console.log(chalk.blue(`📩 รับอีเวนต์: ${event.type}`));
 
                 // จัดการอีเวนต์
@@ -1501,7 +1391,6 @@ async function startBot(appState, token, name, startTime, password, saveToFile =
                         try {
                             await command.run({ api, event, args });
                             console.log(chalk.green(`✅ รันคำสั่ง: ${commandName}`));
-                            // เพิ่มตัวนับการใช้คำสั่ง
                             commandUsage[commandName] = (commandUsage[commandName] || 0) + 1;
 
                             io.emit('updateBots', generateBotData());
@@ -1515,11 +1404,9 @@ async function startBot(appState, token, name, startTime, password, saveToFile =
                     }
                 }
 
-                // อัปเดตปิงของเว็บไซต์ทันที
                 io.emit('updateBots', generateBotData());
             });
 
-            // บันทึกข้อมูลบอทลงไฟล์
             if (saveToFile) {
                 const botData = { appState, token, name, startTime, password };
                 const botFilePath = path.join(botsDir, `${name.replace(/ /g, '_')}.json`);
@@ -1532,37 +1419,14 @@ async function startBot(appState, token, name, startTime, password, saveToFile =
     });
 }
 
-// Route สำหรับลบบอท
-app.post('/delete', async (req, res) => {
-    const { token, code } = req.body;
-
-    console.log(`ได้รับคำขอลบบอท: token=${token}, code=${code}`);
-
-    if (!token || !code) {
-        console.log('ข้อมูลไม่ครบถ้วน');
-        return res.json({ success: false, message: 'ข้อมูลไม่ครบถ้วน' });
-    }
-
-    const trimmedToken = token.trim(); // ทำการ trim โทเค็นก่อนค้นหา
+// ฟังก์ชันลบบอทออกจากระบบและไฟล์ (ภายในเซิร์ฟเวอร์)
+async function deleteBotServer(token) {
+    const trimmedToken = token.trim();
     const bot = botSessions[trimmedToken];
-    if (!bot) {
-        console.log('ไม่พบบอทที่ต้องการลบ');
-        return res.json({ success: false, message: 'ไม่พบบอทที่ต้องการลบ' });
-    }
+    if (!bot) return; // ไม่พบบอท
 
-    console.log(`ตรวจสอบรหัสผ่าน: bot.password=${bot.password}, code=${code}`);
-
-    if (bot.password.toString() !== code.toString()) { // ตรวจสอบรหัสผ่าน
-        console.log('รหัสผ่านไม่ถูกต้อง');
-        return res.json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
-    }
-
-    // หยุดการทำงานของบอทและลบทันที
     try {
-        // หยุดการตั้งเวลาในการลบถ้าบอทกำลังจะถูกลบอัตโนมัติ
-        cancelDeletion(trimmedToken);
-
-        // ตรวจสอบว่า bot.api มีเมธอด logout หรือไม่
+        // logout บอท
         if (typeof bot.api.logout === 'function') {
             await new Promise((resolve, reject) => {
                 bot.api.logout((err) => {
@@ -1570,22 +1434,57 @@ app.post('/delete', async (req, res) => {
                     resolve();
                 });
             });
-            console.log(`บอทถูกหยุดทำงาน: ${bot.name}`);
-        } else {
-            throw new Error('เมธอด logout ไม่พบใน bot.api');
         }
 
         // ลบไฟล์บอท
         const botFilePath = path.join(botsDir, `${bot.name.replace(/ /g, '_')}.json`);
         if (fs.existsSync(botFilePath)) {
             fs.unlinkSync(botFilePath);
-            console.log(`ลบไฟล์บอท: ${botFilePath}`);
         }
 
-        // ลบจาก botSessions
         delete botSessions[trimmedToken];
-        console.log(`ลบบอทจาก botSessions: ${trimmedToken}`);
+        io.emit('updateBots', generateBotData());
+        console.log(chalk.green(`✅ ลบบอท ${bot.name} ออกจากระบบแล้ว`));
+    } catch (err) {
+        console.error(`ไม่สามารถลบบอทได้: ${err.message}`);
+    }
+}
 
+// Route สำหรับลบบอท (เรียกจาก Client)
+app.post('/delete', async (req, res) => {
+    const { token, code } = req.body;
+
+    if (!token || !code) {
+        return res.json({ success: false, message: 'ข้อมูลไม่ครบถ้วน' });
+    }
+
+    const trimmedToken = token.trim();
+    const bot = botSessions[trimmedToken];
+    if (!bot) {
+        return res.json({ success: false, message: 'ไม่พบบอทที่ต้องการลบ' });
+    }
+
+    if (bot.password.toString() !== code.toString()) {
+        return res.json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
+    }
+
+    // ลบบอท
+    try {
+        if (typeof bot.api.logout === 'function') {
+            await new Promise((resolve, reject) => {
+                bot.api.logout((err) => {
+                    if (err) return reject(err);
+                    resolve();
+                });
+            });
+        }
+
+        const botFilePath = path.join(botsDir, `${bot.name.replace(/ /g, '_')}.json`);
+        if (fs.existsSync(botFilePath)) {
+            fs.unlinkSync(botFilePath);
+        }
+
+        delete botSessions[trimmedToken];
         io.emit('updateBots', generateBotData());
         res.json({ success: true, message: 'ลบบอทสำเร็จ' });
     } catch (err) {
@@ -1608,7 +1507,7 @@ app.post('/edit', async (req, res) => {
         return res.json({ success: false, message: 'ไม่พบบอทที่ต้องการแก้ไข' });
     }
 
-    if (bot.password.toString() !== code.toString()) { // ตรวจสอบรหัสผ่าน
+    if (bot.password.toString() !== code.toString()) {
         return res.json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
     }
 
@@ -1618,7 +1517,6 @@ app.post('/edit', async (req, res) => {
     }
 
     try {
-        // หยุดการทำงานของบอท
         if (typeof bot.api.logout === 'function') {
             await new Promise((resolve, reject) => {
                 bot.api.logout((err) => {
@@ -1626,30 +1524,19 @@ app.post('/edit', async (req, res) => {
                     resolve();
                 });
             });
-            console.log(`หยุดบอท: ${bot.name}`);
-        } else {
-            throw new Error('เมธอด logout ไม่พบใน bot.api');
         }
 
-        // หยุดการตั้งเวลาในการลบถ้าบอทกำลังจะถูกลบอัตโนมัติ
-        cancelDeletion(trimmedToken);
-
-        // ลบไฟล์บอทเก่า
         const oldBotFilePath = path.join(botsDir, `${bot.name.replace(/ /g, '_')}.json`);
         if (fs.existsSync(oldBotFilePath)) {
             fs.unlinkSync(oldBotFilePath);
-            console.log(`ลบไฟล์บอทเก่า: ${oldBotFilePath}`);
         }
 
-        // ลบจาก botSessions
         delete botSessions[trimmedToken];
-        console.log(`ลบบอทจาก botSessions: ${trimmedToken}`);
 
-        // เริ่มต้นบอทใหม่ด้วยโทเค่นใหม่และรหัสผ่านใหม่
         const newPassword = generate6DigitCode();
         let newAppState;
         try {
-            newAppState = JSON.parse(newToken); // ตรวจสอบว่า newToken เป็น JSON string
+            newAppState = JSON.parse(newToken);
         } catch (parseError) {
             throw new Error('newToken ไม่เป็น JSON ที่ถูกต้อง');
         }
@@ -1671,7 +1558,6 @@ io.on('connection', (socket) => {
     socket.emit('updateBots', generateBotData());
     socket.emit('updateCommands', generateCommandData());
 
-    // Handle customPing from client
     socket.on('customPing', (pingTime) => {
         socket.emit('customPong', pingTime);
     });
@@ -1681,7 +1567,14 @@ io.on('connection', (socket) => {
     });
 });
 
-// เริ่มต้นเซิร์ฟเวอร์และโหลดบอทจากไฟล์ที่เก็บไว้
+function generateBotName() {
+    const adjectives = ["Super", "Mega", "Ultra", "Hyper", "Turbo", "Alpha", "Beta", "Gamma", "Delta"];
+    const nouns = ["Dragon", "Phoenix", "Falcon", "Tiger", "Lion", "Eagle", "Shark", "Wolf", "Leopard"];
+    const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const noun = nouns[Math.floor(Math.random() * nouns.length)];
+    return `${adjective}${noun}`;
+}
+
 server.listen(PORT, () => {
     console.log(chalk.blue(`🌐 เซิร์ฟเวอร์กำลังทำงานที่ http://localhost:${PORT}`));
     console.log(chalk.green(figlet.textSync("Bot Management", { horizontalLayout: "full" })));
