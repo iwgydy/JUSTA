@@ -25,6 +25,13 @@ const commands = {};
 const commandDescriptions = [];
 const commandUsage = {}; // ติดตามการใช้งานคำสั่ง
 
+const botsDir = path.join(__dirname, 'bots');
+
+// สร้างโฟลเดอร์ bots ถ้ายังไม่มี
+if (!fs.existsSync(botsDir)) {
+    fs.mkdirSync(botsDir);
+}
+
 // โหลดคำสั่งจากโฟลเดอร์ commands
 const commandsPath = path.join(__dirname, 'commands');
 if (fs.existsSync(commandsPath)) {
@@ -71,7 +78,7 @@ function generateBotData() {
     const totalBots = Object.keys(botSessions).length;
     const onlineBots = Object.values(botSessions).filter(bot => bot.status === 'online').length;
     const activeBots = Object.values(botSessions).filter(bot => bot.status === 'active').length;
-    
+
     const botRows = Object.entries(botSessions).map(([token, bot]) => `
         <tr id="bot-${token}">
             <td>
@@ -121,6 +128,18 @@ function generateCommandData() {
     return commandsData;
 }
 
+// โหลดบอทจากไฟล์ที่เก็บไว้เมื่อตอนเริ่มต้นเซิร์ฟเวอร์
+function loadBotsFromFiles() {
+    fs.readdirSync(botsDir).forEach(file => {
+        if (file.endsWith('.json')) {
+            const filePath = path.join(botsDir, file);
+            const botData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+            const { appState, token, name, startTime } = botData;
+            startBot(appState, token, name, startTime, false);
+        }
+    });
+}
+
 // หน้าแดชบอร์ดหลัก
 app.get("/", (req, res) => {
     const totalBots = Object.keys(botSessions).length;
@@ -143,10 +162,10 @@ app.get("/", (req, res) => {
                     --primary-color: #0d6efd;
                     --secondary-color: #6c757d;
                     --accent-color: #198754;
-                    --background-color: #121212;
-                    --card-bg: rgba(255, 255, 255, 0.1);
-                    --card-border: rgba(255, 255, 255, 0.2);
-                    --text-color: #ffffff;
+                    --background-color: #f8f9fa;
+                    --card-bg: #ffffff;
+                    --card-border: #dee2e6;
+                    --text-color: #212529;
                     --success-color: #198754;
                     --error-color: #dc3545;
                     --info-color: #0d6efd;
@@ -161,30 +180,15 @@ app.get("/", (req, res) => {
                     overflow-x: hidden;
                 }
 
-                body::before {
-                    content: '';
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: 
-                        radial-gradient(circle at 20% 20%, rgba(13, 110, 253, 0.15) 0%, transparent 40%),
-                        radial-gradient(circle at 80% 80%, rgba(25, 135, 84, 0.15) 0%, transparent 40%);
-                    pointer-events: none;
-                    z-index: -1;
-                }
-
                 .navbar {
-                    background: rgba(0, 0, 0, 0.8);
+                    background: var(--primary-color);
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                    border-bottom: 2px solid var(--primary-color);
                 }
 
                 .navbar-brand {
                     font-family: 'Kanit', sans-serif;
                     font-weight: 600;
-                    color: var(--text-color) !important;
+                    color: #ffffff !important;
                 }
 
                 .stats-card {
@@ -248,7 +252,7 @@ app.get("/", (req, res) => {
 
                 .bot-table tr:nth-child(even),
                 .command-table tr:nth-child(even) {
-                    background-color: rgba(13, 110, 253, 0.05);
+                    background-color: #f1f1f1;
                 }
 
                 .status-online {
@@ -274,12 +278,12 @@ app.get("/", (req, res) => {
                 }
 
                 .footer {
-                    background: rgba(0, 0, 0, 0.8);
+                    background: var(--primary-color);
                     border-top: 2px solid var(--primary-color);
                     padding: 20px 0;
                     margin-top: 40px;
                     font-size: 0.9rem;
-                    color: var(--text-color);
+                    color: #ffffff;
                 }
 
                 .animate-float {
@@ -325,7 +329,7 @@ app.get("/", (req, res) => {
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
-                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: var(--primary-color);"></i>
+                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: #ffffff;"></i>
                         ระบบจัดการบอท
                     </a>
                     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -509,6 +513,19 @@ app.get("/", (req, res) => {
 
 // หน้าเพิ่มบอท
 app.get("/start", (req, res) => {
+    const error = req.query.error;
+
+    let errorMessage = "";
+    if (error === 'already-running') {
+        errorMessage = `<div class="alert alert-warning" role="alert">
+                            บอทนี้กำลังทำงานอยู่แล้ว
+                        </div>`;
+    } else if (error === 'invalid-token') {
+        errorMessage = `<div class="alert alert-danger" role="alert">
+                            โทเค็นไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง
+                        </div>`;
+    }
+
     res.send(`
         <!DOCTYPE html>
         <html lang="th">
@@ -525,10 +542,10 @@ app.get("/start", (req, res) => {
                     --primary-color: #0d6efd;
                     --secondary-color: #6c757d;
                     --accent-color: #198754;
-                    --background-color: #121212;
-                    --card-bg: rgba(255, 255, 255, 0.1);
-                    --card-border: rgba(255, 255, 255, 0.2);
-                    --text-color: #ffffff;
+                    --background-color: #f8f9fa;
+                    --card-bg: #ffffff;
+                    --card-border: #dee2e6;
+                    --text-color: #212529;
                     --success-color: #198754;
                     --error-color: #dc3545;
                     --info-color: #0d6efd;
@@ -543,30 +560,15 @@ app.get("/start", (req, res) => {
                     overflow-x: hidden;
                 }
 
-                body::before {
-                    content: '';
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: 
-                        radial-gradient(circle at 20% 20%, rgba(13, 110, 253, 0.15) 0%, transparent 40%),
-                        radial-gradient(circle at 80% 80%, rgba(25, 135, 84, 0.15) 0%, transparent 40%);
-                    pointer-events: none;
-                    z-index: -1;
-                }
-
                 .navbar {
-                    background: rgba(0, 0, 0, 0.8);
+                    background: var(--primary-color);
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                    border-bottom: 2px solid var(--primary-color);
                 }
 
                 .navbar-brand {
                     font-family: 'Kanit', sans-serif;
                     font-weight: 600;
-                    color: var(--text-color) !important;
+                    color: #ffffff !important;
                 }
 
                 .glass-card {
@@ -589,8 +591,8 @@ app.get("/start", (req, res) => {
                 }
 
                 .form-control {
-                    background: rgba(255, 255, 255, 0.2);
-                    border: 1px solid rgba(255, 255, 255, 0.3);
+                    background: #f1f1f1;
+                    border: 1px solid #ced4da;
                     border-radius: 8px;
                     padding: 10px 12px;
                     font-size: 1rem;
@@ -599,13 +601,13 @@ app.get("/start", (req, res) => {
                 }
 
                 .form-control::placeholder {
-                    color: rgba(255, 255, 255, 0.6);
+                    color: #6c757d;
                 }
 
                 .form-control:focus {
                     border-color: var(--primary-color);
                     box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
-                    background: rgba(255, 255, 255, 0.3);
+                    background: #e9ecef;
                     color: var(--text-color);
                 }
 
@@ -621,17 +623,17 @@ app.get("/start", (req, res) => {
                 }
 
                 .btn-primary:hover {
-                    background: var(--info-color);
+                    background: #0b5ed7;
                     transform: translateY(-2px);
                 }
 
                 .footer {
-                    background: rgba(0, 0, 0, 0.8);
+                    background: var(--primary-color);
                     border-top: 2px solid var(--primary-color);
                     padding: 20px 0;
                     margin-top: 40px;
                     font-size: 0.9rem;
-                    color: var(--text-color);
+                    color: #ffffff;
                 }
 
                 .animate-float {
@@ -654,7 +656,7 @@ app.get("/start", (req, res) => {
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
-                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: var(--primary-color);"></i>
+                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: #ffffff;"></i>
                         ระบบจัดการบอท
                     </a>
                     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -682,6 +684,7 @@ app.get("/start", (req, res) => {
                         <i class="fas fa-plus-circle me-2" style="color: var(--primary-color);"></i>
                         เพิ่มบอทใหม่
                     </h5>
+                    ${errorMessage}
                     <form class="add-bot-form" method="POST" action="/start">
                         <div class="mb-3">
                             <label for="token" class="form-label">โทเค็นของคุณ</label>
@@ -736,10 +739,10 @@ app.get("/bots", (req, res) => {
                     --primary-color: #0d6efd;
                     --secondary-color: #6c757d;
                     --accent-color: #198754;
-                    --background-color: #121212;
-                    --card-bg: rgba(255, 255, 255, 0.1);
-                    --card-border: rgba(255, 255, 255, 0.2);
-                    --text-color: #ffffff;
+                    --background-color: #f8f9fa;
+                    --card-bg: #ffffff;
+                    --card-border: #dee2e6;
+                    --text-color: #212529;
                     --success-color: #198754;
                     --error-color: #dc3545;
                     --info-color: #0d6efd;
@@ -754,30 +757,15 @@ app.get("/bots", (req, res) => {
                     overflow-x: hidden;
                 }
 
-                body::before {
-                    content: '';
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: 
-                        radial-gradient(circle at 20% 20%, rgba(13, 110, 253, 0.15) 0%, transparent 40%),
-                        radial-gradient(circle at 80% 80%, rgba(25, 135, 84, 0.15) 0%, transparent 40%);
-                    pointer-events: none;
-                    z-index: -1;
-                }
-
                 .navbar {
-                    background: rgba(0, 0, 0, 0.8);
+                    background: var(--primary-color);
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                    border-bottom: 2px solid var(--primary-color);
                 }
 
                 .navbar-brand {
                     font-family: 'Kanit', sans-serif;
                     font-weight: 600;
-                    color: var(--text-color) !important;
+                    color: #ffffff !important;
                 }
 
                 .glass-card {
@@ -812,7 +800,7 @@ app.get("/bots", (req, res) => {
                 }
 
                 .bot-table tr:nth-child(even) {
-                    background-color: rgba(13, 110, 253, 0.05);
+                    background-color: #f1f1f1;
                 }
 
                 .status-online {
@@ -838,12 +826,12 @@ app.get("/bots", (req, res) => {
                 }
 
                 .footer {
-                    background: rgba(0, 0, 0, 0.8);
+                    background: var(--primary-color);
                     border-top: 2px solid var(--primary-color);
                     padding: 20px 0;
                     margin-top: 40px;
                     font-size: 0.9rem;
-                    color: var(--text-color);
+                    color: #ffffff;
                 }
 
                 .animate-float {
@@ -885,7 +873,7 @@ app.get("/bots", (req, res) => {
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
-                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: var(--primary-color);"></i>
+                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: #ffffff;"></i>
                         ระบบจัดการบอท
                     </a>
                     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -897,7 +885,7 @@ app.get("/bots", (req, res) => {
                                 <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
+                                <a class="nav-link active" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
@@ -1058,10 +1046,10 @@ app.get("/commands", (req, res) => {
                     --primary-color: #0d6efd;
                     --secondary-color: #6c757d;
                     --accent-color: #198754;
-                    --background-color: #121212;
-                    --card-bg: rgba(255, 255, 255, 0.1);
-                    --card-border: rgba(255, 255, 255, 0.2);
-                    --text-color: #ffffff;
+                    --background-color: #f8f9fa;
+                    --card-bg: #ffffff;
+                    --card-border: #dee2e6;
+                    --text-color: #212529;
                     --success-color: #198754;
                     --error-color: #dc3545;
                     --info-color: #0d6efd;
@@ -1076,30 +1064,15 @@ app.get("/commands", (req, res) => {
                     overflow-x: hidden;
                 }
 
-                body::before {
-                    content: '';
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: 
-                        radial-gradient(circle at 20% 20%, rgba(13, 110, 253, 0.15) 0%, transparent 40%),
-                        radial-gradient(circle at 80% 80%, rgba(25, 135, 84, 0.15) 0%, transparent 40%);
-                    pointer-events: none;
-                    z-index: -1;
-                }
-
                 .navbar {
-                    background: rgba(0, 0, 0, 0.8);
+                    background: var(--primary-color);
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                    border-bottom: 2px solid var(--primary-color);
                 }
 
                 .navbar-brand {
                     font-family: 'Kanit', sans-serif;
                     font-weight: 600;
-                    color: var(--text-color) !important;
+                    color: #ffffff !important;
                 }
 
                 .glass-card {
@@ -1134,16 +1107,16 @@ app.get("/commands", (req, res) => {
                 }
 
                 .command-table tr:nth-child(even) {
-                    background-color: rgba(13, 110, 253, 0.05);
+                    background-color: #f1f1f1;
                 }
 
                 .footer {
-                    background: rgba(0, 0, 0, 0.8);
+                    background: var(--primary-color);
                     border-top: 2px solid var(--primary-color);
                     padding: 20px 0;
                     margin-top: 40px;
                     font-size: 0.9rem;
-                    color: var(--text-color);
+                    color: #ffffff;
                 }
 
                 .animate-float {
@@ -1169,7 +1142,7 @@ app.get("/commands", (req, res) => {
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
-                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: var(--primary-color);"></i>
+                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: #ffffff;"></i>
                         ระบบจัดการบอท
                     </a>
                     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -1230,28 +1203,28 @@ app.get("/commands", (req, res) => {
 app.post('/start', async (req, res) => {
     const tokenInput = req.body.token.trim();
 
-    if (botSessions[tokenInput]) {
-        return res.redirect('/start?error=already-running');
-    }
-
-    botCount++;
-    const botName = `Bot ${botCount}`;
-    const startTime = Date.now();
-
     try {
         const appState = JSON.parse(tokenInput);
-        await startBot(appState, tokenInput, botName, startTime);
+        const token = tokenInput; // ใช้ tokenInput เป็น key
+        if (botSessions[token]) {
+            return res.redirect('/start?error=already-running');
+        }
+
+        botCount++;
+        const botName = `Bot ${botCount}`;
+        const startTime = Date.now();
+
+        await startBot(appState, token, botName, startTime, true);
         res.redirect('/bots');
         io.emit('updateBots', generateBotData());
     } catch (err) {
         console.error(chalk.red(`❌ เกิดข้อผิดพลาดในการเริ่มบอท: ${err.message}`));
-        botCount--;
         res.redirect('/start?error=invalid-token');
     }
 });
 
 // ฟังก์ชันเริ่มต้นบอท
-async function startBot(appState, token, name, startTime) {
+async function startBot(appState, token, name, startTime, saveToFile = true) {
     return new Promise((resolve, reject) => {
         login({ appState }, (err, api) => {
             if (err) {
@@ -1270,6 +1243,8 @@ async function startBot(appState, token, name, startTime) {
                 startTime, 
                 status: 'online'
             };
+            botCount = Math.max(botCount, parseInt(name.replace('Bot ', ''))); // ปรับ botCount ให้สูงสุด
+
             console.log(chalk.green(figlet.textSync("Bot Started!", { horizontalLayout: "full" })));
             console.log(chalk.green(`✅ ${name} กำลังทำงานด้วยโทเค็น: ${token}`));
 
@@ -1333,6 +1308,13 @@ async function startBot(appState, token, name, startTime) {
                 }
             });
 
+            // บันทึกข้อมูลบอทลงไฟล์
+            if (saveToFile) {
+                const botData = { appState, token, name, startTime };
+                const botFilePath = path.join(botsDir, `${name.replace(/ /g, '_')}.json`);
+                fs.writeFileSync(botFilePath, JSON.stringify(botData, null, 4));
+            }
+
             io.emit('updateBots', generateBotData());
             resolve();
         });
@@ -1344,10 +1326,17 @@ function scheduleBotRemoval(token) {
     if (removalTimers[token]) return; // ถ้ามีการนับถอยหลังอยู่แล้ว
 
     removalTimers[token] = setTimeout(() => {
-        delete botSessions[token];
+        const bot = botSessions[token];
+        if (bot) {
+            const botFilePath = path.join(botsDir, `${bot.name.replace(/ /g, '_')}.json`);
+            if (fs.existsSync(botFilePath)) {
+                fs.unlinkSync(botFilePath);
+            }
+            delete botSessions[token];
+            console.log(chalk.yellow(`⚠️ ลบบอทที่ออฟไลน์: ${token}`));
+            io.emit('updateBots', generateBotData());
+        }
         delete removalTimers[token];
-        console.log(chalk.yellow(`⚠️ ลบบอทที่ออฟไลน์: ${token}`));
-        io.emit('updateBots', generateBotData());
     }, 60000); // 60 วินาที
 }
 
@@ -1363,194 +1352,6 @@ function clearCountdown(token) {
     }
 }
 
-// หน้าแสดงคำสั่งที่ใช้
-app.get("/commands", (req, res) => {
-    const commandsData = generateCommandData();
-
-    res.send(`
-        <!DOCTYPE html>
-        <html lang="th">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>คำสั่งที่ใช้ | ระบบจัดการบอท</title>
-            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-            <style>
-                /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
-                :root {
-                    --primary-color: #0d6efd;
-                    --secondary-color: #6c757d;
-                    --accent-color: #198754;
-                    --background-color: #121212;
-                    --card-bg: rgba(255, 255, 255, 0.1);
-                    --card-border: rgba(255, 255, 255, 0.2);
-                    --text-color: #ffffff;
-                    --success-color: #198754;
-                    --error-color: #dc3545;
-                    --info-color: #0d6efd;
-                }
-
-                body {
-                    background: var(--background-color);
-                    color: var(--text-color);
-                    font-family: 'Roboto', sans-serif;
-                    min-height: 100vh;
-                    position: relative;
-                    overflow-x: hidden;
-                }
-
-                body::before {
-                    content: '';
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: 
-                        radial-gradient(circle at 20% 20%, rgba(13, 110, 253, 0.15) 0%, transparent 40%),
-                        radial-gradient(circle at 80% 80%, rgba(25, 135, 84, 0.15) 0%, transparent 40%);
-                    pointer-events: none;
-                    z-index: -1;
-                }
-
-                .navbar {
-                    background: rgba(0, 0, 0, 0.8);
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                    border-bottom: 2px solid var(--primary-color);
-                }
-
-                .navbar-brand {
-                    font-family: 'Kanit', sans-serif;
-                    font-weight: 600;
-                    color: var(--text-color) !important;
-                }
-
-                .glass-card {
-                    background: var(--card-bg);
-                    border: 1px solid var(--card-border);
-                    border-radius: 16px;
-                    padding: 24px;
-                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-                    transition: transform 0.3s ease, box-shadow 0.3s ease;
-                }
-
-                .glass-card:hover {
-                    transform: translateY(-5px);
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
-                }
-
-                .command-table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-top: 20px;
-                }
-
-                .command-table th, .command-table td {
-                    padding: 12px 15px;
-                    text-align: left;
-                }
-
-                .command-table th {
-                    background-color: var(--primary-color);
-                    color: #fff;
-                    font-weight: 600;
-                }
-
-                .command-table tr:nth-child(even) {
-                    background-color: rgba(13, 110, 253, 0.05);
-                }
-
-                .footer {
-                    background: rgba(0, 0, 0, 0.8);
-                    border-top: 2px solid var(--primary-color);
-                    padding: 20px 0;
-                    margin-top: 40px;
-                    font-size: 0.9rem;
-                    color: var(--text-color);
-                }
-
-                .animate-float {
-                    animation: float 3s ease-in-out infinite;
-                }
-
-                @keyframes float {
-                    0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-10px); }
-                }
-
-                @media (max-width: 768px) {
-                    .glass-card {
-                        margin-bottom: 20px;
-                    }
-                    .command-table th, .command-table td {
-                        padding: 8px 10px;
-                    }
-                }
-            </style>
-        </head>
-        <body>
-            <nav class="navbar navbar-expand-lg navbar-dark mb-4">
-                <div class="container">
-                    <a class="navbar-brand d-flex align-items-center" href="/">
-                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: var(--primary-color);"></i>
-                        ระบบจัดการบอท
-                    </a>
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                        <span class="navbar-toggler-icon"></span>
-                    </button>
-                    <div class="collapse navbar-collapse" id="navbarNav">
-                        <ul class="navbar-nav ms-auto">
-                            <li class="nav-item">
-                                <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link active" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </nav>
-
-            <div class="container">
-                <!-- ตารางคำสั่งที่ใช้ -->
-                <div class="glass-card">
-                    <h5 class="mb-4">
-                        <i class="fas fa-terminal me-2" style="color: var(--secondary-color);"></i>
-                        คำสั่งที่ใช้
-                    </h5>
-                    <div class="table-responsive">
-                        <table class="table command-table">
-                            <thead>
-                                <tr>
-                                    <th>ชื่อคำสั่ง</th>
-                                    <th>จำนวนที่ใช้</th>
-                                </tr>
-                            </thead>
-                            <tbody id="commandTableBody">
-                                ${commandsData}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <footer class="footer text-center">
-                <div class="container">
-                    <p class="mb-0">© ${new Date().getFullYear()} ระบบจัดการบอท | พัฒนาด้วย ❤️</p>
-                </div>
-            </footer>
-
-            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-        </body>
-        </html>
-    `);
-});
-
 // Socket.io สำหรับหน้าแดชบอร์ดหลักและดูบอทรัน
 io.on('connection', (socket) => {
     console.log(chalk.blue('🔌 Socket.io client connected'));
@@ -1562,8 +1363,9 @@ io.on('connection', (socket) => {
     });
 });
 
-// เริ่มต้นเซิร์ฟเวอร์
+// เริ่มต้นเซิร์ฟเวอร์และโหลดบอทจากไฟล์ที่เก็บไว้
 server.listen(PORT, () => {
     console.log(chalk.blue(`🌐 เซิร์ฟเวอร์กำลังทำงานที่ http://localhost:${PORT}`));
     console.log(chalk.green(figlet.textSync("Bot Management", { horizontalLayout: "full" })));
+    loadBotsFromFiles();
 });
