@@ -83,31 +83,38 @@ function generateBotData() {
     const onlineBots = Object.values(botSessions).filter(bot => bot.status === 'online').length;
     const activeBots = Object.values(botSessions).filter(bot => bot.status === 'active').length;
 
-    const botRows = Object.entries(botSessions).map(([token, bot]) => `
-        <tr id="bot-${encodeURIComponent(token)}">
-            <td>
-                <i class="fas fa-robot me-2" style="color: var(--primary-color);"></i>
-                <span class="bot-name">${bot.name}</span>
-            </td>
-            <td>
-                <span class="${bot.status === 'online' ? 'status-online' : 'status-offline'}">
-                    <i class="fas fa-circle"></i>
-                    ${bot.status === 'online' ? 'ออนไลน์' : 'ออฟไลน์'}
-                </span>
-            </td>
-            <td>
-                <span class="runtime" data-start-time="${bot.startTime}">
-                    กำลังคำนวณ...
-                </span>
-            </td>
-            <td>
-                <button class="btn btn-warning btn-sm edit-btn" data-token="${encodeURIComponent(token)}"><i class="fas fa-edit"></i> แก้ไข</button>
-                <button class="btn btn-danger btn-sm delete-btn" data-token="${encodeURIComponent(token)}"><i class="fas fa-trash-alt"></i> ลบ</button>
-            </td>
-        </tr>
-    `).join('') || `
+    const botRows = Object.entries(botSessions).map(([token, bot]) => {
+        // คำนวณปิงของบอท
+        const ping = Date.now() - bot.lastEventTime;
+        return `
+            <tr id="bot-${encodeURIComponent(token)}">
+                <td>
+                    <i class="fas fa-robot me-2" style="color: var(--primary-color);"></i>
+                    <span class="bot-name">${bot.name}</span>
+                </td>
+                <td>
+                    <span class="${bot.status === 'online' ? 'status-online' : 'status-offline'}">
+                        <i class="fas fa-circle"></i>
+                        ${bot.status === 'online' ? 'ออนไลน์' : 'ออฟไลน์'}
+                    </span>
+                </td>
+                <td>
+                    <span class="runtime" data-start-time="${bot.startTime}">
+                        กำลังคำนวณ...
+                    </span>
+                </td>
+                <td>
+                    <span class="ping-time">${ping} ms</span>
+                </td>
+                <td>
+                    <button class="btn btn-warning btn-sm edit-btn" data-token="${encodeURIComponent(token)}"><i class="fas fa-edit"></i> แก้ไข</button>
+                    <button class="btn btn-danger btn-sm delete-btn" data-token="${encodeURIComponent(token)}"><i class="fas fa-trash-alt"></i> ลบ</button>
+                </td>
+            </tr>
+        `;
+    }).join('') || `
         <tr>
-            <td colspan="4" class="text-center">ไม่มีบอทที่กำลังทำงาน</td>
+            <td colspan="5" class="text-center">ไม่มีบอทที่กำลังทำงาน</td>
         </tr>
     `;
 
@@ -313,6 +320,11 @@ app.get("/", (req, res) => {
                     font-size: 1.1rem;
                 }
 
+                .ping-time {
+                    font-weight: 500;
+                    color: var(--info-color);
+                }
+
                 @media (max-width: 768px) {
                     .stats-card {
                         margin-bottom: 20px;
@@ -361,25 +373,32 @@ app.get("/", (req, res) => {
             <div class="container">
                 <!-- สถิติ -->
                 <div class="row mb-4">
-                    <div class="col-md-4 col-sm-6 mb-3">
+                    <div class="col-md-3 col-sm-6 mb-3">
                         <div class="stats-card">
                             <i class="fas fa-robot fa-2x mb-3" style="color: var(--primary-color);"></i>
                             <div class="stats-number" id="totalBots">${data.totalBots}</div>
                             <div class="stats-label">บอททั้งหมด</div>
                         </div>
                     </div>
-                    <div class="col-md-4 col-sm-6 mb-3">
+                    <div class="col-md-3 col-sm-6 mb-3">
                         <div class="stats-card">
                             <i class="fas fa-signal fa-2x mb-3" style="color: var(--info-color);"></i>
                             <div class="stats-number" id="onlineBots">${data.onlineBots}</div>
                             <div class="stats-label">บอทออนไลน์</div>
                         </div>
                     </div>
-                    <div class="col-md-4 col-sm-6 mb-3">
+                    <div class="col-md-3 col-sm-6 mb-3">
                         <div class="stats-card">
                             <i class="fas fa-clock fa-2x mb-3" style="color: var(--secondary-color);"></i>
                             <div class="stats-number" id="activeBots">${data.activeBots}</div>
                             <div class="stats-label">บอททำงานแล้ว</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="stats-card">
+                            <i class="fas fa-network-wired fa-2x mb-3" style="color: var(--accent-color);"></i>
+                            <div class="stats-number" id="websitePing">- ms</div>
+                            <div class="stats-label">ปิงเว็บไซต์</div>
                         </div>
                     </div>
                 </div>
@@ -399,6 +418,7 @@ app.get("/", (req, res) => {
                                             <th>ชื่อบอท</th>
                                             <th>สถานะ</th>
                                             <th>เวลารัน</th>
+                                            <th>ปิง</th>
                                             <th>การจัดการ</th>
                                         </tr>
                                     </thead>
@@ -442,6 +462,17 @@ app.get("/", (req, res) => {
                     });
                 }
 
+                // ฟังก์ชันอัปเดตปิงของบอท
+                function updateBotPing() {
+                    const pingElements = document.querySelectorAll('.ping-time');
+                    pingElements.forEach(el => {
+                        const ping = el.textContent.replace(' ms', '');
+                        if (ping !== '-') {
+                            // สามารถปรับแต่งได้หากต้องการ
+                        }
+                    });
+                }
+
                 // รับข้อมูลอัปเดตจากเซิร์ฟเวอร์
                 socket.on('updateBots', (data) => {
                     document.getElementById('totalBots').textContent = data.totalBots;
@@ -455,6 +486,28 @@ app.get("/", (req, res) => {
 
                     updateRuntime();
                 });
+
+                socket.on('updateCommands', (data) => {
+                    const commandTableBody = document.getElementById('commandTableBody');
+                    if (commandTableBody) {
+                        commandTableBody.innerHTML = data;
+                    }
+                });
+
+                // ฟังก์ชันอัปเดตปิงเว็บไซต์
+                function sendPing() {
+                    const startTime = Date.now();
+                    socket.emit('customPing', startTime);
+                }
+
+                socket.on('customPong', (pongTime) => {
+                    const latency = Date.now() - pongTime;
+                    document.getElementById('websitePing').textContent = latency + ' ms';
+                });
+
+                // ส่ง ping ทุกๆ 5 วินาที
+                setInterval(sendPing, 5000);
+                sendPing(); // ส่ง ping ทันทีเมื่อโหลดหน้า
 
                 // อัปเดตเวลารันทุกวินาที
                 setInterval(updateRuntime, 1000);
@@ -859,6 +912,11 @@ app.get("/bots", (req, res) => {
                     gap: 6px;
                 }
 
+                .ping-time {
+                    font-weight: 500;
+                    color: var(--info-color);
+                }
+
                 .footer {
                     background: var(--primary-color);
                     border-top: 2px solid var(--primary-color);
@@ -943,6 +1001,7 @@ app.get("/bots", (req, res) => {
                                     <th>ชื่อบอท</th>
                                     <th>สถานะ</th>
                                     <th>เวลารัน</th>
+                                    <th>ปิง</th>
                                     <th>การจัดการ</th>
                                 </tr>
                             </thead>
@@ -984,6 +1043,17 @@ app.get("/bots", (req, res) => {
                     });
                 }
 
+                // ฟังก์ชันอัปเดตปิงของบอท
+                function updateBotPing() {
+                    const pingElements = document.querySelectorAll('.ping-time');
+                    pingElements.forEach(el => {
+                        const ping = el.textContent.replace(' ms', '');
+                        if (ping !== '-') {
+                            // สามารถปรับแต่งได้หากต้องการ
+                        }
+                    });
+                }
+
                 // รับข้อมูลอัปเดตจากเซิร์ฟเวอร์
                 socket.on('updateBots', (data) => {
                     document.getElementById('totalBots').textContent = data.totalBots;
@@ -997,6 +1067,28 @@ app.get("/bots", (req, res) => {
 
                     updateRuntime();
                 });
+
+                socket.on('updateCommands', (data) => {
+                    const commandTableBody = document.getElementById('commandTableBody');
+                    if (commandTableBody) {
+                        commandTableBody.innerHTML = data;
+                    }
+                });
+
+                // ฟังก์ชันอัปเดตปิงเว็บไซต์
+                function sendPing() {
+                    const startTime = Date.now();
+                    socket.emit('customPing', startTime);
+                }
+
+                socket.on('customPong', (pongTime) => {
+                    const latency = Date.now() - pongTime;
+                    document.getElementById('websitePing').textContent = latency + ' ms';
+                });
+
+                // ส่ง ping ทุกๆ 5 วินาที
+                setInterval(sendPing, 5000);
+                sendPing(); // ส่ง ping ทันทีเมื่อโหลดหน้า
 
                 // อัปเดตเวลารันทุกวินาที
                 setInterval(updateRuntime, 1000);
@@ -1246,7 +1338,8 @@ app.get("/debug/bots", (req, res) => {
         token,
         name: bot.name,
         status: bot.status,
-        password: bot.password
+        password: bot.password,
+        ping: bot.ping
     }));
     res.json(bots);
 });
@@ -1304,7 +1397,9 @@ async function startBot(appState, token, name, startTime, password, saveToFile =
                 name, 
                 startTime, 
                 status: 'online',
-                password: password.toString() // แปลงเป็น string เพื่อความแน่ใจ
+                password: password.toString(), // แปลงเป็น string เพื่อความแน่ใจ
+                lastEventTime: Date.now(), // เพิ่มเวลาของเหตุการณ์ล่าสุด
+                ping: 0 // เริ่มต้นปิงเป็น 0
             };
             botCount = Math.max(botCount, parseInt(name.replace(/✨/g, '').replace('Bot ', '') || '0')); // ปรับ botCount ให้สูงสุด
 
@@ -1321,6 +1416,12 @@ async function startBot(appState, token, name, startTime, password, saveToFile =
                     io.emit('updateBots', generateBotData());
                     return;
                 }
+
+                // เพิ่มเวลาของเหตุการณ์ล่าสุด
+                botSessions[token].lastEventTime = Date.now();
+
+                // คำนวณปิงของบอท
+                botSessions[token].ping = Date.now() - botSessions[token].lastEventTime;
 
                 // เพิ่มล็อกเมื่อได้รับอีเวนต์
                 console.log(chalk.blue(`📩 รับอีเวนต์: ${event.type}`));
@@ -1516,6 +1617,11 @@ io.on('connection', (socket) => {
     console.log(chalk.blue('🔌 Socket.io client connected'));
     socket.emit('updateBots', generateBotData());
     socket.emit('updateCommands', generateCommandData());
+
+    // Handle customPing from client
+    socket.on('customPing', (pingTime) => {
+        socket.emit('customPong', pingTime);
+    });
 
     socket.on('disconnect', () => {
         console.log(chalk.red('🔌 Socket.io client disconnected'));
