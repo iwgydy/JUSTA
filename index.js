@@ -11,7 +11,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "*", // ปรับตามความต้องการ
+        origin: "*", // ปรับให้เหมาะสมกับความปลอดภัยของคุณ
         methods: ["GET", "POST"]
     }
 });
@@ -228,24 +228,26 @@ app.get("/", (req, res) => {
                     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
                 }
 
-                .bot-table {
+                .bot-table, .command-table {
                     width: 100%;
                     border-collapse: collapse;
                     margin-top: 20px;
                 }
 
-                .bot-table th, .bot-table td {
+                .bot-table th, .bot-table td,
+                .command-table th, .command-table td {
                     padding: 12px 15px;
                     text-align: left;
                 }
 
-                .bot-table th {
+                .bot-table th, .command-table th {
                     background-color: var(--primary-color);
                     color: #fff;
                     font-weight: 600;
                 }
 
-                .bot-table tr:nth-child(even) {
+                .bot-table tr:nth-child(even),
+                .command-table tr:nth-child(even) {
                     background-color: rgba(13, 110, 253, 0.05);
                 }
 
@@ -312,7 +314,8 @@ app.get("/", (req, res) => {
                     .glass-card {
                         margin-bottom: 20px;
                     }
-                    .bot-table th, .bot-table td {
+                    .bot-table th, .bot-table td,
+                    .command-table th, .command-table td {
                         padding: 8px 10px;
                     }
                 }
@@ -334,7 +337,7 @@ app.get("/", (req, res) => {
                                 <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link active" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
+                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
@@ -375,7 +378,7 @@ app.get("/", (req, res) => {
                     <div class="col-12">
                         <div class="glass-card">
                             <h5 class="mb-4">
-                                <i class="fas fa-list me-2" style="color: var(--info-color);"></i>
+                                <i class="fas fa-robot me-2" style="color: var(--primary-color);"></i>
                                 บอทที่กำลังทำงาน
                             </h5>
                             <div class="table-responsive">
@@ -447,13 +450,13 @@ app.get("/", (req, res) => {
                         const hours = Math.floor((elapsed / (1000 * 60 * 60)) % 24);
                         const days = Math.floor(elapsed / (1000 * 60 * 60 * 24));
 
-                        el.textContent = `${days} วัน ${hours} ชั่วโมง ${minutes} นาที ${seconds} วินาที`;
+                        el.textContent = \`\${days} วัน \${hours} ชั่วโมง \${minutes} นาที \${seconds} วินาที\`;
                     });
                 }
 
                 // ฟังก์ชันเริ่มนับถอยหลังการลบบอท
                 function startCountdown(token) {
-                    const countdownElement = document.getElementById(`countdown-${token}`);
+                    const countdownElement = document.getElementById(\`countdown-\${token}\`);
                     if (!countdownElement) return;
 
                     let secondsLeft = 60;
@@ -506,8 +509,6 @@ app.get("/", (req, res) => {
 
 // หน้าเพิ่มบอท
 app.get("/start", (req, res) => {
-    const error = req.query.error ? `<div class="alert alert-danger" role="alert">${req.query.error === 'already-running' ? 'บอทนี้กำลังทำงานอยู่แล้ว' : 'โทเค็นไม่ถูกต้อง'}</div>` : '';
-
     res.send(`
         <!DOCTYPE html>
         <html lang="th">
@@ -647,10 +648,6 @@ app.get("/start", (req, res) => {
                         margin-bottom: 20px;
                     }
                 }
-
-                .alert {
-                    margin-bottom: 20px;
-                }
             </style>
         </head>
         <body>
@@ -680,7 +677,6 @@ app.get("/start", (req, res) => {
             </nav>
 
             <div class="container">
-                ${error}
                 <div class="glass-card">
                     <h5 class="mb-4">
                         <i class="fas fa-plus-circle me-2" style="color: var(--primary-color);"></i>
@@ -720,6 +716,10 @@ app.get("/start", (req, res) => {
 
 // หน้าแสดงบอทรัน
 app.get("/bots", (req, res) => {
+    const totalBots = Object.keys(botSessions).length;
+    const onlineBots = Object.values(botSessions).filter(bot => bot.status === 'online').length;
+    const activeBots = Object.values(botSessions).filter(bot => bot.status === 'active').length;
+
     res.send(`
         <!DOCTYPE html>
         <html lang="th">
@@ -897,7 +897,7 @@ app.get("/bots", (req, res) => {
                                 <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link active" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
+                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
@@ -981,13 +981,13 @@ app.get("/bots", (req, res) => {
                         const hours = Math.floor((elapsed / (1000 * 60 * 60)) % 24);
                         const days = Math.floor(elapsed / (1000 * 60 * 60 * 24));
 
-                        el.textContent = `${days} วัน ${hours} ชั่วโมง ${minutes} นาที ${seconds} วินาที`;
+                        el.textContent = \`\${days} วัน \${hours} ชั่วโมง \${minutes} นาที \${seconds} วินาที\`;
                     });
                 }
 
                 // ฟังก์ชันเริ่มนับถอยหลังการลบบอท
                 function startCountdown(token) {
-                    const countdownElement = document.getElementById(`countdown-${token}`);
+                    const countdownElement = document.getElementById(\`countdown-\${token}\`);
                     if (!countdownElement) return;
 
                     let secondsLeft = 60;
@@ -1275,8 +1275,7 @@ async function startBot(appState, token, name, startTime) {
 
             api.setOptions({ listenEvents: true });
 
-            // เพิ่มฟังก์ชันเพื่อจัดการการเชื่อมต่อบอท
-            function handleBotEvents(err, event) {
+            api.listenMqtt(async (err, event) => {
                 if (err) {
                     console.error(chalk.red(`❌ เกิดข้อผิดพลาด: ${err}`));
                     botSessions[token].status = 'offline';
@@ -1292,7 +1291,7 @@ async function startBot(appState, token, name, startTime) {
                 if (event.logMessageType && events[event.logMessageType]) {
                     for (const eventHandler of events[event.logMessageType]) {
                         try {
-                            eventHandler.run({ api, event });
+                            await eventHandler.run({ api, event });
                             console.log(chalk.blue(`🔄 ประมวลผลอีเวนต์: ${eventHandler.config.name}`));
                         } catch (error) {
                             console.error(chalk.red(`❌ เกิดข้อผิดพลาดในอีเวนต์ ${eventHandler.config.name}:`, error));
@@ -1312,7 +1311,7 @@ async function startBot(appState, token, name, startTime) {
 
                     if (command && typeof command.run === "function") {
                         try {
-                            command.run({ api, event, args });
+                            await command.run({ api, event, args });
                             console.log(chalk.green(`✅ รันคำสั่ง: ${commandName}`));
                             // เพิ่มตัวนับการใช้คำสั่ง
                             commandUsage[commandName] = (commandUsage[commandName] || 0) + 1;
@@ -1332,10 +1331,7 @@ async function startBot(appState, token, name, startTime) {
                 if (botSessions[token].status === 'online' && removalTimers[token]) {
                     clearCountdown(token);
                 }
-            }
-
-            // เริ่มฟังอีเวนต์ของบอท
-            api.listenMqtt(handleBotEvents);
+            });
 
             io.emit('updateBots', generateBotData());
             resolve();
