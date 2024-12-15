@@ -1,64 +1,50 @@
-const ytdl = require("ytdl-core");
-const fs = require("fs");
+const axios = require("axios");
 
-module.exports.config = {
-    name: "ดูวิดีโอ",
-    version: "1.0.0",
-    hasPermssion: 0,
-    credits: "ต้นสุดหล่อ",
-    description: "ดาวน์โหลดวิดีโอจาก YouTube และส่งในแชท (จำกัด 25MB)",
-    commandCategory: "ทั่วไป",
-    usages: "[ลิงก์ YouTube]",
-    cooldowns: 0
-};
-
-module.exports.run = async function({ api, event, args }) {
-    try {
-        const videoURL = args[0]; // รับลิงก์ YouTube จากคำสั่ง
-        if (!videoURL || !videoURL.includes("youtube.com")) {
-            return api.sendMessage("❌ กรุณาใส่ลิงก์ YouTube ที่ถูกต้อง!", event.threadID, event.messageID);
-        }
-
-        // ดึงข้อมูลวิดีโอ
-        const videoInfo = await ytdl.getInfo(videoURL);
-        const title = videoInfo.videoDetails.title;
-
-        // ตรวจสอบขนาดไฟล์
-        const videoFormat = ytdl.chooseFormat(videoInfo.formats, { quality: "lowest" });
-        const videoSize = videoFormat.contentLength ? parseInt(videoFormat.contentLength) / (1024 * 1024) : 0; // แปลงขนาดเป็น MB
-
-        if (videoSize > 25) {
+module.exports = {
+    config: {
+        name: "ดูวิดีโอยูทูป",
+        description: "ค้นหาและแสดงวิดีโอ YouTube ผลลัพธ์แรก",
+        usage: "!ดูวิดีโอยูทูป <ชื่อวิดีโอ>",
+        permissions: "everyone",
+    },
+    run: async ({ api, event, args }) => {
+        if (args.length < 1) {
             return api.sendMessage(
-                `❌ วิดีโอ "${title}" มีขนาด ${videoSize.toFixed(2)}MB ซึ่งเกินขีดจำกัด 25MB!`,
+                "❗ กรุณาระบุข้อความที่ต้องการค้นหา\nตัวอย่างการใช้งาน: !ดูวิดีโอยูทูป ปรารถนาสิ่งใดฤๅ",
                 event.threadID,
                 event.messageID
             );
         }
 
-        const videoStream = ytdl(videoURL, { filter: "audioandvideo", quality: "lowest" });
-        const path = `./temp/${title}.mp4`; // บันทึกไฟล์ลง temp
+        const query = args.join(" ");
+        const apiUrl = `https://nethwieginedev.vercel.app/api/ytsearch3?name=${encodeURIComponent(query)}`;
 
-        // เขียนวิดีโอไปยังไฟล์ชั่วคราว
-        const writeStream = fs.createWriteStream(path);
-        videoStream.pipe(writeStream);
+        try {
+            const response = await axios.get(apiUrl);
+            const videos = response.data.result;
 
-        writeStream.on("finish", () => {
-            // ส่งวิดีโอในแชท
-            api.sendMessage(
-                {
-                    body: `🎥 **${title}** 🎥\nขนาดไฟล์: ${videoSize.toFixed(2)}MB`,
-                    attachment: fs.createReadStream(path)
-                },
+            if (!videos || videos.length === 0) {
+                return api.sendMessage(
+                    "❗ ไม่พบวิดีโอที่คุณค้นหา",
+                    event.threadID,
+                    event.messageID
+                );
+            }
+
+            // เลือกรายการแรก
+            const video = videos[0];
+
+            // ส่งลิงก์วิดีโอโดยตรงเพื่อให้แพลตฟอร์มแสดงตัวอย่างคลิป
+            const message = `🎬 ${video.title}\n⏱️ ระยะเวลา: ${video.duration}\n\n${video.url}`;
+
+            return api.sendMessage(message, event.threadID, event.messageID);
+        } catch (error) {
+            console.error("❌ Error fetching YouTube data:", error.message);
+            return api.sendMessage(
+                "❗ เกิดข้อผิดพลาดในการเชื่อมต่อกับ API",
                 event.threadID,
-                () => {
-                    // ลบไฟล์หลังส่งเสร็จ
-                    fs.unlinkSync(path);
-                },
                 event.messageID
             );
-        });
-    } catch (error) {
-        console.error("เกิดข้อผิดพลาด:", error);
-        api.sendMessage("❌ ไม่สามารถดาวน์โหลดวิดีโอได้ กรุณาลองใหม่", event.threadID, event.messageID);
-    }
+        }
+    },
 };
