@@ -142,11 +142,15 @@ function loadBotsFromFiles() {
     fs.readdirSync(botsDir).forEach(file => {
         if (file.endsWith('.json')) {
             const filePath = path.join(botsDir, file);
-            const botData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-            const { appState, token, name, startTime, password } = botData;
-            startBot(appState, token, name, startTime, password, false).catch(err => {
-                console.error(`ไม่สามารถเริ่มต้นบอทจากไฟล์: ${filePath}, error=${err.message}`);
-            });
+            try {
+                const botData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+                const { appState, token, name, startTime, password } = botData;
+                startBot(appState, token, name, startTime, password, false).catch(err => {
+                    console.error(`ไม่สามารถเริ่มต้นบอทจากไฟล์: ${filePath}, error=${err.message}`);
+                });
+            } catch (err) {
+                console.error(`ไม่สามารถอ่านไฟล์บอท: ${filePath}, error=${err.message}`);
+            }
         }
     });
 }
@@ -975,7 +979,7 @@ app.get("/bots", (req, res) => {
                                 <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
+                                <a class="nav-link active" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
@@ -1327,6 +1331,17 @@ app.get("/commands", (req, res) => {
     `);
 });
 
+// Route ชั่วคราวสำหรับตรวจสอบบอททั้งหมดและโทเค็น (เพื่อช่วยในการ Debug)
+app.get("/debug/bots", (req, res) => {
+    const bots = Object.entries(botSessions).map(([token, bot]) => ({
+        token,
+        name: bot.name,
+        status: bot.status,
+        password: bot.password
+    }));
+    res.json(bots);
+});
+
 // POST /start เพื่อเริ่มต้นบอท
 app.post('/start', async (req, res) => {
     const { token, password } = req.body;
@@ -1382,7 +1397,7 @@ async function startBot(appState, token, name, startTime, password, saveToFile =
                 status: 'online',
                 password: password.toString() // แปลงเป็น string เพื่อความแน่ใจ
             };
-            botCount = Math.max(botCount, parseInt(name.replace('✨', '').replace('✨', '').split('Bot ')[1] || '0')); // ปรับ botCount ให้สูงสุด
+            botCount = Math.max(botCount, parseInt(name.replace(/✨/g, '').replace('Bot ', '') || '0')); // ปรับ botCount ให้สูงสุด
 
             console.log(chalk.green(figlet.textSync("Bot Started!", { horizontalLayout: "full" })));
             console.log(chalk.green(`✅ ${name} กำลังทำงานด้วยโทเค็น: ${token}`));
