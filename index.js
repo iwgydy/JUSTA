@@ -85,7 +85,7 @@ function generateBotData() {
 
     const botRows = Object.entries(botSessions).map(([token, bot]) => {
         // คำนวณปิงของบอท
-        const ping = Date.now() - bot.lastEventTime;
+        const ping = bot.ping || '-';
         return `
             <tr id="bot-${encodeURIComponent(token)}">
                 <td>
@@ -104,7 +104,7 @@ function generateBotData() {
                     </span>
                 </td>
                 <td>
-                    <span class="ping-time">${ping} ms</span>
+                    <span class="ping-time">${ping}</span>
                 </td>
                 <td>
                     <button class="btn btn-warning btn-sm edit-btn" data-token="${encodeURIComponent(token)}"><i class="fas fa-edit"></i> แก้ไข</button>
@@ -462,13 +462,13 @@ app.get("/", (req, res) => {
                     });
                 }
 
-                // ฟังก์ชันอัปเดตปิงของบอท
+                // ฟังก์ชันอัปเดตปิงของบอท (ถ้ามีการปรับแต่งเพิ่มเติม)
                 function updateBotPing() {
                     const pingElements = document.querySelectorAll('.ping-time');
                     pingElements.forEach(el => {
                         const ping = el.textContent.replace(' ms', '');
-                        if (ping !== '-') {
-                            // สามารถปรับแต่งได้หากต้องการ
+                        if (ping !== '-' && !isNaN(ping)) {
+                            // คุณสามารถเพิ่มฟังก์ชันเพิ่มเติมที่นี่หากต้องการ
                         }
                     });
                 }
@@ -478,7 +478,7 @@ app.get("/", (req, res) => {
                     document.getElementById('totalBots').textContent = data.totalBots;
                     document.getElementById('onlineBots').textContent = data.onlineBots;
                     document.getElementById('activeBots').textContent = data.activeBots;
-                    
+
                     const botTableBody = document.getElementById('botTableBody');
                     if (botTableBody) {
                         botTableBody.innerHTML = data.botRows;
@@ -505,8 +505,8 @@ app.get("/", (req, res) => {
                     document.getElementById('websitePing').textContent = latency + ' ms';
                 });
 
-                // ส่ง ping ทุกๆ 5 วินาที
-                setInterval(sendPing, 5000);
+                // ส่ง ping ทุกๆ 1 วินาที
+                setInterval(sendPing, 1000);
                 sendPing(); // ส่ง ping ทันทีเมื่อโหลดหน้า
 
                 // อัปเดตเวลารันทุกวินาที
@@ -1048,7 +1048,7 @@ app.get("/bots", (req, res) => {
                     const pingElements = document.querySelectorAll('.ping-time');
                     pingElements.forEach(el => {
                         const ping = el.textContent.replace(' ms', '');
-                        if (ping !== '-') {
+                        if (ping !== '-' && !isNaN(ping)) {
                             // สามารถปรับแต่งได้หากต้องการ
                         }
                     });
@@ -1059,7 +1059,7 @@ app.get("/bots", (req, res) => {
                     document.getElementById('totalBots').textContent = data.totalBots;
                     document.getElementById('onlineBots').textContent = data.onlineBots;
                     document.getElementById('activeBots').textContent = data.activeBots;
-                    
+
                     const botTableBody = document.getElementById('botTableBody');
                     if (botTableBody) {
                         botTableBody.innerHTML = data.botRows;
@@ -1086,8 +1086,8 @@ app.get("/bots", (req, res) => {
                     document.getElementById('websitePing').textContent = latency + ' ms';
                 });
 
-                // ส่ง ping ทุกๆ 5 วินาที
-                setInterval(sendPing, 5000);
+                // ส่ง ping ทุกๆ 1 วินาที
+                setInterval(sendPing, 1000);
                 sendPing(); // ส่ง ping ทันทีเมื่อโหลดหน้า
 
                 // อัปเดตเวลารันทุกวินาที
@@ -1470,6 +1470,9 @@ async function startBot(appState, token, name, startTime, password, saveToFile =
                 if (botSessions[token].status === 'online') {
                     // ไม่มีการนับถอยหลังในโค้ดที่ปรับปรุง
                 }
+
+                // อัปเดตปิงของบอททันที
+                io.emit('updateBots', generateBotData());
             });
 
             // บันทึกข้อมูลบอทลงไฟล์
