@@ -86,7 +86,7 @@ function generateBotData() {
     const botRows = Object.entries(botSessions).map(([token, bot]) => `
         <tr id="bot-${encodeURIComponent(token)}">
             <td>
-                <i class="fas fa-robot me-2" style="color: var(--primary-color);"></i>
+                <i class="fas fa-robot me-2" style="color: var(--accent-color);"></i>
                 <span class="bot-name">${bot.name}</span>
             </td>
             <td>
@@ -186,6 +186,7 @@ app.get("/", (req, res) => {
                     min-height: 100vh;
                     position: relative;
                     overflow-x: hidden;
+                    transition: background 0.5s ease;
                 }
 
                 .navbar {
@@ -196,6 +197,15 @@ app.get("/", (req, res) => {
                 .navbar-brand {
                     font-family: 'Press Start 2P', cursive;
                     font-weight: 600;
+                    color: var(--accent-color) !important;
+                }
+
+                .navbar-nav .nav-link {
+                    color: var(--text-color) !important;
+                    transition: color 0.3s ease;
+                }
+
+                .navbar-nav .nav-link:hover {
                     color: var(--accent-color) !important;
                 }
 
@@ -345,6 +355,49 @@ app.get("/", (req, res) => {
                     background-color: var(--accent-color);
                     border-radius: 6px;
                     border: 3px solid #1e1e1e;
+                }
+
+                /* Additional Styles for Hacker Theme */
+                body::before {
+                    content: "";
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: url('https://i.imgur.com/3Z8dM7V.png') repeat;
+                    opacity: 0.05;
+                    pointer-events: none;
+                    z-index: -1;
+                }
+
+                .terminal-style {
+                    background: rgba(0, 0, 0, 0.8);
+                    border: 1px solid var(--accent-color);
+                    padding: 15px;
+                    border-radius: 8px;
+                    color: var(--accent-color);
+                    font-family: 'Courier New', Courier, monospace;
+                }
+
+                /* Button Styles */
+                .btn-warning {
+                    background-color: #ffc107;
+                    border: none;
+                    color: #212529;
+                }
+
+                .btn-danger {
+                    background-color: #dc3545;
+                    border: none;
+                }
+
+                .btn-warning:hover {
+                    background-color: #e0a800;
+                }
+
+                .btn-danger:hover {
+                    background-color: #c82333;
                 }
             </style>
         </head>
@@ -587,15 +640,17 @@ app.get("/start", (req, res) => {
                     --success-color: #00ff00;
                     --error-color: #ff0000;
                     --info-color: #1e90ff;
+                    --font-family: 'Roboto Mono', monospace;
                 }
 
                 body {
                     background: var(--background-color);
                     color: var(--text-color);
-                    font-family: 'Roboto Mono', monospace;
+                    font-family: var(--font-family);
                     min-height: 100vh;
                     position: relative;
                     overflow-x: hidden;
+                    transition: background 0.5s ease;
                 }
 
                 .navbar {
@@ -606,6 +661,15 @@ app.get("/start", (req, res) => {
                 .navbar-brand {
                     font-family: 'Press Start 2P', cursive;
                     font-weight: 600;
+                    color: var(--accent-color) !important;
+                }
+
+                .navbar-nav .nav-link {
+                    color: var(--text-color) !important;
+                    transition: color 0.3s ease;
+                }
+
+                .navbar-nav .nav-link:hover {
                     color: var(--accent-color) !important;
                 }
 
@@ -703,6 +767,20 @@ app.get("/start", (req, res) => {
                     border-radius: 6px;
                     border: 3px solid #1e1e1e;
                 }
+
+                /* Additional Styles for Hacker Theme */
+                body::before {
+                    content: "";
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: url('https://i.imgur.com/3Z8dM7V.png') repeat;
+                    opacity: 0.05;
+                    pointer-events: none;
+                    z-index: -1;
+                }
             </style>
         </head>
         <body>
@@ -732,42 +810,56 @@ app.get("/start", (req, res) => {
             </nav>
 
             <div class="container">
-                <div class="glass-card">
-                    <h5 class="mb-4">
-                        <i class="fas fa-plus-circle me-2" style="color: var(--accent-color);"></i>
-                        เพิ่มบอทใหม่
-                    </h5>
-                    ${errorMessage}
-                    <form class="add-bot-form" method="POST" action="/start">
-                        <div class="mb-3">
-                            <label for="token" class="form-label">โทเค็นของคุณ</label>
-                            <textarea 
-                                id="token" 
-                                name="token" 
-                                class="form-control" 
-                                rows="4" 
-                                placeholder='{"appState": "YOUR_APP_STATE"}'
-                                required
-                            ></textarea>
+                <!-- สถิติ -->
+                <div class="row mb-4">
+                    <div class="col-md-4 col-sm-6 mb-3">
+                        <div class="stats-card">
+                            <i class="fas fa-robot fa-2x mb-3" style="color: var(--accent-color);"></i>
+                            <div class="stats-number" id="totalBots">${data.totalBots}</div>
+                            <div class="stats-label">บอททั้งหมด</div>
                         </div>
-                        <div class="mb-3">
-                            <label for="password" class="form-label">ตั้งรหัสผ่าน 6 หลักสำหรับการจัดการบอท</label>
-                            <input 
-                                type="password" 
-                                id="password" 
-                                name="password" 
-                                class="form-control" 
-                                pattern="\\d{6}" 
-                                placeholder="123456" 
-                                required
-                                title="กรุณากรอกรหัสผ่าน 6 หลัก"
-                            />
+                    </div>
+                    <div class="col-md-4 col-sm-6 mb-3">
+                        <div class="stats-card">
+                            <i class="fas fa-signal fa-2x mb-3" style="color: var(--info-color);"></i>
+                            <div class="stats-number" id="onlineBots">${data.onlineBots}</div>
+                            <div class="stats-label">บอทออนไลน์</div>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-play me-2"></i>
-                            เริ่มบอท
-                        </button>
-                    </form>
+                    </div>
+                    <div class="col-md-4 col-sm-6 mb-3">
+                        <div class="stats-card">
+                            <i class="fas fa-clock fa-2x mb-3" style="color: var(--secondary-color);"></i>
+                            <div class="stats-number" id="activeBots">${data.activeBots}</div>
+                            <div class="stats-label">บอททำงานแล้ว</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- ตารางบอท -->
+                    <div class="col-12">
+                        <div class="glass-card">
+                            <h5 class="mb-4">
+                                <i class="fas fa-robot me-2" style="color: var(--accent-color);"></i>
+                                บอทที่กำลังทำงาน
+                            </h5>
+                            <div class="table-responsive">
+                                <table class="table bot-table">
+                                    <thead>
+                                        <tr>
+                                            <th>ชื่อบอท</th>
+                                            <th>สถานะ</th>
+                                            <th>เวลารัน</th>
+                                            <th>การจัดการ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="botTableBody">
+                                        ${data.botRows}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -778,6 +870,509 @@ app.get("/start", (req, res) => {
             </footer>
 
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+            <script src="/socket.io/socket.io.js"></script>
+            <script>
+                const socket = io();
+
+                // ฟังก์ชันอัปเดตเวลารัน
+                function updateRuntime() {
+                    const runtimeElements = document.querySelectorAll('.runtime');
+                    const now = Date.now();
+
+                    runtimeElements.forEach(el => {
+                        const startTime = parseInt(el.getAttribute('data-start-time'));
+                        if (!startTime) return;
+
+                        const elapsed = now - startTime;
+                        const seconds = Math.floor((elapsed / 1000) % 60);
+                        const minutes = Math.floor((elapsed / (1000 * 60)) % 60);
+                        const hours = Math.floor((elapsed / (1000 * 60 * 60)) % 24);
+                        const days = Math.floor(elapsed / (1000 * 60 * 60 * 24));
+
+                        el.textContent = \`\${days} วัน \${hours} ชั่วโมง \${minutes} นาที \${seconds} วินาที\`;
+                    });
+                }
+
+                // รับข้อมูลอัปเดตจากเซิร์ฟเวอร์
+                socket.on('updateBots', (data) => {
+                    document.getElementById('totalBots').textContent = data.totalBots;
+                    document.getElementById('onlineBots').textContent = data.onlineBots;
+                    document.getElementById('activeBots').textContent = data.activeBots;
+                    
+                    const botTableBody = document.getElementById('botTableBody');
+                    if (botTableBody) {
+                        botTableBody.innerHTML = data.botRows;
+                    }
+
+                    updateRuntime();
+                });
+
+                // อัปเดตเวลารันทุกวินาที
+                setInterval(updateRuntime, 1000);
+                document.addEventListener('DOMContentLoaded', updateRuntime);
+
+                // Event Delegation สำหรับปุ่มลบและแก้ไข
+                document.addEventListener('click', function(event) {
+                    if (event.target.closest('.delete-btn')) {
+                        const token = decodeURIComponent(event.target.closest('.delete-btn').getAttribute('data-token'));
+                        const deleteCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการลบบอท:');
+                        if (deleteCode) {
+                            fetch('/delete', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ token, code: deleteCode })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    alert('ลบบอทสำเร็จ');
+                                    // การอัปเดตจะถูกจัดการผ่าน Socket.io
+                                } else {
+                                    alert(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด');
+                                }
+                            })
+                            .catch(err => {
+                                console.error(err);
+                                alert('เกิดข้อผิดพลาดในการลบบอท');
+                            });
+                        }
+                    }
+
+                    if (event.target.closest('.edit-btn')) {
+                        const token = decodeURIComponent(event.target.closest('.edit-btn').getAttribute('data-token'));
+                        const editCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการแก้ไขโทเค่น:');
+                        if (editCode) {
+                            const newToken = prompt('กรุณากรอกโทเค่นใหม่:');
+                            if (newToken) {
+                                fetch('/edit', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({ token, code: editCode, newToken })
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        alert('แก้ไขโทเค่นสำเร็จ');
+                                        // การอัปเดตจะถูกจัดการผ่าน Socket.io
+                                    } else {
+                                        alert(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด');
+                                    }
+                                })
+                                .catch(err => {
+                                    console.error(err);
+                                    alert('เกิดข้อผิดพลาดในการแก้ไขโทเค่น');
+                                });
+                            }
+                        }
+                    }
+                });
+            </script>
+        </body>
+        </html>
+    `);
+});
+
+// หน้าเพิ่มบอท
+app.get("/start", (req, res) => {
+    const error = req.query.error;
+
+    let errorMessage = "";
+    if (error === 'already-running') {
+        errorMessage = `<div class="alert alert-warning" role="alert">
+                            บอทนี้กำลังทำงานอยู่แล้ว
+                        </div>`;
+    } else if (error === 'invalid-token') {
+        errorMessage = `<div class="alert alert-danger" role="alert">
+                            โทเค็นไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง
+                        </div>`;
+    } else if (error === 'missing-fields') {
+        errorMessage = `<div class="alert alert-danger" role="alert">
+                            กรุณากรอกทั้งโทเค็นและรหัสผ่าน
+                        </div>`;
+    } else if (error === 'invalid-password') {
+        errorMessage = `<div class="alert alert-danger" role="alert">
+                            รหัสผ่านไม่ถูกต้อง กรุณากรอกรหัสผ่าน 6 หลัก
+                        </div>`;
+    }
+
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="th">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>เพิ่มบอท | ระบบจัดการบอท</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <style>
+                /* CSS สำหรับธีมแฮกเกอร์ */
+                :root {
+                    --primary-color: #0d6efd;
+                    --secondary-color: #6c757d;
+                    --accent-color: #00ff00;
+                    --background-color: #121212;
+                    --card-bg: #1e1e1e;
+                    --card-border: #333333;
+                    --text-color: #00ff00;
+                    --success-color: #00ff00;
+                    --error-color: #ff0000;
+                    --info-color: #1e90ff;
+                    --font-family: 'Roboto Mono', monospace;
+                }
+
+                body {
+                    background: var(--background-color);
+                    color: var(--text-color);
+                    font-family: var(--font-family);
+                    min-height: 100vh;
+                    position: relative;
+                    overflow-x: hidden;
+                    transition: background 0.5s ease;
+                }
+
+                .navbar {
+                    background: var(--card-bg);
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+                }
+
+                .navbar-brand {
+                    font-family: 'Press Start 2P', cursive;
+                    font-weight: 600;
+                    color: var(--accent-color) !important;
+                }
+
+                .navbar-nav .nav-link {
+                    color: var(--text-color) !important;
+                    transition: color 0.3s ease;
+                }
+
+                .navbar-nav .nav-link:hover {
+                    color: var(--accent-color) !important;
+                }
+
+                .glass-card {
+                    background: var(--card-bg);
+                    border: 1px solid var(--card-border);
+                    border-radius: 16px;
+                    padding: 24px;
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                }
+
+                .glass-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.7);
+                }
+
+                .add-bot-form .form-label {
+                    font-weight: 500;
+                    color: var(--text-color);
+                }
+
+                .form-control {
+                    background: #2c2c2c;
+                    border: 1px solid #444444;
+                    border-radius: 8px;
+                    padding: 10px 12px;
+                    font-size: 1rem;
+                    transition: border-color 0.3s ease, background 0.3s ease;
+                    color: var(--text-color);
+                }
+
+                .form-control::placeholder {
+                    color: #6c757d;
+                }
+
+                .form-control:focus {
+                    border-color: var(--accent-color);
+                    box-shadow: 0 0 0 0.2rem rgba(0, 255, 0, 0.25);
+                    background: #3c3c3c;
+                    color: var(--text-color);
+                }
+
+                .btn-primary {
+                    background: var(--accent-color);
+                    border: none;
+                    padding: 10px 20px;
+                    font-size: 1rem;
+                    border-radius: 8px;
+                    transition: background 0.3s ease, transform 0.2s ease;
+                    color: #000;
+                    font-weight: 600;
+                }
+
+                .btn-primary:hover {
+                    background: #00e600;
+                    transform: translateY(-2px);
+                }
+
+                .footer {
+                    background: var(--card-bg);
+                    border-top: 2px solid var(--card-border);
+                    padding: 20px 0;
+                    margin-top: 40px;
+                    font-size: 0.9rem;
+                    color: var(--accent-color);
+                }
+
+                .animate-float {
+                    animation: float 3s ease-in-out infinite;
+                }
+
+                @keyframes float {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-10px); }
+                }
+
+                @media (max-width: 768px) {
+                    .glass-card {
+                        margin-bottom: 20px;
+                    }
+                }
+
+                /* Custom Scrollbar */
+                ::-webkit-scrollbar {
+                    width: 12px;
+                }
+
+                ::-webkit-scrollbar-track {
+                    background: #1e1e1e;
+                }
+
+                ::-webkit-scrollbar-thumb {
+                    background-color: var(--accent-color);
+                    border-radius: 6px;
+                    border: 3px solid #1e1e1e;
+                }
+
+                /* Additional Styles for Hacker Theme */
+                body::before {
+                    content: "";
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: url('https://i.imgur.com/3Z8dM7V.png') repeat;
+                    opacity: 0.05;
+                    pointer-events: none;
+                    z-index: -1;
+                }
+
+                /* Button Styles */
+                .btn-warning {
+                    background-color: #ffc107;
+                    border: none;
+                    color: #212529;
+                }
+
+                .btn-danger {
+                    background-color: #dc3545;
+                    border: none;
+                }
+
+                .btn-warning:hover {
+                    background-color: #e0a800;
+                }
+
+                .btn-danger:hover {
+                    background-color: #c82333;
+                }
+            </style>
+        </head>
+        <body>
+            <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+                <div class="container">
+                    <a class="navbar-brand d-flex align-items-center" href="/">
+                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: var(--accent-color);"></i>
+                        ระบบจัดการบอท
+                    </a>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav ms-auto">
+                            <li class="nav-item">
+                                <a class="nav-link active" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="container">
+                <!-- สถิติ -->
+                <div class="row mb-4">
+                    <div class="col-md-4 col-sm-6 mb-3">
+                        <div class="stats-card">
+                            <i class="fas fa-robot fa-2x mb-3" style="color: var(--accent-color);"></i>
+                            <div class="stats-number" id="totalBots">${data.totalBots}</div>
+                            <div class="stats-label">บอททั้งหมด</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-sm-6 mb-3">
+                        <div class="stats-card">
+                            <i class="fas fa-signal fa-2x mb-3" style="color: var(--info-color);"></i>
+                            <div class="stats-number" id="onlineBots">${data.onlineBots}</div>
+                            <div class="stats-label">บอทออนไลน์</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-sm-6 mb-3">
+                        <div class="stats-card">
+                            <i class="fas fa-clock fa-2x mb-3" style="color: var(--secondary-color);"></i>
+                            <div class="stats-number" id="activeBots">${data.activeBots}</div>
+                            <div class="stats-label">บอททำงานแล้ว</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- ตารางบอท -->
+                    <div class="col-12">
+                        <div class="glass-card">
+                            <h5 class="mb-4">
+                                <i class="fas fa-robot me-2" style="color: var(--accent-color);"></i>
+                                บอทที่กำลังทำงาน
+                            </h5>
+                            <div class="table-responsive">
+                                <table class="table bot-table">
+                                    <thead>
+                                        <tr>
+                                            <th>ชื่อบอท</th>
+                                            <th>สถานะ</th>
+                                            <th>เวลารัน</th>
+                                            <th>การจัดการ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="botTableBody">
+                                        ${data.botRows}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="footer text-center">
+                <div class="container">
+                    <p class="mb-0">© ${new Date().getFullYear()} ระบบจัดการบอท | พัฒนาด้วย ❤️</p>
+                </div>
+            </footer>
+
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+            <script src="/socket.io/socket.io.js"></script>
+            <script>
+                const socket = io();
+
+                // ฟังก์ชันอัปเดตเวลารัน
+                function updateRuntime() {
+                    const runtimeElements = document.querySelectorAll('.runtime');
+                    const now = Date.now();
+
+                    runtimeElements.forEach(el => {
+                        const startTime = parseInt(el.getAttribute('data-start-time'));
+                        if (!startTime) return;
+
+                        const elapsed = now - startTime;
+                        const seconds = Math.floor((elapsed / 1000) % 60);
+                        const minutes = Math.floor((elapsed / (1000 * 60)) % 60);
+                        const hours = Math.floor((elapsed / (1000 * 60 * 60)) % 24);
+                        const days = Math.floor(elapsed / (1000 * 60 * 60 * 24));
+
+                        el.textContent = \`\${days} วัน \${hours} ชั่วโมง \${minutes} นาที \${seconds} วินาที\`;
+                    });
+                }
+
+                // รับข้อมูลอัปเดตจากเซิร์ฟเวอร์
+                socket.on('updateBots', (data) => {
+                    document.getElementById('totalBots').textContent = data.totalBots;
+                    document.getElementById('onlineBots').textContent = data.onlineBots;
+                    document.getElementById('activeBots').textContent = data.activeBots;
+                    
+                    const botTableBody = document.getElementById('botTableBody');
+                    if (botTableBody) {
+                        botTableBody.innerHTML = data.botRows;
+                    }
+
+                    updateRuntime();
+                });
+
+                // อัปเดตเวลารันทุกวินาที
+                setInterval(updateRuntime, 1000);
+                document.addEventListener('DOMContentLoaded', updateRuntime);
+
+                // Event Delegation สำหรับปุ่มลบและแก้ไข
+                document.addEventListener('click', function(event) {
+                    if (event.target.closest('.delete-btn')) {
+                        const token = decodeURIComponent(event.target.closest('.delete-btn').getAttribute('data-token'));
+                        const deleteCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการลบบอท:');
+                        if (deleteCode) {
+                            fetch('/delete', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ token, code: deleteCode })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    alert('ลบบอทสำเร็จ');
+                                    // การอัปเดตจะถูกจัดการผ่าน Socket.io
+                                } else {
+                                    alert(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด');
+                                }
+                            })
+                            .catch(err => {
+                                console.error(err);
+                                alert('เกิดข้อผิดพลาดในการลบบอท');
+                            });
+                        }
+                    }
+
+                    if (event.target.closest('.edit-btn')) {
+                        const token = decodeURIComponent(event.target.closest('.edit-btn').getAttribute('data-token'));
+                        const editCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการแก้ไขโทเค่น:');
+                        if (editCode) {
+                            const newToken = prompt('กรุณากรอกโทเค่นใหม่:');
+                            if (newToken) {
+                                fetch('/edit', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({ token, code: editCode, newToken })
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        alert('แก้ไขโทเค่นสำเร็จ');
+                                        // การอัปเดตจะถูกจัดการผ่าน Socket.io
+                                    } else {
+                                        alert(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด');
+                                    }
+                                })
+                                .catch(err => {
+                                    console.error(err);
+                                    alert('เกิดข้อผิดพลาดในการแก้ไขโทเค่น');
+                                });
+                            }
+                        }
+                    }
+                });
+            </script>
         </body>
         </html>
     `);
@@ -811,15 +1406,17 @@ app.get("/bots", (req, res) => {
                     --error-color: #ff0000;
                     --info-color: #1e90ff;
                     --bot-name-color: #ff69b4;
+                    --font-family: 'Roboto Mono', monospace;
                 }
 
                 body {
                     background: var(--background-color);
                     color: var(--text-color);
-                    font-family: 'Roboto Mono', monospace;
+                    font-family: var(--font-family);
                     min-height: 100vh;
                     position: relative;
                     overflow-x: hidden;
+                    transition: background 0.5s ease;
                 }
 
                 .navbar {
@@ -830,6 +1427,15 @@ app.get("/bots", (req, res) => {
                 .navbar-brand {
                     font-family: 'Press Start 2P', cursive;
                     font-weight: 600;
+                    color: var(--accent-color) !important;
+                }
+
+                .navbar-nav .nav-link {
+                    color: var(--text-color) !important;
+                    transition: color 0.3s ease;
+                }
+
+                .navbar-nav .nav-link:hover {
                     color: var(--accent-color) !important;
                 }
 
@@ -946,6 +1552,40 @@ app.get("/bots", (req, res) => {
                     background-color: var(--accent-color);
                     border-radius: 6px;
                     border: 3px solid #1e1e1e;
+                }
+
+                /* Additional Styles for Hacker Theme */
+                body::before {
+                    content: "";
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: url('https://i.imgur.com/3Z8dM7V.png') repeat;
+                    opacity: 0.05;
+                    pointer-events: none;
+                    z-index: -1;
+                }
+
+                /* Button Styles */
+                .btn-warning {
+                    background-color: #ffc107;
+                    border: none;
+                    color: #212529;
+                }
+
+                .btn-danger {
+                    background-color: #dc3545;
+                    border: none;
+                }
+
+                .btn-warning:hover {
+                    background-color: #e0a800;
+                }
+
+                .btn-danger:hover {
+                    background-color: #c82333;
                 }
             </style>
         </head>
@@ -1140,15 +1780,17 @@ app.get("/commands", (req, res) => {
                     --success-color: #00ff00;
                     --error-color: #ff0000;
                     --info-color: #1e90ff;
+                    --font-family: 'Roboto Mono', monospace;
                 }
 
                 body {
                     background: var(--background-color);
                     color: var(--text-color);
-                    font-family: 'Roboto Mono', monospace;
+                    font-family: var(--font-family);
                     min-height: 100vh;
                     position: relative;
                     overflow-x: hidden;
+                    transition: background 0.5s ease;
                 }
 
                 .navbar {
@@ -1159,6 +1801,15 @@ app.get("/commands", (req, res) => {
                 .navbar-brand {
                     font-family: 'Press Start 2P', cursive;
                     font-weight: 600;
+                    color: var(--accent-color) !important;
+                }
+
+                .navbar-nav .nav-link {
+                    color: var(--text-color) !important;
+                    transition: color 0.3s ease;
+                }
+
+                .navbar-nav .nav-link:hover {
                     color: var(--accent-color) !important;
                 }
 
@@ -1237,6 +1888,40 @@ app.get("/commands", (req, res) => {
                     background-color: var(--accent-color);
                     border-radius: 6px;
                     border: 3px solid #1e1e1e;
+                }
+
+                /* Additional Styles for Hacker Theme */
+                body::before {
+                    content: "";
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: url('https://i.imgur.com/3Z8dM7V.png') repeat;
+                    opacity: 0.05;
+                    pointer-events: none;
+                    z-index: -1;
+                }
+
+                /* Button Styles */
+                .btn-warning {
+                    background-color: #ffc107;
+                    border: none;
+                    color: #212529;
+                }
+
+                .btn-danger {
+                    background-color: #dc3545;
+                    border: none;
+                }
+
+                .btn-warning:hover {
+                    background-color: #e0a800;
+                }
+
+                .btn-danger:hover {
+                    background-color: #c82333;
                 }
             </style>
         </head>
