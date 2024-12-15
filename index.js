@@ -1,7 +1,7 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const login = require('ryuu-fca-api');
+const login = require('ryuu-fca-api'); // ตรวจสอบว่าติดตั้งแพคเกจนี้แล้ว
 const chalk = require('chalk');
 const figlet = require('figlet');
 const fs = require('fs');
@@ -144,7 +144,9 @@ function loadBotsFromFiles() {
             const filePath = path.join(botsDir, file);
             const botData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
             const { appState, token, name, startTime, password } = botData;
-            startBot(appState, token, name, startTime, password, false);
+            startBot(appState, token, name, startTime, password, false).catch(err => {
+                console.error(`ไม่สามารถเริ่มต้นบอทจากไฟล์: ${filePath}, error=${err.message}`);
+            });
         }
     });
 }
@@ -522,7 +524,7 @@ app.get("/", (req, res) => {
                                     alert('ลบบอทสำเร็จ');
                                     // การอัปเดตจะถูกจัดการผ่าน Socket.io
                                 } else {
-                                    alert('รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด');
+                                    alert(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด');
                                 }
                             })
                             .catch(err => {
@@ -551,7 +553,7 @@ app.get("/", (req, res) => {
                                         alert('แก้ไขโทเค่นสำเร็จ');
                                         // การอัปเดตจะถูกจัดการผ่าน Socket.io
                                     } else {
-                                        alert('รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด');
+                                        alert(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด');
                                     }
                                 })
                                 .catch(err => {
@@ -581,6 +583,14 @@ app.get("/start", (req, res) => {
         errorMessage = `<div class="alert alert-danger" role="alert">
                             โทเค็นไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง
                         </div>`;
+    } else if (error === 'missing-fields') {
+        errorMessage = `<div class="alert alert-danger" role="alert">
+                            กรุณากรอกทั้งโทเค็นและรหัสผ่าน
+                        </div>`;
+    } else if (error === 'invalid-password') {
+        errorMessage = `<div class="alert alert-danger" role="alert">
+                            รหัสผ่านไม่ถูกต้อง กรุณากรอกรหัสผ่าน 6 หลัก
+                        </div>`;
     }
 
     res.send(`
@@ -591,7 +601,7 @@ app.get("/start", (req, res) => {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>เพิ่มบอท | ระบบจัดการบอท</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
                 /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
@@ -1098,7 +1108,7 @@ app.get("/bots", (req, res) => {
                                     alert('ลบบอทสำเร็จ');
                                     // การอัปเดตจะถูกจัดการผ่าน Socket.io
                                 } else {
-                                    alert('รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด');
+                                    alert(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด');
                                 }
                             })
                             .catch(err => {
@@ -1127,7 +1137,7 @@ app.get("/bots", (req, res) => {
                                         alert('แก้ไขโทเค่นสำเร็จ');
                                         // การอัปเดตจะถูกจัดการผ่าน Socket.io
                                     } else {
-                                        alert('รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด');
+                                        alert(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด');
                                     }
                                 })
                                 .catch(err => {
@@ -1370,9 +1380,9 @@ async function startBot(appState, token, name, startTime, password, saveToFile =
                 name, 
                 startTime, 
                 status: 'online',
-                password // เพิ่มรหัสผ่าน
+                password: password.toString() // แปลงเป็น string เพื่อความแน่ใจ
             };
-            botCount = Math.max(botCount, parseInt(name.replace('✨Bot ', ''))); // ปรับ botCount ให้สูงสุด
+            botCount = Math.max(botCount, parseInt(name.replace('✨', '').replace('✨', '').split('Bot ')[1] || '0')); // ปรับ botCount ให้สูงสุด
 
             console.log(chalk.green(figlet.textSync("Bot Started!", { horizontalLayout: "full" })));
             console.log(chalk.green(`✅ ${name} กำลังทำงานด้วยโทเค็น: ${token}`));
@@ -1483,46 +1493,58 @@ function clearCountdown(token) {
 }
 
 // Route สำหรับลบบอท
-app.post('/delete', (req, res) => {
+app.post('/delete', async (req, res) => {
     const { token, code } = req.body;
+    
+    console.log(`ได้รับคำขอลบบอท: token=${token}, code=${code}`);
 
     if (!token || !code) {
+        console.log('ข้อมูลไม่ครบถ้วน');
         return res.json({ success: false, message: 'ข้อมูลไม่ครบถ้วน' });
     }
 
     const bot = botSessions[token];
     if (!bot) {
+        console.log('ไม่พบบอทที่ต้องการลบ');
         return res.json({ success: false, message: 'ไม่พบบอทที่ต้องการลบ' });
     }
 
-    if (bot.password !== code) { // ตรวจสอบรหัสผ่าน
+    console.log(`ตรวจสอบรหัสผ่าน: bot.password=${bot.password}, code=${code}`);
+
+    if (bot.password.toString() !== code.toString()) { // ตรวจสอบรหัสผ่าน
+        console.log('รหัสผ่านไม่ถูกต้อง');
         return res.json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
     }
 
     // หยุดการทำงานของบอท
-    bot.api.destroy().then(() => {
+    try {
+        await bot.api.destroy();
+        console.log(`บอทถูกหยุดทำงาน: ${bot.name}`);
+
         // ลบไฟล์บอท
         const botFilePath = path.join(botsDir, `${bot.name.replace(/ /g, '_')}.json`);
         if (fs.existsSync(botFilePath)) {
             fs.unlinkSync(botFilePath);
+            console.log(`ลบไฟล์บอท: ${botFilePath}`);
         }
 
         // ลบจาก botSessions
         delete botSessions[token];
+        console.log(`ลบบอทจาก botSessions: ${token}`);
 
         // หากกำลังนับถอยหลังให้ยกเลิก
         if (removalTimers[token]) {
             clearTimeout(removalTimers[token]);
             delete removalTimers[token];
+            console.log(`ยกเลิกการนับถอยหลัง: ${token}`);
         }
 
-        console.log(chalk.red(`❌ ลบบอท: ${bot.name} (${token})`));
         io.emit('updateBots', generateBotData());
         res.json({ success: true, message: 'ลบบอทสำเร็จ' });
-    }).catch(err => {
-        console.error(chalk.red(`❌ ไม่สามารถหยุดบอท: ${err.message}`));
+    } catch (err) {
+        console.error(`ไม่สามารถหยุดบอท: ${err.message}`);
         res.json({ success: false, message: 'ไม่สามารถหยุดบอทได้' });
-    });
+    }
 });
 
 // Route สำหรับแก้ไขโทเค่น
@@ -1538,7 +1560,7 @@ app.post('/edit', async (req, res) => {
         return res.json({ success: false, message: 'ไม่พบบอทที่ต้องการแก้ไข' });
     }
 
-    if (bot.password !== code) { // ตรวจสอบรหัสผ่าน
+    if (bot.password.toString() !== code.toString()) { // ตรวจสอบรหัสผ่าน
         return res.json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
     }
 
@@ -1549,20 +1571,24 @@ app.post('/edit', async (req, res) => {
     try {
         // หยุดการทำงานของบอท
         await bot.api.destroy();
+        console.log(`หยุดบอท: ${bot.name}`);
 
         // ลบไฟล์บอทเก่า
         const oldBotFilePath = path.join(botsDir, `${bot.name.replace(/ /g, '_')}.json`);
         if (fs.existsSync(oldBotFilePath)) {
             fs.unlinkSync(oldBotFilePath);
+            console.log(`ลบไฟล์บอทเก่า: ${oldBotFilePath}`);
         }
 
         // ลบจาก botSessions
         delete botSessions[token];
+        console.log(`ลบบอทจาก botSessions: ${token}`);
 
         // หยุดการนับถอยหลังหากกำลังนับ
         if (removalTimers[token]) {
             clearTimeout(removalTimers[token]);
             delete removalTimers[token];
+            console.log(`ยกเลิกการนับถอยหลัง: ${token}`);
         }
 
         // เริ่มต้นบอทใหม่ด้วยโทเค่นใหม่และรหัสผ่านใหม่
