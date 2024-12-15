@@ -1,90 +1,42 @@
-const axios = require("axios");
-const fs = require("fs");
-const path = require("path");
+const axios = require('axios');
+const request = require('request');
 
 module.exports = {
-    config: {
-        name: "/สุ่มคลิปCapCut", // เปลี่ยนชื่อคำสั่งให้รองรับ "/"
-        description: "ดึงและส่งคลิปแบบสุ่มจาก CapCut API",
-        usage: "/สุ่มคลิปCapCut",
-        permissions: "everyone",
-    },
-    run: async ({ api, event }) => {
-        const apiUrl = "https://apis-david-mp-momn.onrender.com/api/edit";
-        const downloadsDir = path.join(__dirname, "../../downloads");
+  config: {
+    name: 'สุ่มคลิปแคปคัด',
+    description: 'ส่งคลิปวิดีโอจากแอปแคปคัดแบบสุ่มให้คุณ',
+  },
+  run: async ({ api, event }) => {
+    try {
+      const response = await axios.get('https://apis-david-mp-momn.onrender.com/api/edit');
+      const data = response.data;
 
-        // ตรวจสอบและสร้างโฟลเดอร์ downloads หากไม่มี
-        if (!fs.existsSync(downloadsDir)) {
-            fs.mkdirSync(downloadsDir, { recursive: true });
-        }
+      // ตรวจสอบว่าข้อมูลที่ได้มาเป็นอาเรย์ และมีคลิปอยู่หรือไม่
+      if (Array.isArray(data) && data.length > 0) {
+        // เลือกคลิปแบบสุ่ม
+        const randomClip = data[Math.floor(Math.random() * data.length)];
 
-        try {
-            // ดึงข้อมูลคลิปจาก API
-            const response = await axios.get(apiUrl);
-            const clips = response.data;
-
-            if (!clips || clips.length === 0) {
-                return api.sendMessage(
-                    "❗ ไม่พบคลิปในขณะนี้",
-                    event.threadID,
-                    event.messageID
-                );
+        // ส่งคลิปเป็นไฟล์แนบ (หากลิงก์ randomClip เป็น URL ไฟล์วิดีโอโดยตรง เช่น .mp4)
+        api.sendMessage(
+          { attachment: request(randomClip) },
+          event.threadID,
+          (err) => {
+            if (err) {
+              console.error("❌ ไม่สามารถส่งคลิปได้:", err);
+              api.sendMessage("ขออภัยค่ะ ไม่สามารถส่งคลิปได้ในขณะนี้", event.threadID);
+            } else {
+              // ส่งข้อความแจ้งเตือนสั้น ๆ ว่าส่งคลิปสำเร็จแล้ว
+              api.sendMessage("🎬 คลิปของคุณพร้อมแล้ว! รับชมให้สนุกนะคะ 🎉", event.threadID);
             }
-
-            // สุ่มเลือกคลิป
-            const randomClip = clips[Math.floor(Math.random() * clips.length)];
-
-            if (!randomClip.video || !randomClip.title) {
-                return api.sendMessage(
-                    "❗ ข้อมูลคลิปไม่สมบูรณ์",
-                    event.threadID,
-                    event.messageID
-                );
-            }
-
-            const videoUrl = randomClip.video;
-            const videoPath = path.join(downloadsDir, `capcut_${Date.now()}.mp4`);
-
-            // ดาวน์โหลดวิดีโอ
-            const videoResponse = await axios({
-                method: "get",
-                url: videoUrl,
-                responseType: "stream",
-            });
-
-            const writer = fs.createWriteStream(videoPath);
-            videoResponse.data.pipe(writer);
-
-            writer.on("finish", () => {
-                // ส่งวิดีโอให้ผู้ใช้งาน
-                api.sendMessage(
-                    {
-                        body: `🎬 คลิปสุ่มจาก CapCut: ${randomClip.title}`,
-                        attachment: fs.createReadStream(videoPath),
-                    },
-                    event.threadID,
-                    () => {
-                        // ลบไฟล์หลังส่งสำเร็จ
-                        fs.unlinkSync(videoPath);
-                    }
-                );
-            });
-
-            writer.on("error", (err) => {
-                console.error("❌ Error writing video file:", err.message);
-                return api.sendMessage(
-                    "❗ เกิดข้อผิดพลาดในการดาวน์โหลดวิดีโอ",
-                    event.threadID,
-                    event.messageID
-                );
-            });
-        } catch (error) {
-            console.error("❌ Error fetching CapCut clip:", error.message);
-            return api.sendMessage(
-                "❗ เกิดข้อผิดพลาดในการเชื่อมต่อกับ API",
-                event.threadID,
-                event.messageID
-            );
-        }
-    },
+          }
+        );
+      } else {
+        // กรณีไม่มีคลิปในข้อมูล
+        api.sendMessage("ไม่พบคลิปจากแคปคัดในขณะนี้ค่ะ ลองใหม่อีกครั้งนะคะ", event.threadID);
+      }
+    } catch (error) {
+      console.error('❌ เกิดข้อผิดพลาดในการดึงคลิป:', error);
+      api.sendMessage("ไม่สามารถดึงคลิปได้ในขณะนี้ค่ะ กรุณาลองใหม่อีกครั้ง", event.threadID);
+    }
+  }
 };
