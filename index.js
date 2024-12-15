@@ -160,42 +160,43 @@ app.get("/", (req, res) => {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>แดชบอร์ดหลัก | ระบบจัดการบอท</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
+                /* CSS สำหรับธีมแฮกเกอร์ */
                 :root {
                     --primary-color: #0d6efd;
                     --secondary-color: #6c757d;
-                    --accent-color: #198754;
-                    --background-color: #f8f9fa;
-                    --card-bg: #ffffff;
-                    --card-border: #dee2e6;
-                    --text-color: #212529;
-                    --success-color: #198754;
-                    --error-color: #dc3545;
-                    --info-color: #0d6efd;
-                    --bot-name-color: #ff5722;
+                    --accent-color: #00ff00;
+                    --background-color: #121212;
+                    --card-bg: #1e1e1e;
+                    --card-border: #333333;
+                    --text-color: #00ff00;
+                    --success-color: #00ff00;
+                    --error-color: #ff0000;
+                    --info-color: #1e90ff;
+                    --bot-name-color: #ff69b4;
+                    --font-family: 'Roboto Mono', monospace;
                 }
 
                 body {
                     background: var(--background-color);
                     color: var(--text-color);
-                    font-family: 'Roboto', sans-serif;
+                    font-family: var(--font-family);
                     min-height: 100vh;
                     position: relative;
                     overflow-x: hidden;
                 }
 
                 .navbar {
-                    background: var(--primary-color);
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    background: var(--card-bg);
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
                 }
 
                 .navbar-brand {
-                    font-family: 'Kanit', sans-serif;
+                    font-family: 'Press Start 2P', cursive;
                     font-weight: 600;
-                    color: #ffffff !important;
+                    color: var(--accent-color) !important;
                 }
 
                 .stats-card {
@@ -204,20 +205,20 @@ app.get("/", (req, res) => {
                     border-radius: 12px;
                     padding: 20px;
                     text-align: center;
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
 
                 .stats-card:hover {
                     transform: translateY(-5px);
-                    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+                    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.7);
                 }
 
                 .stats-number {
                     font-size: 2.5rem;
                     font-weight: 700;
                     margin: 10px 0;
-                    color: var(--primary-color);
+                    color: var(--accent-color);
                 }
 
                 .stats-label {
@@ -230,13 +231,13 @@ app.get("/", (req, res) => {
                     border: 1px solid var(--card-border);
                     border-radius: 16px;
                     padding: 24px;
-                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
 
                 .glass-card:hover {
                     transform: translateY(-5px);
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.7);
                 }
 
                 .bot-table, .command-table {
@@ -252,14 +253,14 @@ app.get("/", (req, res) => {
                 }
 
                 .bot-table th, .command-table th {
-                    background-color: var(--primary-color);
-                    color: #fff;
+                    background-color: var(--card-border);
+                    color: var(--accent-color);
                     font-weight: 600;
                 }
 
                 .bot-table tr:nth-child(even),
                 .command-table tr:nth-child(even) {
-                    background-color: #f1f1f1;
+                    background-color: #2c2c2c;
                 }
 
                 .status-online {
@@ -285,12 +286,12 @@ app.get("/", (req, res) => {
                 }
 
                 .footer {
-                    background: var(--primary-color);
-                    border-top: 2px solid var(--primary-color);
+                    background: var(--card-bg);
+                    border-top: 2px solid var(--card-border);
                     padding: 20px 0;
                     margin-top: 40px;
                     font-size: 0.9rem;
-                    color: #ffffff;
+                    color: var(--accent-color);
                 }
 
                 .animate-float {
@@ -330,13 +331,28 @@ app.get("/", (req, res) => {
                 .btn-edit, .btn-delete {
                     margin-right: 5px;
                 }
+
+                /* Custom Scrollbar */
+                ::-webkit-scrollbar {
+                    width: 12px;
+                }
+
+                ::-webkit-scrollbar-track {
+                    background: #1e1e1e;
+                }
+
+                ::-webkit-scrollbar-thumb {
+                    background-color: var(--accent-color);
+                    border-radius: 6px;
+                    border: 3px solid #1e1e1e;
+                }
             </style>
         </head>
         <body>
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
-                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: #ffffff;"></i>
+                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: var(--accent-color);"></i>
                         ระบบจัดการบอท
                     </a>
                     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -363,7 +379,7 @@ app.get("/", (req, res) => {
                 <div class="row mb-4">
                     <div class="col-md-4 col-sm-6 mb-3">
                         <div class="stats-card">
-                            <i class="fas fa-robot fa-2x mb-3" style="color: var(--primary-color);"></i>
+                            <i class="fas fa-robot fa-2x mb-3" style="color: var(--accent-color);"></i>
                             <div class="stats-number" id="totalBots">${data.totalBots}</div>
                             <div class="stats-label">บอททั้งหมด</div>
                         </div>
@@ -389,7 +405,7 @@ app.get("/", (req, res) => {
                     <div class="col-12">
                         <div class="glass-card">
                             <h5 class="mb-4">
-                                <i class="fas fa-robot me-2" style="color: var(--primary-color);"></i>
+                                <i class="fas fa-robot me-2" style="color: var(--accent-color);"></i>
                                 บอทที่กำลังทำงาน
                             </h5>
                             <div class="table-responsive">
@@ -556,41 +572,41 @@ app.get("/start", (req, res) => {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>เพิ่มบอท | ระบบจัดการบอท</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
+                /* CSS สำหรับธีมแฮกเกอร์ */
                 :root {
                     --primary-color: #0d6efd;
                     --secondary-color: #6c757d;
-                    --accent-color: #198754;
-                    --background-color: #f8f9fa;
-                    --card-bg: #ffffff;
-                    --card-border: #dee2e6;
-                    --text-color: #212529;
-                    --success-color: #198754;
-                    --error-color: #dc3545;
-                    --info-color: #0d6efd;
+                    --accent-color: #00ff00;
+                    --background-color: #121212;
+                    --card-bg: #1e1e1e;
+                    --card-border: #333333;
+                    --text-color: #00ff00;
+                    --success-color: #00ff00;
+                    --error-color: #ff0000;
+                    --info-color: #1e90ff;
                 }
 
                 body {
                     background: var(--background-color);
                     color: var(--text-color);
-                    font-family: 'Roboto', sans-serif;
+                    font-family: 'Roboto Mono', monospace;
                     min-height: 100vh;
                     position: relative;
                     overflow-x: hidden;
                 }
 
                 .navbar {
-                    background: var(--primary-color);
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    background: var(--card-bg);
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
                 }
 
                 .navbar-brand {
-                    font-family: 'Kanit', sans-serif;
+                    font-family: 'Press Start 2P', cursive;
                     font-weight: 600;
-                    color: #ffffff !important;
+                    color: var(--accent-color) !important;
                 }
 
                 .glass-card {
@@ -598,13 +614,13 @@ app.get("/start", (req, res) => {
                     border: 1px solid var(--card-border);
                     border-radius: 16px;
                     padding: 24px;
-                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
 
                 .glass-card:hover {
                     transform: translateY(-5px);
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.7);
                 }
 
                 .add-bot-form .form-label {
@@ -613,8 +629,8 @@ app.get("/start", (req, res) => {
                 }
 
                 .form-control {
-                    background: #f1f1f1;
-                    border: 1px solid #ced4da;
+                    background: #2c2c2c;
+                    border: 1px solid #444444;
                     border-radius: 8px;
                     padding: 10px 12px;
                     font-size: 1rem;
@@ -627,35 +643,35 @@ app.get("/start", (req, res) => {
                 }
 
                 .form-control:focus {
-                    border-color: var(--primary-color);
-                    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
-                    background: #e9ecef;
+                    border-color: var(--accent-color);
+                    box-shadow: 0 0 0 0.2rem rgba(0, 255, 0, 0.25);
+                    background: #3c3c3c;
                     color: var(--text-color);
                 }
 
                 .btn-primary {
-                    background: var(--primary-color);
+                    background: var(--accent-color);
                     border: none;
                     padding: 10px 20px;
                     font-size: 1rem;
                     border-radius: 8px;
                     transition: background 0.3s ease, transform 0.2s ease;
-                    color: #fff;
+                    color: #000;
                     font-weight: 600;
                 }
 
                 .btn-primary:hover {
-                    background: #0b5ed7;
+                    background: #00e600;
                     transform: translateY(-2px);
                 }
 
                 .footer {
-                    background: var(--primary-color);
-                    border-top: 2px solid var(--primary-color);
+                    background: var(--card-bg);
+                    border-top: 2px solid var(--card-border);
                     padding: 20px 0;
                     margin-top: 40px;
                     font-size: 0.9rem;
-                    color: #ffffff;
+                    color: var(--accent-color);
                 }
 
                 .animate-float {
@@ -672,13 +688,28 @@ app.get("/start", (req, res) => {
                         margin-bottom: 20px;
                     }
                 }
+
+                /* Custom Scrollbar */
+                ::-webkit-scrollbar {
+                    width: 12px;
+                }
+
+                ::-webkit-scrollbar-track {
+                    background: #1e1e1e;
+                }
+
+                ::-webkit-scrollbar-thumb {
+                    background-color: var(--accent-color);
+                    border-radius: 6px;
+                    border: 3px solid #1e1e1e;
+                }
             </style>
         </head>
         <body>
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
-                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: #ffffff;"></i>
+                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: var(--accent-color);"></i>
                         ระบบจัดการบอท
                     </a>
                     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -703,7 +734,7 @@ app.get("/start", (req, res) => {
             <div class="container">
                 <div class="glass-card">
                     <h5 class="mb-4">
-                        <i class="fas fa-plus-circle me-2" style="color: var(--primary-color);"></i>
+                        <i class="fas fa-plus-circle me-2" style="color: var(--accent-color);"></i>
                         เพิ่มบอทใหม่
                     </h5>
                     ${errorMessage}
@@ -764,42 +795,42 @@ app.get("/bots", (req, res) => {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>ดูบอทรัน | ระบบจัดการบอท</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
+                /* CSS สำหรับธีมแฮกเกอร์ */
                 :root {
                     --primary-color: #0d6efd;
                     --secondary-color: #6c757d;
-                    --accent-color: #198754;
-                    --background-color: #f8f9fa;
-                    --card-bg: #ffffff;
-                    --card-border: #dee2e6;
-                    --text-color: #212529;
-                    --success-color: #198754;
-                    --error-color: #dc3545;
-                    --info-color: #0d6efd;
-                    --bot-name-color: #ff5722;
+                    --accent-color: #00ff00;
+                    --background-color: #121212;
+                    --card-bg: #1e1e1e;
+                    --card-border: #333333;
+                    --text-color: #00ff00;
+                    --success-color: #00ff00;
+                    --error-color: #ff0000;
+                    --info-color: #1e90ff;
+                    --bot-name-color: #ff69b4;
                 }
 
                 body {
                     background: var(--background-color);
                     color: var(--text-color);
-                    font-family: 'Roboto', sans-serif;
+                    font-family: 'Roboto Mono', monospace;
                     min-height: 100vh;
                     position: relative;
                     overflow-x: hidden;
                 }
 
                 .navbar {
-                    background: var(--primary-color);
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    background: var(--card-bg);
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
                 }
 
                 .navbar-brand {
-                    font-family: 'Kanit', sans-serif;
+                    font-family: 'Press Start 2P', cursive;
                     font-weight: 600;
-                    color: #ffffff !important;
+                    color: var(--accent-color) !important;
                 }
 
                 .glass-card {
@@ -807,13 +838,13 @@ app.get("/bots", (req, res) => {
                     border: 1px solid var(--card-border);
                     border-radius: 16px;
                     padding: 24px;
-                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
 
                 .glass-card:hover {
                     transform: translateY(-5px);
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.7);
                 }
 
                 .bot-table {
@@ -828,13 +859,13 @@ app.get("/bots", (req, res) => {
                 }
 
                 .bot-table th {
-                    background-color: var(--primary-color);
-                    color: #fff;
+                    background-color: var(--card-border);
+                    color: var(--accent-color);
                     font-weight: 600;
                 }
 
                 .bot-table tr:nth-child(even) {
-                    background-color: #f1f1f1;
+                    background-color: #2c2c2c;
                 }
 
                 .status-online {
@@ -860,12 +891,12 @@ app.get("/bots", (req, res) => {
                 }
 
                 .footer {
-                    background: var(--primary-color);
-                    border-top: 2px solid var(--primary-color);
+                    background: var(--card-bg);
+                    border-top: 2px solid var(--card-border);
                     padding: 20px 0;
                     margin-top: 40px;
                     font-size: 0.9rem;
-                    color: #ffffff;
+                    color: var(--accent-color);
                 }
 
                 .animate-float {
@@ -901,13 +932,28 @@ app.get("/bots", (req, res) => {
                 .btn-edit, .btn-delete {
                     margin-right: 5px;
                 }
+
+                /* Custom Scrollbar */
+                ::-webkit-scrollbar {
+                    width: 12px;
+                }
+
+                ::-webkit-scrollbar-track {
+                    background: #1e1e1e;
+                }
+
+                ::-webkit-scrollbar-thumb {
+                    background-color: var(--accent-color);
+                    border-radius: 6px;
+                    border: 3px solid #1e1e1e;
+                }
             </style>
         </head>
         <body>
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
-                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: #ffffff;"></i>
+                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: var(--accent-color);"></i>
                         ระบบจัดการบอท
                     </a>
                     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -1079,41 +1125,41 @@ app.get("/commands", (req, res) => {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>คำสั่งที่ใช้ | ระบบจัดการบอท</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
+                /* CSS สำหรับธีมแฮกเกอร์ */
                 :root {
                     --primary-color: #0d6efd;
                     --secondary-color: #6c757d;
-                    --accent-color: #198754;
-                    --background-color: #f8f9fa;
-                    --card-bg: #ffffff;
-                    --card-border: #dee2e6;
-                    --text-color: #212529;
-                    --success-color: #198754;
-                    --error-color: #dc3545;
-                    --info-color: #0d6efd;
+                    --accent-color: #00ff00;
+                    --background-color: #121212;
+                    --card-bg: #1e1e1e;
+                    --card-border: #333333;
+                    --text-color: #00ff00;
+                    --success-color: #00ff00;
+                    --error-color: #ff0000;
+                    --info-color: #1e90ff;
                 }
 
                 body {
                     background: var(--background-color);
                     color: var(--text-color);
-                    font-family: 'Roboto', sans-serif;
+                    font-family: 'Roboto Mono', monospace;
                     min-height: 100vh;
                     position: relative;
                     overflow-x: hidden;
                 }
 
                 .navbar {
-                    background: var(--primary-color);
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    background: var(--card-bg);
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
                 }
 
                 .navbar-brand {
-                    font-family: 'Kanit', sans-serif;
+                    font-family: 'Press Start 2P', cursive;
                     font-weight: 600;
-                    color: #ffffff !important;
+                    color: var(--accent-color) !important;
                 }
 
                 .glass-card {
@@ -1121,13 +1167,13 @@ app.get("/commands", (req, res) => {
                     border: 1px solid var(--card-border);
                     border-radius: 16px;
                     padding: 24px;
-                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
 
                 .glass-card:hover {
                     transform: translateY(-5px);
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.7);
                 }
 
                 .command-table {
@@ -1142,22 +1188,22 @@ app.get("/commands", (req, res) => {
                 }
 
                 .command-table th {
-                    background-color: var(--primary-color);
-                    color: #fff;
+                    background-color: var(--card-border);
+                    color: var(--accent-color);
                     font-weight: 600;
                 }
 
                 .command-table tr:nth-child(even) {
-                    background-color: #f1f1f1;
+                    background-color: #2c2c2c;
                 }
 
                 .footer {
-                    background: var(--primary-color);
-                    border-top: 2px solid var(--primary-color);
+                    background: var(--card-bg);
+                    border-top: 2px solid var(--card-border);
                     padding: 20px 0;
                     margin-top: 40px;
                     font-size: 0.9rem;
-                    color: #ffffff;
+                    color: var(--accent-color);
                 }
 
                 .animate-float {
@@ -1177,13 +1223,28 @@ app.get("/commands", (req, res) => {
                         padding: 8px 10px;
                     }
                 }
+
+                /* Custom Scrollbar */
+                ::-webkit-scrollbar {
+                    width: 12px;
+                }
+
+                ::-webkit-scrollbar-track {
+                    background: #1e1e1e;
+                }
+
+                ::-webkit-scrollbar-thumb {
+                    background-color: var(--accent-color);
+                    border-radius: 6px;
+                    border: 3px solid #1e1e1e;
+                }
             </style>
         </head>
         <body>
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
-                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: #ffffff;"></i>
+                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: var(--accent-color);"></i>
                         ระบบจัดการบอท
                     </a>
                     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
