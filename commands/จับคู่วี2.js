@@ -14,7 +14,7 @@ module.exports.config = {
 
 module.exports.run = async function({ api, event }) {
     try {
-        // ดึงข้อมูลผู้เข้าร่วมจาก event โดยตรง
+        // ดึงข้อมูลผู้เข้าร่วมจาก event
         const participantIDs = event.participantIDs || [];
         const botID = api.getCurrentUserID();
         const userID = event.senderID;
@@ -30,6 +30,12 @@ module.exports.run = async function({ api, event }) {
         const randomID = listUserID[Math.floor(Math.random() * listUserID.length)];
         const tle = Math.floor(Math.random() * 101); // สุ่มเปอร์เซ็นต์ความรัก
 
+        // ดึง ID Facebook จาก API (joshweb)
+        const senderData = await axios.get(`https://api.joshweb.click/api/findid?url=https://facebook.com/${userID}`);
+        const pairData = await axios.get(`https://api.joshweb.click/api/findid?url=https://facebook.com/${randomID}`);
+        const senderFacebookID = senderData.data.result;
+        const pairFacebookID = pairData.data.result;
+
         // ดึงชื่อผู้ส่งและผู้ที่ถูกจับคู่
         const senderName = (await api.getUserInfo(userID))[userID].name;
         const pairName = (await api.getUserInfo(randomID))[randomID].name;
@@ -40,9 +46,9 @@ module.exports.run = async function({ api, event }) {
             { id: randomID, tag: pairName }
         ];
 
-        // ดึงรูปโปรไฟล์
-        const senderAvatar = (await axios.get(`https://graph.facebook.com/${userID}/picture?width=512&height=512`, { responseType: "arraybuffer" })).data;
-        const pairAvatar = (await axios.get(`https://graph.facebook.com/${randomID}/picture?width=512&height=512`, { responseType: "arraybuffer" })).data;
+        // ดึงรูปโปรไฟล์จาก Facebook Graph API
+        const senderAvatar = (await axios.get(`https://graph.facebook.com/${senderFacebookID}/picture?width=512&height=512`, { responseType: "arraybuffer" })).data;
+        const pairAvatar = (await axios.get(`https://graph.facebook.com/${pairFacebookID}/picture?width=512&height=512`, { responseType: "arraybuffer" })).data;
 
         fs.writeFileSync(__dirname + "/cache/sender.png", Buffer.from(senderAvatar, "utf-8"));
         fs.writeFileSync(__dirname + "/cache/pair.png", Buffer.from(pairAvatar, "utf-8"));
