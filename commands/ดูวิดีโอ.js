@@ -23,6 +23,12 @@ module.exports = {
         const apiUrl = `https://nethwieginedev.vercel.app/api/ytsearch3?name=${encodeURIComponent(query)}`;
 
         try {
+            // ตรวจสอบว่ามีโฟลเดอร์ downloads หรือไม่ หากไม่มีให้สร้าง
+            const downloadsDir = path.join(__dirname, "../../downloads");
+            if (!fs.existsSync(downloadsDir)) {
+                fs.mkdirSync(downloadsDir, { recursive: true });
+            }
+
             // ค้นหาวิดีโอ
             const response = await axios.get(apiUrl);
             const videos = response.data.result;
@@ -47,7 +53,7 @@ module.exports = {
             );
 
             // ดาวน์โหลดวิดีโอ
-            const videoPath = path.join(__dirname, `../../downloads/${video.id}.mp4`);
+            const videoPath = path.join(downloadsDir, `${video.id}.mp4`);
             const videoStream = ytdl(videoUrl, { quality: "highest" });
 
             videoStream.pipe(fs.createWriteStream(videoPath));
