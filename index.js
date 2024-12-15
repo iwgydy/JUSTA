@@ -18,7 +18,8 @@ const io = new Server(server, {
 const PORT = 3005;
 
 let botCount = 0;
-global.botSessions = {}; // เปลี่ยนจาก let เป็น global เพื่อให้สามารถเข้าถึงได้ในคำสั่ง
+const botSessions = {};
+const pendingDeletions = {}; // เพิ่มวัตถุสำหรับติดตามการลบบอทที่กำลังดำเนินการ
 const prefix = "/";
 const commands = {};
 const commandDescriptions = [];
@@ -83,46 +84,37 @@ function generateBotData() {
     const onlineBots = Object.values(botSessions).filter(bot => bot.status === 'online').length;
     const activeBots = Object.values(botSessions).filter(bot => bot.status === 'active').length;
 
-    // สร้างแถวตารางบอทพร้อมข้อมูลปิง
-    const botRows = Object.entries(botSessions).map(([token, bot]) => `
-        <tr id="bot-${encodeURIComponent(token)}">
-            <td>
-                <i class="fas fa-robot me-2" style="color: var(--primary-color);"></i>
-                <span class="bot-name">${bot.name}</span>
-            </td>
-            <td>
-                <span class="${bot.status === 'online' ? 'status-online' : 'status-offline'}">
-                    <i class="fas fa-circle"></i>
-                    ${bot.status === 'online' ? 'ออนไลน์' : 'ออฟไลน์'}
-                </span>
-            </td>
-            <td>
-                <span class="runtime" data-start-time="${bot.startTime}">
-                    กำลังคำนวณ...
-                </span>
-            </td>
-            <td>
-                <span class="ping">${bot.ping || 'N/A'} ms</span>
-            </td>
-            <td>
-                <button class="btn btn-warning btn-sm edit-btn" data-token="${encodeURIComponent(token)}"><i class="fas fa-edit"></i> แก้ไข</button>
-                <button class="btn btn-danger btn-sm delete-btn" data-token="${encodeURIComponent(token)}"><i class="fas fa-trash-alt"></i> ลบ</button>
-            </td>
-        </tr>
-    `).join('') || `
+    const botRows = Object.entries(botSessions).map(([token, bot]) => {
+        return `
+            <tr id="bot-${encodeURIComponent(token)}">
+                <td>
+                    <i class="fas fa-robot me-2" style="color: var(--primary-color);"></i>
+                    <span class="bot-name">${bot.name}</span>
+                </td>
+                <td>
+                    <span class="${bot.status === 'online' ? 'status-online' : 'status-offline'}">
+                        <i class="fas fa-circle"></i>
+                        ${bot.status === 'online' ? 'ออนไลน์' : 'ออฟไลน์'}
+                    </span>
+                </td>
+                <td>
+                    <span class="runtime" data-start-time="${bot.startTime}">
+                        กำลังคำนวณ...
+                    </span>
+                </td>
+                <td>
+                    <button class="btn btn-warning btn-sm edit-btn" data-token="${encodeURIComponent(token)}"><i class="fas fa-edit"></i> แก้ไข</button>
+                    <button class="btn btn-danger btn-sm delete-btn" data-token="${encodeURIComponent(token)}"><i class="fas fa-trash-alt"></i> ลบ</button>
+                </td>
+            </tr>
+        `;
+    }).join('') || `
         <tr>
-            <td colspan="5" class="text-center">ไม่มีบอทที่กำลังทำงาน</td>
+            <td colspan="4" class="text-center">ไม่มีบอทที่กำลังทำงาน</td>
         </tr>
     `;
 
-    return { 
-        totalBots, 
-        onlineBots, 
-        activeBots, 
-        botRows, 
-        commandDescriptions, 
-        websitePing 
-    };
+    return { totalBots, onlineBots, activeBots, botRows, commandDescriptions };
 }
 
 // ฟังก์ชันช่วยเหลือในการสร้างข้อมูลคำสั่ง
@@ -148,8 +140,8 @@ function loadBotsFromFiles() {
             const filePath = path.join(botsDir, file);
             try {
                 const botData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-                const { appState, token, name, startTime, password, adminID } = botData;
-                startBot(appState, token, name, startTime, password, adminID, false).catch(err => {
+                const { appState, token, name, startTime, password } = botData;
+                startBot(appState, token, name, startTime, password, false).catch(err => {
                     console.error(`ไม่สามารถเริ่มต้นบอทจากไฟล์: ${filePath}, error=${err.message}`);
                 });
             } catch (err) {
@@ -159,8 +151,65 @@ function loadBotsFromFiles() {
     });
 }
 
-// ตัวแปรสำหรับเก็บค่าปิงของเว็บไซต์
-let websitePing = 0;
+// ฟังก์ชันช่วยเหลือในการสร้างชื่อบอทที่สวยงาม
+function generateBotName() {
+    const adjectives = ["Super", "Mega", "Ultra", "Hyper", "Turbo", "Alpha", "Beta", "Gamma", "Delta"];
+    const nouns = ["Dragon", "Phoenix", "Falcon", "Tiger", "Lion", "Eagle", "Shark", "Wolf", "Leopard"];
+    const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const noun = nouns[Math.floor(Math.random() * nouns.length)];
+    return `${adjective}${noun}`;
+}
+
+// ฟังก์ชันลบบอทแบบบังคับ (ใช้สำหรับการลบอัตโนมัติเมื่อบอทเป็นออฟไลน์)
+async function forceDeleteBot(token) {
+    const bot = botSessions[token];
+    if (!bot) return;
+
+    try {
+        if (typeof bot.api.logout === 'function') {
+            await new Promise((resolve, reject) => {
+                bot.api.logout((err) => {
+                    if (err) return reject(err);
+                    resolve();
+                });
+            });
+            console.log(`บอทถูกหยุดทำงาน: ${bot.name}`);
+        }
+
+        // ลบไฟล์บอท
+        const botFilePath = path.join(botsDir, `${bot.name.replace(/ /g, '_')}.json`);
+        if (fs.existsSync(botFilePath)) {
+            fs.unlinkSync(botFilePath);
+            console.log(`ลบไฟล์บอท: ${botFilePath}`);
+        }
+
+        // ลบจาก botSessions
+        delete botSessions[token];
+        console.log(`ลบบอทจาก botSessions: ${token}`);
+
+        io.emit('updateBots', generateBotData());
+    } catch (err) {
+        console.error(`ไม่สามารถหยุดบอท: ${err.message}`);
+    }
+}
+
+// ฟังก์ชันเพื่อกำหนดเวลาในการลบบอทหลังจากเป็นออฟไลน์
+function scheduleDeletion(token) {
+    if (pendingDeletions[token]) return; // มีการตั้งเวลาไว้แล้ว
+    const timer = setTimeout(() => {
+        forceDeleteBot(token);
+        delete pendingDeletions[token];
+    }, 60000); // 60 วินาที
+    pendingDeletions[token] = timer;
+}
+
+// ฟังก์ชันเพื่อยกเลิกการตั้งเวลาในการลบบอท
+function cancelDeletion(token) {
+    if (pendingDeletions[token]) {
+        clearTimeout(pendingDeletions[token]);
+        delete pendingDeletions[token];
+    }
+}
 
 // หน้าแดชบอร์ดหลัก
 app.get("/", (req, res) => {
@@ -253,26 +302,24 @@ app.get("/", (req, res) => {
                     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
                 }
 
-                .bot-table, .command-table {
+                .bot-table {
                     width: 100%;
                     border-collapse: collapse;
                     margin-top: 20px;
                 }
 
-                .bot-table th, .bot-table td,
-                .command-table th, .command-table td {
+                .bot-table th, .bot-table td {
                     padding: 12px 15px;
                     text-align: left;
                 }
 
-                .bot-table th, .command-table th {
+                .bot-table th {
                     background-color: var(--primary-color);
                     color: #fff;
                     font-weight: 600;
                 }
 
-                .bot-table tr:nth-child(even),
-                .command-table tr:nth-child(even) {
+                .bot-table tr:nth-child(even) {
                     background-color: #f1f1f1;
                 }
 
@@ -321,15 +368,30 @@ app.get("/", (req, res) => {
                     color: var(--info-color);
                 }
 
-                .ping {
-                    font-weight: 500;
-                    color: var(--accent-color);
-                }
-
                 .bot-name {
                     font-family: 'Press Start 2P', cursive;
                     color: var(--bot-name-color);
                     font-size: 1.1rem;
+                }
+
+                /* ปรับแต่งตำแหน่งและสไตล์ของปิงเว็บไซต์ */
+                .website-ping {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background-color: rgba(255, 255, 255, 0.8);
+                    padding: 10px 15px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    font-size: 1rem;
+                    color: var(--text-color);
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .ping-icon {
+                    color: var(--info-color);
                 }
 
                 @media (max-width: 768px) {
@@ -339,9 +401,14 @@ app.get("/", (req, res) => {
                     .glass-card {
                         margin-bottom: 20px;
                     }
-                    .bot-table th, .bot-table td,
-                    .command-table th, .command-table td {
+                    .bot-table th, .bot-table td {
                         padding: 8px 10px;
+                    }
+                    .website-ping {
+                        top: 10px;
+                        right: 10px;
+                        font-size: 0.9rem;
+                        padding: 8px 12px;
                     }
                 }
 
@@ -352,6 +419,12 @@ app.get("/", (req, res) => {
             </style>
         </head>
         <body>
+            <!-- ปิงเว็บไซต์ที่มุมขวาบนสุด -->
+            <div class="website-ping">
+                <i class="fas fa-tachometer-alt ping-icon"></i>
+                <span id="websitePing">- ms</span>
+            </div>
+
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
@@ -401,13 +474,7 @@ app.get("/", (req, res) => {
                             <div class="stats-label">บอททำงานแล้ว</div>
                         </div>
                     </div>
-                    <div class="col-md-3 col-sm-6 mb-3">
-                        <div class="stats-card">
-                            <i class="fas fa-tachometer-alt fa-2x mb-3" style="color: var(--accent-color);"></i>
-                            <div class="stats-number" id="websitePing">${data.websitePing} ms</div>
-                            <div class="stats-label">Ping เว็บไซต์</div>
-                        </div>
-                    </div>
+                    <!-- ลบคอลัมน์ปิงเว็บไซต์จากสถิติ -->
                 </div>
 
                 <div class="row">
@@ -425,7 +492,6 @@ app.get("/", (req, res) => {
                                             <th>ชื่อบอท</th>
                                             <th>สถานะ</th>
                                             <th>เวลารัน</th>
-                                            <th>ปิง</th>
                                             <th>การจัดการ</th>
                                         </tr>
                                     </thead>
@@ -469,23 +535,11 @@ app.get("/", (req, res) => {
                     });
                 }
 
-                // ฟังก์ชันส่งปิงไปยังเซิร์ฟเวอร์
-                function sendPing() {
-                    const timestamp = Date.now();
-                    socket.emit('ping', timestamp);
-                }
-
-                // ส่งปิงทุกๆ 5 วินาที
-                setInterval(sendPing, 5000);
-                // ส่งปิงทันทีเมื่อโหลดหน้า
-                sendPing();
-
                 // รับข้อมูลอัปเดตจากเซิร์ฟเวอร์
                 socket.on('updateBots', (data) => {
                     document.getElementById('totalBots').textContent = data.totalBots;
                     document.getElementById('onlineBots').textContent = data.onlineBots;
                     document.getElementById('activeBots').textContent = data.activeBots;
-                    document.getElementById('websitePing').textContent = data.websitePing + ' ms';
 
                     const botTableBody = document.getElementById('botTableBody');
                     if (botTableBody) {
@@ -494,6 +548,28 @@ app.get("/", (req, res) => {
 
                     updateRuntime();
                 });
+
+                socket.on('updateCommands', (data) => {
+                    const commandTableBody = document.getElementById('commandTableBody');
+                    if (commandTableBody) {
+                        commandTableBody.innerHTML = data;
+                    }
+                });
+
+                // ฟังก์ชันอัปเดตปิงเว็บไซต์
+                function sendPing() {
+                    const startTime = Date.now();
+                    socket.emit('customPing', startTime);
+                }
+
+                socket.on('customPong', (pongTime) => {
+                    const latency = Date.now() - pongTime;
+                    document.getElementById('websitePing').textContent = latency + ' ms';
+                });
+
+                // ส่ง ping ทุกๆ 1 วินาที
+                setInterval(sendPing, 1000);
+                sendPing(); // ส่ง ping ทันทีเมื่อโหลดหน้า
 
                 // อัปเดตเวลารันทุกวินาที
                 setInterval(updateRuntime, 1000);
@@ -579,7 +655,7 @@ app.get("/start", (req, res) => {
                         </div>`;
     } else if (error === 'missing-fields') {
         errorMessage = `<div class="alert alert-danger" role="alert">
-                            กรุณากรอกทั้งโทเค็น, รหัสผ่าน และ ID แอดมิน
+                            กรุณากรอกทั้งโทเค็นและรหัสผ่าน
                         </div>`;
     } else if (error === 'invalid-password') {
         errorMessage = `<div class="alert alert-danger" role="alert">
@@ -771,18 +847,6 @@ app.get("/start", (req, res) => {
                                 title="กรุณากรอกรหัสผ่าน 6 หลัก"
                             />
                         </div>
-                        <div class="mb-3">
-                            <label for="adminID" class="form-label">ID แอดมินของบอท</label>
-                            <input 
-                                type="text" 
-                                id="adminID" 
-                                name="adminID" 
-                                class="form-control" 
-                                placeholder="61555184860915" 
-                                required
-                                title="กรุณากรอก ID แอดมินของบอท"
-                            />
-                        </div>
                         <button type="submit" class="btn btn-primary w-100">
                             <i class="fas fa-play me-2"></i>
                             เริ่มบอท
@@ -910,6 +974,11 @@ app.get("/bots", (req, res) => {
                     gap: 6px;
                 }
 
+                .ping-time {
+                    font-weight: 500;
+                    color: var(--info-color);
+                }
+
                 .footer {
                     background: var(--primary-color);
                     border-top: 2px solid var(--primary-color);
@@ -931,11 +1000,6 @@ app.get("/bots", (req, res) => {
                 .runtime {
                     font-weight: 500;
                     color: var(--info-color);
-                }
-
-                .ping {
-                    font-weight: 500;
-                    color: var(--accent-color);
                 }
 
                 .bot-name {
@@ -999,7 +1063,6 @@ app.get("/bots", (req, res) => {
                                     <th>ชื่อบอท</th>
                                     <th>สถานะ</th>
                                     <th>เวลารัน</th>
-                                    <th>ปิง</th>
                                     <th>การจัดการ</th>
                                 </tr>
                             </thead>
@@ -1041,23 +1104,11 @@ app.get("/bots", (req, res) => {
                     });
                 }
 
-                // ฟังก์ชันส่งปิงไปยังเซิร์ฟเวอร์
-                function sendPing() {
-                    const timestamp = Date.now();
-                    socket.emit('ping', timestamp);
-                }
-
-                // ส่งปิงทุกๆ 5 วินาที
-                setInterval(sendPing, 5000);
-                // ส่งปิงทันทีเมื่อโหลดหน้า
-                sendPing();
-
                 // รับข้อมูลอัปเดตจากเซิร์ฟเวอร์
                 socket.on('updateBots', (data) => {
                     document.getElementById('totalBots').textContent = data.totalBots;
                     document.getElementById('onlineBots').textContent = data.onlineBots;
                     document.getElementById('activeBots').textContent = data.activeBots;
-                    document.getElementById('websitePing').textContent = data.websitePing + ' ms';
 
                     const botTableBody = document.getElementById('botTableBody');
                     if (botTableBody) {
@@ -1066,6 +1117,28 @@ app.get("/bots", (req, res) => {
 
                     updateRuntime();
                 });
+
+                socket.on('updateCommands', (data) => {
+                    const commandTableBody = document.getElementById('commandTableBody');
+                    if (commandTableBody) {
+                        commandTableBody.innerHTML = data;
+                    }
+                });
+
+                // ฟังก์ชันอัปเดตปิงเว็บไซต์
+                function sendPing() {
+                    const startTime = Date.now();
+                    socket.emit('customPing', startTime);
+                }
+
+                socket.on('customPong', (pongTime) => {
+                    const latency = Date.now() - pongTime;
+                    document.getElementById('websitePing').textContent = latency + ' ms';
+                });
+
+                // ส่ง ping ทุกๆ 1 วินาที
+                setInterval(sendPing, 1000);
+                sendPing(); // ส่ง ping ทันทีเมื่อโหลดหน้า
 
                 // อัปเดตเวลารันทุกวินาที
                 setInterval(updateRuntime, 1000);
@@ -1316,18 +1389,17 @@ app.get("/debug/bots", (req, res) => {
         name: bot.name,
         status: bot.status,
         password: bot.password,
-        adminID: bot.adminID,
-        ping: bot.ping || 'N/A'
+        // ลบ ping ออกเพราะไม่ต้องการตรวจสอบปิงแต่ละบอทแล้ว
     }));
     res.json(bots);
 });
 
 // POST /start เพื่อเริ่มต้นบอท
 app.post('/start', async (req, res) => {
-    const { token, password, adminID } = req.body;
+    const { token, password } = req.body;
 
-    // ตรวจสอบว่ามีการกรอกโทเค็น, รหัสผ่าน และ ID แอดมิน
-    if (!token || !password || !adminID) {
+    // ตรวจสอบว่ามีการกรอกโทเค็นและรหัสผ่าน
+    if (!token || !password) {
         return res.redirect('/start?error=missing-fields');
     }
 
@@ -1347,7 +1419,7 @@ app.post('/start', async (req, res) => {
         const botName = `✨${generateBotName()}✨`;
         const startTime = Date.now();
 
-        await startBot(appState, tokenKey, botName, startTime, password, adminID, true);
+        await startBot(appState, tokenKey, botName, startTime, password, true);
         res.redirect('/bots');
         io.emit('updateBots', generateBotData());
     } catch (err) {
@@ -1357,7 +1429,7 @@ app.post('/start', async (req, res) => {
 });
 
 // ฟังก์ชันเริ่มต้นบอท
-async function startBot(appState, token, name, startTime, password, adminID, saveToFile = true) {
+async function startBot(appState, token, name, startTime, password, saveToFile = true) {
     return new Promise((resolve, reject) => {
         login({ appState }, (err, api) => {
             if (err) {
@@ -1375,16 +1447,17 @@ async function startBot(appState, token, name, startTime, password, adminID, sav
                 name, 
                 startTime, 
                 status: 'online',
-                password: password.toString(), // แปลงเป็น string เพื่อความแน่ใจ
-                adminID: adminID.trim(), // เก็บ ID แอดมิน
-                ping: 'N/A' // เริ่มต้นปิงเป็น N/A
+                password: password.toString() // แปลงเป็น string เพื่อความแน่ใจ
+                // ลบ lastEventTime และ ping ออก
             };
             botCount = Math.max(botCount, parseInt(name.replace(/✨/g, '').replace('Bot ', '') || '0')); // ปรับ botCount ให้สูงสุด
 
             console.log(chalk.green(figlet.textSync("Bot Started!", { horizontalLayout: "full" })));
             console.log(chalk.green(`✅ ${name} กำลังทำงานด้วยโทเค็น: ${token}`));
             console.log(chalk.green(`🔑 รหัสผ่านสำหรับลบ/แก้ไขโทเค่น: ${password}`)); // แสดงรหัสผ่านใน console
-            console.log(chalk.green(`🔑 ID แอดมิน: ${adminID}`)); // แสดง ID แอดมินใน console
+
+            // ยกเลิกการตั้งเวลาในการลบถ้าบอทกลับมาออนไลน์
+            cancelDeletion(token);
 
             api.setOptions({ listenEvents: true });
 
@@ -1393,6 +1466,9 @@ async function startBot(appState, token, name, startTime, password, adminID, sav
                     console.error(chalk.red(`❌ เกิดข้อผิดพลาด: ${err}`));
                     botSessions[token].status = 'offline';
                     io.emit('updateBots', generateBotData());
+
+                    // กำหนดเวลาในการลบบอทหลังจากเป็นออฟไลน์
+                    scheduleDeletion(token);
                     return;
                 }
 
@@ -1414,7 +1490,7 @@ async function startBot(appState, token, name, startTime, password, adminID, sav
                 // จัดการข้อความ
                 if (event.type === "message") {
                     const message = event.body ? event.body.trim() : "";
-
+                    
                     if (!message.startsWith(prefix)) return;
 
                     const args = message.slice(prefix.length).trim().split(/ +/);
@@ -1439,15 +1515,13 @@ async function startBot(appState, token, name, startTime, password, adminID, sav
                     }
                 }
 
-                // หากบอทกลับมาทำงานใหม่ขณะนับถอยหลังให้ยกเลิกการลบ
-                if (botSessions[token].status === 'online') {
-                    // ไม่มีการนับถอยหลังในโค้ดที่ปรับปรุง
-                }
+                // อัปเดตปิงของเว็บไซต์ทันที
+                io.emit('updateBots', generateBotData());
             });
 
             // บันทึกข้อมูลบอทลงไฟล์
             if (saveToFile) {
-                const botData = { appState, token, name, startTime, password, adminID };
+                const botData = { appState, token, name, startTime, password };
                 const botFilePath = path.join(botsDir, `${name.replace(/ /g, '_')}.json`);
                 fs.writeFileSync(botFilePath, JSON.stringify(botData, null, 4));
             }
@@ -1485,6 +1559,9 @@ app.post('/delete', async (req, res) => {
 
     // หยุดการทำงานของบอทและลบทันที
     try {
+        // หยุดการตั้งเวลาในการลบถ้าบอทกำลังจะถูกลบอัตโนมัติ
+        cancelDeletion(trimmedToken);
+
         // ตรวจสอบว่า bot.api มีเมธอด logout หรือไม่
         if (typeof bot.api.logout === 'function') {
             await new Promise((resolve, reject) => {
@@ -1554,6 +1631,9 @@ app.post('/edit', async (req, res) => {
             throw new Error('เมธอด logout ไม่พบใน bot.api');
         }
 
+        // หยุดการตั้งเวลาในการลบถ้าบอทกำลังจะถูกลบอัตโนมัติ
+        cancelDeletion(trimmedToken);
+
         // ลบไฟล์บอทเก่า
         const oldBotFilePath = path.join(botsDir, `${bot.name.replace(/ /g, '_')}.json`);
         if (fs.existsSync(oldBotFilePath)) {
@@ -1574,7 +1654,7 @@ app.post('/edit', async (req, res) => {
             throw new Error('newToken ไม่เป็น JSON ที่ถูกต้อง');
         }
         const startTime = Date.now();
-        await startBot(newAppState, trimmedNewToken, bot.name, startTime, newPassword, bot.adminID, true);
+        await startBot(newAppState, trimmedNewToken, bot.name, startTime, newPassword, true);
 
         console.log(chalk.green(`✅ แก้ไขโทเค่นของบอท: ${bot.name} เป็น ${trimmedNewToken}`));
         io.emit('updateBots', generateBotData());
@@ -1588,30 +1668,18 @@ app.post('/edit', async (req, res) => {
 // Socket.io สำหรับหน้าแดชบอร์ดหลักและดูบอทรัน
 io.on('connection', (socket) => {
     console.log(chalk.blue('🔌 Socket.io client connected'));
-
-    // Handle 'ping' event from client
-    socket.on('ping', (timestamp) => {
-        const latency = Date.now() - timestamp;
-        const ping = Math.min(latency, 200);
-        websitePing = ping;
-        io.emit('updateBots', generateBotData());
-    });
-
     socket.emit('updateBots', generateBotData());
+    socket.emit('updateCommands', generateCommandData());
+
+    // Handle customPing from client
+    socket.on('customPing', (pingTime) => {
+        socket.emit('customPong', pingTime);
+    });
 
     socket.on('disconnect', () => {
         console.log(chalk.red('🔌 Socket.io client disconnected'));
     });
 });
-
-// ฟังก์ชันช่วยเหลือในการสร้างชื่อบอทที่สวยงาม
-function generateBotName() {
-    const adjectives = ["Super", "Mega", "Ultra", "Hyper", "Turbo", "Alpha", "Beta", "Gamma", "Delta"];
-    const nouns = ["Dragon", "Phoenix", "Falcon", "Tiger", "Lion", "Eagle", "Shark", "Wolf", "Leopard"];
-    const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const noun = nouns[Math.floor(Math.random() * nouns.length)];
-    return `${adjective}${noun}`;
-}
 
 // เริ่มต้นเซิร์ฟเวอร์และโหลดบอทจากไฟล์ที่เก็บไว้
 server.listen(PORT, () => {
@@ -1619,12 +1687,3 @@ server.listen(PORT, () => {
     console.log(chalk.green(figlet.textSync("Bot Management", { horizontalLayout: "full" })));
     loadBotsFromFiles();
 });
-
-// ฟังก์ชันช่วยเหลือในการอัปเดตปิงของบอททุกๆ 5 วินาที
-setInterval(() => {
-    Object.values(botSessions).forEach(bot => {
-        // จำลองการปิงด้วยการสุ่มค่าระหว่าง 1-200 ms
-        bot.ping = Math.floor(Math.random() * 200) + 1;
-    });
-    io.emit('updateBots', generateBotData());
-}, 5000); // อัปเดตทุก 5 วินาที
