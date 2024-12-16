@@ -1,93 +1,44 @@
-const { createCanvas, loadImage } = require('canvas');
-const fs = require('fs-extra');
-const path = require('path');
-const axios = require('axios');
+const { createCanvas } = require('canvas');
 
 module.exports = {
-  config: {
-    name: "จับคู่วี2",
-    aliases: [],
-    version: "1.1",
-    author: "Vex_kshitiz",
-    shortDescription: "จับคู่รูปโปรไฟล์",
-    longDescription: "ค้นหารูปโปรไฟล์ที่จับคู่กัน",
-    category: "image",
-    guide: {
-      en: "{p}pairdp2 {คำค้น1} and {คำค้น2} -{ลำดับรูปภาพ}\nตัวอย่าง: {p}pairdp2 zoro and sanji -2"
+    name: 'image',
+    description: 'สร้างรูปภาพพร้อมข้อความจาก args',
+    async execute(message, args) {
+        if (!args.length) {
+            return message.reply('กรุณากรอกข้อความด้วย เช่น !image สวัสดีครับ ทำไรอยู่');
+        }
+
+        // ข้อความที่ส่งเข้ามาจะถูกจับใส่เป็นบรรทัดๆ จาก args
+        // ตัวอย่าง: "!image สวัสดีครับ ทำไรอยู่"
+        // args = ["สวัสดีครับ", "ทำไรอยู่"]
+
+        const width = 1080;
+        const height = 720;
+        const canvas = createCanvas(width, height);
+        const ctx = canvas.getContext('2d');
+
+        // วาดพื้นหลัง
+        ctx.fillStyle = '#2d1c0e'; 
+        ctx.fillRect(0, 0, width, height);
+
+        // ตั้งค่าฟอนต์และสีข้อความ
+        ctx.font = '48px sans-serif'; 
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+
+        let x = width / 2;  // ตำแหน่งกึ่งกลางภาพ
+        let y = 100;        // จุดเริ่มต้น Y
+        const lineHeight = 60;
+
+        args.forEach(line => {
+            ctx.fillText(line, x, y);
+            y += lineHeight;
+        });
+
+        // สร้างบัฟเฟอร์ภาพ
+        const attachment = canvas.toBuffer();
+        
+        // ส่งภาพกลับไปในแชนแนล
+        return message.channel.send({ files: [{ attachment, name: 'output.png' }] });
     }
-  },
-  onStart: async function ({ message, event, args, api }) {
-    try {
-      const input = args.join(" ");
-      const [queries, imageIndex] = input.split(' -');
-      if (!queries || !imageIndex) {
-        return message.reply("❌ || กรุณาระบุคำค้นหา 2 คำคั่นด้วยคำว่า 'and' และหมายเลขรูปภาพโดยใช้เครื่องหมาย '-',\nตัวอย่าง: pairdp2 zoro and sanji -2");
-      }
-
-      const [query1, query2] = queries.split(' and ');
-      if (!query1 || !query2) {
-        return message.reply("❌ || กรุณาระบุคำค้นหา 2 คำคั่นด้วย 'and'\nตัวอย่าง: pairdp2 zoro and sanji -2");
-      }
-
-      const searchQuery = `${query1} and ${query2}`;
-      const apiUrl = `https://pin-two.vercel.app/pin?search=${encodeURIComponent(searchQuery)}`;
-
-      const response = await axios.get(apiUrl);
-      const imageData = response.data.result;
-
-      const index = parseInt(imageIndex) - 1;
-      if (index < 0 || index >= imageData.length) {
-        return message.reply(`❌ || กรุณาระบุหมายเลขรูปภาพที่ถูกต้อง ระหว่าง 1 ถึง ${imageData.length}`);
-      }
-
-      const imageUrl = imageData[index];
-
-      const imgResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-
-      const image = await loadImage(imgResponse.data);
-      const width = image.width;
-      const height = image.height;
-      const halfWidth = width / 2;
-
-      const canvasLeft = createCanvas(halfWidth, height);
-      const ctxLeft = canvasLeft.getContext('2d');
-      ctxLeft.drawImage(image, 0, 0, halfWidth, height, 0, 0, halfWidth, height);
-
-      const canvasRight = createCanvas(halfWidth, height);
-      const ctxRight = canvasRight.getContext('2d');
-      ctxRight.drawImage(image, halfWidth, 0, halfWidth, height, 0, 0, halfWidth, height);
-
-      const cacheFolderPath = path.join(__dirname, 'cache');
-      if (!fs.existsSync(cacheFolderPath)) {
-        fs.mkdirSync(cacheFolderPath);
-      }
-
-      const timestamp = Date.now();
-      const leftImagePath = path.join(cacheFolderPath, `${timestamp}left.png`);
-      const rightImagePath = path.join(cacheFolderPath, `${timestamp}right.png`);
-
-      await Promise.all([
-        fs.promises.writeFile(leftImagePath, canvasLeft.toBuffer('image/png')),
-        fs.promises.writeFile(rightImagePath, canvasRight.toBuffer('image/png'))
-      ]);
-
-      const imgData = [
-        fs.createReadStream(leftImagePath),
-        fs.createReadStream(rightImagePath)
-      ];
-
-      await api.sendMessage({
-        attachment: imgData,
-        body: "ภาพคู่ DP!"
-      }, event.threadID, event.messageID);
-
-      fs.unlinkSync(leftImagePath);
-      fs.unlinkSync(rightImagePath);
-
-      console.log("ส่งรูปภาพสำเร็จ และทำความสะอาดแคชเรียบร้อย");
-    } catch (error) {
-      console.error("Error:", error);
-      message.reply("❌ | เกิดข้อผิดพลาดบางอย่าง");
-    }
-  }
 };
