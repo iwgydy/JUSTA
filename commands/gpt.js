@@ -5,7 +5,7 @@ const path = require("path");
 
 module.exports.config = {
     name: "สร้างคำคม",
-    version: "1.0.0",
+    version: "1.1.0",
     hasPermssion: 0,
     credits: "YourName",
     description: "สร้างภาพคำคมจากข้อความที่ป้อน",
@@ -36,20 +36,27 @@ module.exports.run = async function ({ api, event, args }) {
             responseType: "arraybuffer"
         });
 
-        // ใช้ sharp สร้างภาพพร้อมคำคม
-        const imageBuffer = Buffer.from(backgroundImage.data);
-        await sharp(imageBuffer)
-            .resize(1280, 720) // ปรับขนาดภาพ
-            .composite([{
-                input: Buffer.from(`<svg>
-                    <rect x="0" y="0" width="1280" height="720" fill="rgba(0, 0, 0, 0.3)" />
-                    <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"
-                          font-family="Arial, sans-serif" font-size="50" fill="white">
-                        ${quoteText.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}
-                    </text>
-                </svg>`),
-                blend: "over"
-            }])
+        // ขนาดภาพพื้นหลัง
+        const backgroundWidth = 1280;
+        const backgroundHeight = 720;
+
+        // สร้างภาพ SVG สำหรับข้อความคำคม
+        const svgText = `
+            <svg width="${backgroundWidth}" height="${backgroundHeight}">
+                <rect x="0" y="0" width="${backgroundWidth}" height="${backgroundHeight}" fill="rgba(0, 0, 0, 0.3)" />
+                <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"
+                      font-family="Arial, sans-serif" font-size="50" fill="white">
+                    ${quoteText.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}
+                </text>
+            </svg>
+        `;
+
+        const svgBuffer = Buffer.from(svgText);
+
+        // ใช้ sharp รวมภาพพื้นหลังกับข้อความ SVG
+        await sharp(Buffer.from(backgroundImage.data))
+            .resize(backgroundWidth, backgroundHeight) // ปรับขนาดพื้นหลัง
+            .composite([{ input: svgBuffer, blend: "over" }])
             .toFile(outputImagePath);
 
         // ส่งภาพที่สร้างเสร็จกลับไปยังแชท
