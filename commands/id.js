@@ -1,71 +1,62 @@
 const axios = require("axios");
-const fs = require("fs-extra");
-const FormData = require("form-data");
 
 module.exports.config = {
-  name: "ถังขยะ",
+  name: "อิโมจิเป็นgif",
   version: "1.0",
   hasPermssion: 0,
   credits: "YourName",
-  description: "นำภาพของผู้ใช้มาใส่ในเอฟเฟกต์ถังขยะ",
+  description: "แปลงอิโมจิเป็น GIF ผ่าน API",
   commandCategory: "fun",
-  usages: "ถังขยะ @แท็กผู้ใช้",
-  cooldowns: 5,
+  usages: "อิโมจิเป็นgif [อิโมจิ]",
+  cooldowns: 3,
 };
 
-module.exports.run = async function ({ api, event }) {
+module.exports.run = async function ({ api, event, args }) {
   try {
-    if (!event.mentions || Object.keys(event.mentions).length === 0) {
-      return api.sendMessage("❌ กรุณาแท็กผู้ใช้ 1 คนที่คุณต้องการใส่ถังขยะ", event.threadID, event.messageID);
+    // ตรวจสอบว่าผู้ใช้ใส่อิโมจิหรือไม่
+    if (args.length === 0) {
+      return api.sendMessage("❌ กรุณาใส่อิโมจิที่ต้องการแปลงเป็น GIF เช่น 😝", event.threadID, event.messageID);
     }
 
-    const mention = Object.keys(event.mentions)[0];
-    const imageUrl = `https://graph.facebook.com/${mention}/picture?width=1024&height=1024&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
+    const emoji = args.join(" "); // ดึงอิโมจิที่ผู้ใช้ส่งมา
+    const apiUrl = `https://api.joshweb.click/emoji2gif?q=${encodeURIComponent(emoji)}`;
 
-    api.sendMessage("♻️ กำลังประมวลผลภาพถังขยะ กรุณารอสักครู่...", event.threadID, event.messageID);
+    api.sendMessage("🔄 กำลังแปลงอิโมจิเป็น GIF...", event.threadID, event.messageID);
 
-    // ดาวน์โหลดภาพโปรไฟล์
-    const profileImagePath = __dirname + `/cache/${mention}_avatar.png`;
-    const response = await axios({
-      url: imageUrl,
+    // เรียก API และดึง URL GIF
+    const response = await axios.get(apiUrl);
+    const gifUrl = response.data.url;
+
+    if (!gifUrl) {
+      return api.sendMessage("❌ ไม่พบ GIF สำหรับอิโมจินี้ ลองใช้อิโมจิอื่นดูนะ!", event.threadID, event.messageID);
+    }
+
+    // ดาวน์โหลด GIF ชั่วคราว
+    const path = __dirname + `/cache/emoji_${Date.now()}.gif`;
+    const gifResponse = await axios({
+      url: gifUrl,
       method: "GET",
       responseType: "stream",
     });
+
     await new Promise((resolve, reject) => {
-      response.data.pipe(fs.createWriteStream(profileImagePath)).on("finish", resolve).on("error", reject);
+      const writer = gifResponse.data.pipe(require("fs").createWriteStream(path));
+      writer.on("finish", resolve);
+      writer.on("error", reject);
     });
 
-    // เตรียมส่งไป API พร้อมไฟล์
-    const form = new FormData();
-    form.append("file", fs.createReadStream(profileImagePath));
-
-    const apiUrl = `https://api.joshweb.click/canvas/delete?uid=4`;
-    const { data } = await axios.post(apiUrl, form, {
-      headers: form.getHeaders(),
-      responseType: "stream",
-    });
-
-    // บันทึกภาพที่ได้จาก API
-    const outputPath = __dirname + `/cache/${mention}_trash.png`;
-    await new Promise((resolve, reject) => {
-      data.pipe(fs.createWriteStream(outputPath)).on("finish", resolve).on("error", reject);
-    });
-
-    // ส่งภาพกลับแชท
+    // ส่ง GIF กลับไปที่แชท
     api.sendMessage(
       {
-        body: `🗑️ นี่คือภาพถังขยะของผู้ใช้ที่คุณเลือก!`,
-        attachment: fs.createReadStream(outputPath),
+        body: `✨ นี่คือ GIF สำหรับอิโมจิ "${emoji}" ที่คุณเลือก!`,
+        attachment: require("fs").createReadStream(path),
       },
       event.threadID,
-      () => {
-        fs.unlinkSync(profileImagePath);
-        fs.unlinkSync(outputPath);
-      },
+      () => require("fs").unlinkSync(path), // ลบไฟล์หลังส่งเสร็จ
       event.messageID
     );
   } catch (error) {
     console.error("❌ เกิดข้อผิดพลาด:", error.message);
-    api.sendMessage("❌ ไม่สามารถสร้างภาพถังขยะได้ กรุณาลองใหม่อีกครั้ง!", event.threadID, event.messageID);
+    api.sendMessage("❌ ไม่สามารถแปลงอิโมจิเป็น GIF ได้ในขณะนี้ ลองใหม่อีกครั้งนะ!", event.threadID, event.messageID);
   }
 };
