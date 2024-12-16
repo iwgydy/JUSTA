@@ -24,7 +24,7 @@ module.exports.run = async function ({ api, event, args }) {
         // พื้นหลังที่ใช้
         const backgroundImageURL = "https://i.imgur.com/a4gsUdY.jpeg";
 
-        // โหลดภาพพื้นหลัง
+        // ดาวน์โหลดภาพพื้นหลัง
         const response = await axios({
             url: backgroundImageURL,
             method: "GET",
@@ -35,9 +35,13 @@ module.exports.run = async function ({ api, event, args }) {
         const fontPath = "/usr/share/fonts/truetype/custom/305PANITheFoxDemo-Regular.ttf";
         const outputImagePath = path.join(__dirname, "tmp", `quote_${Date.now()}.png`);
 
+        // ขนาดภาพ (ตรงกับพื้นหลัง)
+        const imageWidth = 1280;
+        const imageHeight = 720;
+
         // สร้าง SVG สำหรับข้อความ
         const svgText = `
-            <svg width="1280" height="720">
+            <svg width="${imageWidth}" height="${imageHeight}">
                 <style>
                     @font-face {
                         font-family: 'CustomFont';
@@ -49,6 +53,7 @@ module.exports.run = async function ({ api, event, args }) {
                         font-size: 50px;
                     }
                 </style>
+                <rect x="0" y="0" width="${imageWidth}" height="${imageHeight}" fill="rgba(0,0,0,0.4)" />
                 <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle">
                     ${userText}
                 </text>
@@ -57,8 +62,9 @@ module.exports.run = async function ({ api, event, args }) {
 
         const svgBuffer = Buffer.from(svgText);
 
-        // ใช้ Sharp คอมโพส SVG กับภาพพื้นหลัง
+        // ใช้ Sharp คอมโพส SVG กับภาพพื้นหลัง (ขนาดตรงกัน)
         await sharp(Buffer.from(response.data))
+            .resize(imageWidth, imageHeight) // ปรับขนาดภาพพื้นหลัง
             .composite([{ input: svgBuffer, blend: "over" }])
             .toFile(outputImagePath);
 
