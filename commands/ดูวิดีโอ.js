@@ -1,94 +1,73 @@
-const axios = require("axios");
-const fs = require("fs");
+const fs = require("fs-extra");
+const ytdl = require("ytdl-core");
+const yts = require("yt-search");
 const path = require("path");
-const { exec } = require("child_process");
 
-module.exports = {
-    config: {
-        name: "ดูวิดีโอยูทูป",
-        description: "ค้นหาและส่งวิดีโอ YouTube เป็นไฟล์",
-        usage: "!ดูวิดีโอยูทูป <ชื่อวิดีโอ>",
-        permissions: "everyone",
-    },
-    run: async ({ api, event, args }) => {
-        if (args.length < 1) {
-            return api.sendMessage(
-                "❗ กรุณาระบุข้อความที่ต้องการค้นหา\nตัวอย่างการใช้งาน: !ดูวิดีโอยูทูป ปรารถนาสิ่งใดฤๅ",
-                event.threadID,
-                event.messageID
-            );
-        }
-
-        const query = args.join(" ");
-        const apiUrl = `https://nethwieginedev.vercel.app/api/ytsearch3?name=${encodeURIComponent(query)}`;
-        const downloadsDir = path.join(__dirname, "../../downloads");
-
-        // ตรวจสอบและสร้างโฟลเดอร์ downloads
-        if (!fs.existsSync(downloadsDir)) {
-            fs.mkdirSync(downloadsDir, { recursive: true });
-        }
-
-        try {
-            // ค้นหาวิดีโอ
-            const response = await axios.get(apiUrl);
-            const videos = response.data.result;
-
-            if (!videos || videos.length === 0) {
-                return api.sendMessage(
-                    "❗ ไม่พบวิดีโอที่คุณค้นหา",
-                    event.threadID,
-                    event.messageID
-                );
-            }
-
-            // เลือกรายการแรก
-            const video = videos[0];
-            const videoUrl = video.url;
-            const videoPath = path.join(downloadsDir, `${video.id}.mp4`);
-
-            // แจ้งสถานะการดาวน์โหลด
-            api.sendMessage(
-                `🎬 กำลังดาวน์โหลดวิดีโอ: ${video.title}\n⏱️ ระยะเวลา: ${video.duration}`,
-                event.threadID,
-                event.messageID
-            );
-
-            // ดาวน์โหลดวิดีโอด้วย yt-dlp
-            await downloadYouTubeVideo(videoUrl, videoPath);
-
-            // ส่งวิดีโอ
-            api.sendMessage(
-                {
-                    body: `🎬 นี่คือวิดีโอ: ${video.title}`,
-                    attachment: fs.createReadStream(videoPath),
-                },
-                event.threadID,
-                () => {
-                    // ลบไฟล์หลังจากส่งเสร็จ
-                    fs.unlinkSync(videoPath);
-                }
-            );
-        } catch (error) {
-            console.error("❌ Error:", error.message);
-            return api.sendMessage(
-                "❗ เกิดข้อผิดพลาดในการดาวน์โหลดวิดีโอ",
-                event.threadID,
-                event.messageID
-            );
-        }
-    },
+module.exports.config = {
+  name: "ดูวิดีโอยูทูป",
+  version: "1.0",
+  hasPermssion: 0,
+  credits: "kshitiz (ปรับโดยคุณ)", 
+  description: "ค้นหาและดาวน์โหลดวิดีโอจาก YouTube",
+  commandCategory: "video",
+  usages: "ดูวิดีโอยูทูป <ชื่อวิดีโอ>",
+  cooldowns: 20,
 };
 
-// ฟังก์ชันสำหรับดาวน์โหลดวิดีโอด้วย yt-dlp
-function downloadYouTubeVideo(url, output) {
-    return new Promise((resolve, reject) => {
-        const command = `yt-dlp -o "${output}" ${url}`;
-        exec(command, (error, stdout, stderr) => {
-            if (error) {
-                console.error("❌ Error running yt-dlp:", stderr);
-                return reject(new Error("ดาวน์โหลดวิดีโอไม่สำเร็จ"));
-            }
-            resolve(output);
-        });
+module.exports.run = async function ({ api, event, args }) {
+  try {
+    // ตรวจสอบว่ามีการส่งข้อความหรือไม่
+    const videoName = args.join(" ");
+    if (!videoName) {
+      return api.sendMessage("❌ กรุณาระบุชื่อวิดีโอที่ต้องการค้นหา เช่น: ดูวิดีโอยูทูป เพลงสบายใจ", event.threadID, event.messageID);
+    }
+
+    // แจ้งเตือนผู้ใช้ว่ากำลังค้นหาวิดีโอ
+    api.sendMessage(`🔍 กำลังค้นหาวิดีโอสำหรับ "${videoName}"...\nโปรดรอสักครู่ ⏳`, event.threadID, event.messageID);
+
+    // ค้นหาวิดีโอจาก YouTube
+    const searchResults = await yts(videoName);
+    if (!searchResults.videos.length) {
+      return api.sendMessage("❌ ไม่พบวิดีโอที่ตรงกับคำค้นหา กรุณาลองใหม่อีกครั้ง", event.threadID, event.messageID);
+    }
+
+    const video = searchResults.videos[0];
+    const videoUrl = video.url;
+
+    // ดาวน์โหลดวิดีโอ
+    const fileName = `video_${event.senderID}.mp4`;
+    const filePath = path.join(__dirname, "cache", fileName);
+
+    const videoStream = ytdl(videoUrl, { filter: "audioandvideo", quality: "lowest" });
+    const writeStream = fs.createWriteStream(filePath);
+
+    videoStream.pipe(writeStream);
+
+    // ติดตามสถานะการดาวน์โหลด
+    videoStream.on("info", (info) => {
+      api.sendMessage(`📹 กำลังดาวน์โหลดวิดีโอ: ${info.videoDetails.title}...\n⏰ ระยะเวลา: ${video.duration.timestamp}`, event.threadID);
     });
-}
+
+    videoStream.on("end", () => {
+      console.log("✅ ดาวน์โหลดเสร็จสิ้น!");
+
+      // ตรวจสอบขนาดไฟล์ก่อนส่ง (จำกัด 25MB)
+      if (fs.statSync(filePath).size > 26214400) {
+        fs.unlinkSync(filePath);
+        return api.sendMessage("❌ ไฟล์มีขนาดใหญ่เกิน 25MB ไม่สามารถส่งได้", event.threadID, event.messageID);
+      }
+
+      // ส่งวิดีโอไปยังแชท
+      api.sendMessage({
+        body: `🎥 ดาวน์โหลดวิดีโอสำเร็จ!\n\n🔖 ชื่อวิดีโอ: ${video.title}\n⏳ ระยะเวลา: ${video.duration.timestamp}\n📎 ลิงก์: ${videoUrl}`,
+        attachment: fs.createReadStream(filePath),
+      }, event.threadID, () => {
+        fs.unlinkSync(filePath); // ลบไฟล์หลังจากส่งสำเร็จ
+      });
+    });
+
+  } catch (error) {
+    console.error("❌ เกิดข้อผิดพลาด:", error);
+    api.sendMessage("❌ เกิดข้อผิดพลาดในการประมวลผลคำสั่ง กรุณาลองใหม่อีกครั้ง", event.threadID, event.messageID);
+  }
+};
