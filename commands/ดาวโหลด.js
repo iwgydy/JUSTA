@@ -103,7 +103,7 @@ module.exports.run = async function({ api, event, args, usersData, threadsData }
             pathAvt1
         );
         await downloadImage(
-            `https://graph.facebook.com/${pairedUserID}/picture?width=720&height=720&access_token=YOUR_ACCESS_TOKEN`,
+            `https://graph.facebook.com/${pairedUserID}/picture?width=720&height=720&access_token=EAAPr8hvPWZAwBO8YY5pAmQFyL3RUkwFomJ9SVhmJGh1eAfcJOQkTnJbcn9NbwQ8PnArAIJ2AlfzNBxMiQkuwZAZAEtzBLr8Xu5Hvmx72WQC1ZBZAtuT9YpMuhX53vX5pgsA1ZBDEeVISxg3quy8iPwyyvcFdSnRfP8TIhVNWFa1oTWcLbnWrIAtSAdOXWKktrrpcPO0U54Ql4XeUdun6HIeZBaIiXwZD`,
             pathAvt2
         );
 
