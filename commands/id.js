@@ -1,5 +1,6 @@
 const axios = require("axios");
 const fs = require("fs-extra");
+const FormData = require("form-data");
 
 module.exports.config = {
   name: "ถังขยะ",
@@ -12,55 +13,52 @@ module.exports.config = {
   cooldowns: 5,
 };
 
-module.exports.run = async function ({ api, event, args }) {
+module.exports.run = async function ({ api, event }) {
   try {
-    // ตรวจสอบว่าแท็กผู้ใช้หรือไม่
     if (!event.mentions || Object.keys(event.mentions).length === 0) {
       return api.sendMessage("❌ กรุณาแท็กผู้ใช้ 1 คนที่คุณต้องการใส่ถังขยะ", event.threadID, event.messageID);
     }
 
-    const mention = Object.keys(event.mentions)[0]; // ดึง ID ของผู้ใช้ที่ถูกแท็ก
+    const mention = Object.keys(event.mentions)[0];
     const imageUrl = `https://graph.facebook.com/${mention}/picture?width=1024&height=1024&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
 
     api.sendMessage("♻️ กำลังประมวลผลภาพถังขยะ กรุณารอสักครู่...", event.threadID, event.messageID);
 
-    // ดาวน์โหลดภาพโปรไฟล์ของผู้ใช้
+    // ดาวน์โหลดภาพโปรไฟล์
     const profileImagePath = __dirname + `/cache/${mention}_avatar.png`;
     const response = await axios({
       url: imageUrl,
       method: "GET",
       responseType: "stream",
     });
-
     await new Promise((resolve, reject) => {
       response.data.pipe(fs.createWriteStream(profileImagePath)).on("finish", resolve).on("error", reject);
     });
 
-    // ส่งภาพไปยัง API ถังขยะ
-    const apiUrl = `https://api.joshweb.click/canvas/delete?uid=4`; // ลิ้งค์ API ที่มีภาพถังขยะ
+    // เตรียมส่งไป API พร้อมไฟล์
     const form = new FormData();
     form.append("file", fs.createReadStream(profileImagePath));
 
+    const apiUrl = `https://api.joshweb.click/canvas/delete?uid=4`;
     const { data } = await axios.post(apiUrl, form, {
       headers: form.getHeaders(),
       responseType: "stream",
     });
 
-    // บันทึกผลลัพธ์จาก API
+    // บันทึกภาพที่ได้จาก API
     const outputPath = __dirname + `/cache/${mention}_trash.png`;
     await new Promise((resolve, reject) => {
       data.pipe(fs.createWriteStream(outputPath)).on("finish", resolve).on("error", reject);
     });
 
-    // ส่งภาพผลลัพธ์กลับไปยังแชท
+    // ส่งภาพกลับแชท
     api.sendMessage(
       {
-        body: `🗑️ ทิ้งเรียบร้อย! นี่คือภาพถังขยะสำหรับผู้ใช้ที่คุณเลือก!`,
+        body: `🗑️ นี่คือภาพถังขยะของผู้ใช้ที่คุณเลือก!`,
         attachment: fs.createReadStream(outputPath),
       },
       event.threadID,
       () => {
-        // ลบไฟล์ชั่วคราว
         fs.unlinkSync(profileImagePath);
         fs.unlinkSync(outputPath);
       },
@@ -68,6 +66,6 @@ module.exports.run = async function ({ api, event, args }) {
     );
   } catch (error) {
     console.error("❌ เกิดข้อผิดพลาด:", error.message);
-    api.sendMessage("❌ ไม่สามารถสร้างภาพถังขยะได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง!", event.threadID, event.messageID);
+    api.sendMessage("❌ ไม่สามารถสร้างภาพถังขยะได้ กรุณาลองใหม่อีกครั้ง!", event.threadID, event.messageID);
   }
 };
