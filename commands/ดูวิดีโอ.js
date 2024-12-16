@@ -24,11 +24,18 @@ module.exports.run = async function ({ api, event }) {
     // สุ่มเลือก GIF 1 รายการจากผลลัพธ์
     const randomGif = data[Math.floor(Math.random() * data.length)];
 
-    // ส่งข้อความและ GIF กลับไปยังผู้ใช้
+    // ใช้ axios เพื่อดาวน์โหลดไฟล์จาก URL และแนบกับข้อความ
+    const fileStream = await axios({
+      url: randomGif.url,
+      method: "GET",
+      responseType: "stream",
+    });
+
+    // ส่งข้อความพร้อมแนบ GIF
     api.sendMessage(
       {
         body: `🎬 GIF จากอนิเมะ: ${randomGif.anime_name}`,
-        attachment: await global.utils.getStreamFromURL(randomGif.url),
+        attachment: fileStream.data,
       },
       event.threadID,
       event.messageID
