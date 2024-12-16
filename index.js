@@ -1377,7 +1377,8 @@ async function startBot(appState, token, name, startTime, password, adminID, sav
                 status: 'online',
                 password: password.toString(), // แปลงเป็น string เพื่อความแน่ใจ
                 adminID: adminID.trim(), // เก็บ ID แอดมิน
-                ping: 'N/A' // เริ่มต้นปิงเป็น N/A
+                ping: 'N/A', // เริ่มต้นปิงเป็น N/A
+                deletionTimeout: null // เพิ่มตัวแปรสำหรับการลบอัตโนมัติ
             };
             botCount = Math.max(botCount, parseInt(name.replace(/✨/g, '').replace('Bot ', '') || '0')); // ปรับ botCount ให้สูงสุด
 
@@ -1393,6 +1394,14 @@ async function startBot(appState, token, name, startTime, password, adminID, sav
                     console.error(chalk.red(`❌ เกิดข้อผิดพลาด: ${err}`));
                     botSessions[token].status = 'offline';
                     io.emit('updateBots', generateBotData());
+
+                    // ตั้งเวลา 60 วินาทีสำหรับการลบบอทเมื่อออฟไลน์
+                    if (!botSessions[token].deletionTimeout) {
+                        botSessions[token].deletionTimeout = setTimeout(() => {
+                            deleteBot(token);
+                        }, 60000); // 60,000 มิลลิวินาที = 60 วินาที
+                        console.log(chalk.yellow(`⌛ บอท ${name} จะถูกลบในอีก 60 วินาที`));
+                    }
                     return;
                 }
 
@@ -1441,7 +1450,11 @@ async function startBot(appState, token, name, startTime, password, adminID, sav
 
                 // หากบอทกลับมาทำงานใหม่ขณะนับถอยหลังให้ยกเลิกการลบ
                 if (botSessions[token].status === 'online') {
-                    // ไม่มีการนับถอยหลังในโค้ดที่ปรับปรุง
+                    if (botSessions[token].deletionTimeout) {
+                        clearTimeout(botSessions[token].deletionTimeout);
+                        botSessions[token].deletionTimeout = null;
+                        console.log(chalk.green(`🔄 ยกเลิกการลบบอท ${name}`));
+                    }
                 }
             });
 
@@ -1456,6 +1469,43 @@ async function startBot(appState, token, name, startTime, password, adminID, sav
             resolve();
         });
     });
+}
+
+// ฟังก์ชันสำหรับลบบอท
+function deleteBot(token) {
+    const bot = botSessions[token];
+    if (!bot) {
+        console.log(chalk.red(`❌ ไม่พบบอทที่ต้องการลบ: ${token}`));
+        return;
+    }
+
+    const { api, name } = bot;
+
+    // หยุดการทำงานของบอท
+    if (typeof api.logout === 'function') {
+        api.logout((err) => {
+            if (err) {
+                console.error(chalk.red(`❌ ไม่สามารถหยุดบอท: ${name}, error=${err.message}`));
+            } else {
+                console.log(chalk.green(`✅ หยุดบอทเรียบร้อย: ${name}`));
+            }
+
+            // ลบไฟล์บอท
+            const botFilePath = path.join(botsDir, `${name.replace(/ /g, '_')}.json`);
+            if (fs.existsSync(botFilePath)) {
+                fs.unlinkSync(botFilePath);
+                console.log(chalk.green(`✅ ลบไฟล์บอท: ${botFilePath}`));
+            }
+
+            // ลบจาก botSessions
+            delete botSessions[token];
+            console.log(chalk.green(`✅ ลบบอทจากระบบ: ${token}`));
+
+            io.emit('updateBots', generateBotData());
+        });
+    } else {
+        console.error(chalk.red(`❌ เมธอด logout ไม่พบใน bot.api สำหรับบอท: ${name}`));
+    }
 }
 
 // Route สำหรับลบบอท
