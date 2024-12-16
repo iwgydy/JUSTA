@@ -38,14 +38,19 @@ module.exports.run = async function ({ api, event, args }) {
     const fileName = `video_${event.senderID}.mp4`;
     const filePath = path.join(__dirname, "cache", fileName);
 
-    const videoStream = ytdl(videoUrl, { filter: "audioandvideo", quality: "lowest" });
-    const writeStream = fs.createWriteStream(filePath);
+    const videoStream = ytdl(videoUrl, { 
+      filter: "audioandvideo", 
+      quality: "lowest",
+      highWaterMark: 1 << 25, // เพิ่ม buffer size
+      update: true // อัปเดตข้อมูลแบบเรียลไทม์
+    });
 
+    const writeStream = fs.createWriteStream(filePath);
     videoStream.pipe(writeStream);
 
     // ติดตามสถานะการดาวน์โหลด
     videoStream.on("info", (info) => {
-      api.sendMessage(`📹 กำลังดาวน์โหลดวิดีโอ: ${info.videoDetails.title}...\n⏰ ระยะเวลา: ${video.duration.timestamp}`, event.threadID);
+      api.sendMessage(`📹 กำลังดาวน์โหลดวิดีโอ: ${info.videoDetails.title}...\n⏰ ระยะเวลา: ${info.videoDetails.lengthSeconds} วินาที`, event.threadID);
     });
 
     videoStream.on("end", () => {
