@@ -1,55 +1,93 @@
+const { createCanvas, loadImage } = require('canvas');
+const fs = require('fs-extra');
+const path = require('path');
 const axios = require('axios');
 
 module.exports = {
-    config: {
-        name: "gpt",
-        description: "ส่งคำถามไปยัง GPT API และรับคำตอบ",
-        usage: "/gpt <คำถาม>",
-        access: "ทุกคน"
-    },
-    run: async ({ api, event, args }) => {
-        const threadID = event.threadID;
-        const messageID = event.messageID;
-
-        if (!args.length) {
-            return api.sendMessage("❗ โปรดระบุคำถามของคุณหลังคำสั่ง เช่น `/gpt สวัสดี`", threadID, messageID);
-        }
-
-        const query = args.join(' '); // รวบรวมคำถามจากผู้ใช้
-
-        // ส่งข้อความ "กำลังถาม..." แล้วเก็บ messageID สำหรับลบข้อความนี้ในภายหลัง
-        api.sendMessage("⏳ กำลังถาม...", threadID, async (err, info) => {
-            if (err) return console.error(`❌ ไม่สามารถส่งข้อความ "กำลังถาม..." ได้: ${err.message}`);
-
-            try {
-                // ส่งคำถามไปยัง API
-                const response = await axios.get(`https://nash-api.onrender.com/api/gpt4`, {
-                    params: { query: query },
-                    timeout: 0 // ไม่มีการจำกัดเวลา
-                });
-
-                // ลบข้อความ "กำลังถาม..."
-                api.deleteMessage(info.messageID, (deleteErr) => {
-                    if (deleteErr) console.error(`❌ ไม่สามารถลบข้อความ "กำลังถาม..." ได้: ${deleteErr.message}`);
-                });
-
-                // ตรวจสอบว่ามี `response` ในข้อมูลที่ได้รับ
-                if (response.data && response.data.response) {
-                    api.sendMessage(response.data.response, threadID);
-                } else {
-                    api.sendMessage("❗ ไม่สามารถรับคำตอบจาก GPT ได้ โปรดลองใหม่ภายหลัง", threadID);
-                }
-            } catch (error) {
-                console.error(`❌ เกิดข้อผิดพลาดในการติดต่อ GPT API: ${error.message}`);
-
-                // ลบข้อความ "กำลังถาม..." กรณีมีข้อผิดพลาด
-                api.deleteMessage(info.messageID, (deleteErr) => {
-                    if (deleteErr) console.error(`❌ ไม่สามารถลบข้อความ "กำลังถาม..." ได้: ${deleteErr.message}`);
-                });
-
-                // ส่งข้อความแจ้งข้อผิดพลาดให้ผู้ใช้
-                api.sendMessage("❗ เกิดข้อผิดพลาดในการติดต่อ GPT API โปรดลองใหม่ภายหลัง", threadID);
-            }
-        });
+  config: {
+    name: "จับคู่วี2",
+    aliases: [],
+    version: "1.1",
+    author: "Vex_kshitiz",
+    shortDescription: "จับคู่รูปโปรไฟล์",
+    longDescription: "ค้นหารูปโปรไฟล์ที่จับคู่กัน",
+    category: "image",
+    guide: {
+      en: "{p}pairdp2 {คำค้น1} and {คำค้น2} -{ลำดับรูปภาพ}\nตัวอย่าง: {p}pairdp2 zoro and sanji -2"
     }
+  },
+  onStart: async function ({ message, event, args, api }) {
+    try {
+      const input = args.join(" ");
+      const [queries, imageIndex] = input.split(' -');
+      if (!queries || !imageIndex) {
+        return message.reply("❌ || กรุณาระบุคำค้นหา 2 คำคั่นด้วยคำว่า 'and' และหมายเลขรูปภาพโดยใช้เครื่องหมาย '-',\nตัวอย่าง: pairdp2 zoro and sanji -2");
+      }
+
+      const [query1, query2] = queries.split(' and ');
+      if (!query1 || !query2) {
+        return message.reply("❌ || กรุณาระบุคำค้นหา 2 คำคั่นด้วย 'and'\nตัวอย่าง: pairdp2 zoro and sanji -2");
+      }
+
+      const searchQuery = `${query1} and ${query2}`;
+      const apiUrl = `https://pin-two.vercel.app/pin?search=${encodeURIComponent(searchQuery)}`;
+
+      const response = await axios.get(apiUrl);
+      const imageData = response.data.result;
+
+      const index = parseInt(imageIndex) - 1;
+      if (index < 0 || index >= imageData.length) {
+        return message.reply(`❌ || กรุณาระบุหมายเลขรูปภาพที่ถูกต้อง ระหว่าง 1 ถึง ${imageData.length}`);
+      }
+
+      const imageUrl = imageData[index];
+
+      const imgResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+
+      const image = await loadImage(imgResponse.data);
+      const width = image.width;
+      const height = image.height;
+      const halfWidth = width / 2;
+
+      const canvasLeft = createCanvas(halfWidth, height);
+      const ctxLeft = canvasLeft.getContext('2d');
+      ctxLeft.drawImage(image, 0, 0, halfWidth, height, 0, 0, halfWidth, height);
+
+      const canvasRight = createCanvas(halfWidth, height);
+      const ctxRight = canvasRight.getContext('2d');
+      ctxRight.drawImage(image, halfWidth, 0, halfWidth, height, 0, 0, halfWidth, height);
+
+      const cacheFolderPath = path.join(__dirname, 'cache');
+      if (!fs.existsSync(cacheFolderPath)) {
+        fs.mkdirSync(cacheFolderPath);
+      }
+
+      const timestamp = Date.now();
+      const leftImagePath = path.join(cacheFolderPath, `${timestamp}left.png`);
+      const rightImagePath = path.join(cacheFolderPath, `${timestamp}right.png`);
+
+      await Promise.all([
+        fs.promises.writeFile(leftImagePath, canvasLeft.toBuffer('image/png')),
+        fs.promises.writeFile(rightImagePath, canvasRight.toBuffer('image/png'))
+      ]);
+
+      const imgData = [
+        fs.createReadStream(leftImagePath),
+        fs.createReadStream(rightImagePath)
+      ];
+
+      await api.sendMessage({
+        attachment: imgData,
+        body: "ภาพคู่ DP!"
+      }, event.threadID, event.messageID);
+
+      fs.unlinkSync(leftImagePath);
+      fs.unlinkSync(rightImagePath);
+
+      console.log("ส่งรูปภาพสำเร็จ และทำความสะอาดแคชเรียบร้อย");
+    } catch (error) {
+      console.error("Error:", error);
+      message.reply("❌ | เกิดข้อผิดพลาดบางอย่าง");
+    }
+  }
 };
