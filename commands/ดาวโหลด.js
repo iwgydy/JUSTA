@@ -1,72 +1,62 @@
-const fs = require("fs-extra");
-const path = require("path");
 const axios = require("axios");
-const sharp = require("sharp");
-const { v4: uuidv4 } = require("uuid");
 
 module.exports.config = {
-    name: "sharpen",
-    version: "1.2.0",
+    name: "จับคู่วี2",
+    version: "1.1.0",
     hasPermssion: 0,
     credits: "YourName",
-    description: "ทำให้ภาพคมชัดขึ้น รองรับเฉพาะภาพเท่านั้น",
-    commandCategory: "image",
-    usages: "[ตอบกลับภาพ]",
+    description: "จับคู่สมาชิกในกลุ่ม พร้อมแสดงชื่อและรูปโปรไฟล์",
+    commandCategory: "fun",
+    usages: "[ไม่มีพารามิเตอร์]",
     cooldowns: 5
 };
 
 module.exports.run = async function({ api, event }) {
     try {
-        // ตรวจสอบว่ามีการตอบกลับข้อความที่แนบภาพ
-        if (!event.messageReply || !event.messageReply.attachments || event.messageReply.attachments.length === 0) {
-            return api.sendMessage("❌ กรุณาตอบกลับภาพที่ต้องการทำให้คมชัดขึ้นด้วยคำสั่งนี้", event.threadID, event.messageID);
+        const { threadID, senderID, messageID } = event;
+
+        // ดึงข้อมูลสมาชิกภายในกลุ่ม
+        const threadInfo = await api.getThreadInfo(threadID);
+        const members = threadInfo.participantIDs;
+
+        // ตรวจสอบจำนวนสมาชิก
+        if (members.length < 2) {
+            return api.sendMessage("❌ สมาชิกในกลุ่มน้อยเกินไป ไม่สามารถจับคู่ได้!", threadID, messageID);
         }
 
-        const attachment = event.messageReply.attachments[0];
-
-        // ตรวจสอบว่าประเภทไฟล์เป็นภาพหรือไม่
-        if (attachment.type !== "photo") {
-            return api.sendMessage("❌ กรุณาตอบกลับไฟล์ภาพเท่านั้น (ไม่รองรับวิดีโอหรือ GIF)", event.threadID, event.messageID);
+        // ฟังก์ชันสุ่มสมาชิก
+        function getRandomMember(excludeID) {
+            const filtered = members.filter(id => id !== excludeID);
+            return filtered[Math.floor(Math.random() * filtered.length)];
         }
 
-        const imageUrl = attachment.url; // URL ของภาพ
-        const tmpDir = path.join(__dirname, "tmp");
-        fs.ensureDirSync(tmpDir); // ตรวจสอบหรือสร้างโฟลเดอร์ tmp
+        // กำหนดคนแรกคือผู้ใช้ที่เรียกคำสั่ง
+        const firstUser = senderID;
 
-        // กำหนดเส้นทางไฟล์ชั่วคราว
-        const uniqueId = uuidv4();
-        const originalImagePath = path.join(tmpDir, `original_${uniqueId}.jpg`);
-        const sharpenedImagePath = path.join(tmpDir, `sharpened_${uniqueId}.jpg`);
+        // สุ่มหาคนที่สอง
+        const secondUser = getRandomMember(firstUser);
 
-        // ดาวน์โหลดภาพจาก URL
-        const response = await axios({
-            url: imageUrl,
-            method: "GET",
-            responseType: "arraybuffer"
-        });
+        // ดึงข้อมูลโปรไฟล์ (ชื่อและรูป)
+        const firstUserInfo = await api.getUserInfo(firstUser);
+        const secondUserInfo = await api.getUserInfo(secondUser);
 
-        fs.writeFileSync(originalImagePath, Buffer.from(response.data));
+        const firstUserName = firstUserInfo[firstUser].name || "ไม่ทราบชื่อ";
+        const secondUserName = secondUserInfo[secondUser].name || "ไม่ทราบชื่อ";
 
-        // ทำให้ภาพคมชัดขึ้นด้วย sharp
-        await sharp(originalImagePath)
-            .sharpen({
-                sigma: 1.0, // ปรับความแรง
-                flat: 1.0,
-                jagged: 1.0
-            })
-            .toFile(sharpenedImagePath);
+        const firstUserProfile = `https://graph.facebook.com/${firstUser}/picture?width=720&height=720&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
+        const secondUserProfile = `https://graph.facebook.com/${secondUser}/picture?width=720&height=720&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
 
-        // ส่งภาพคมชัดกลับไปให้ผู้ใช้
+        // ส่งข้อความพร้อมโปรไฟล์รูปภาพ
         api.sendMessage({
-            body: "✅ ทำให้ภาพคมชัดขึ้นเรียบร้อยแล้ว!",
-            attachment: fs.createReadStream(sharpenedImagePath)
-        }, event.threadID, () => {
-            // ลบไฟล์ชั่วคราวเมื่อส่งสำเร็จ
-            fs.unlinkSync(originalImagePath);
-            fs.unlinkSync(sharpenedImagePath);
-        }, event.messageID);
+            body: `💖 จับคู่สำเร็จ!\n\n👤 คนแรก: ${firstUserName}\n👤 คนที่สอง: ${secondUserName}`,
+            attachment: [
+                await axios.get(firstUserProfile, { responseType: "stream" }).then(res => res.data),
+                await axios.get(secondUserProfile, { responseType: "stream" }).then(res => res.data)
+            ]
+        }, threadID, messageID);
+
     } catch (error) {
-        console.error("❌ เกิดข้อผิดพลาด:", error);
-        api.sendMessage("❌ เกิดข้อผิดพลาดในการทำให้ภาพคมชัด กรุณาลองใหม่อีกครั้ง!", event.threadID, event.messageID);
+        console.error("❌ เกิดข้อผิดพลาดในคำสั่งจับคู่:", error);
+        return api.sendMessage("❌ เกิดข้อผิดพลาดในการจับคู่ กรุณาลองใหม่!", event.threadID, event.messageID);
     }
 };
