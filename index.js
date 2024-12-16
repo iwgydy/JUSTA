@@ -6,6 +6,7 @@ const chalk = require('chalk');
 const figlet = require('figlet');
 const fs = require('fs');
 const path = require('path');
+const multer = require('multer'); // สำหรับจัดการการอัปโหลดไฟล์
 
 const app = express();
 const server = http.createServer(app);
@@ -18,9 +19,9 @@ const io = new Server(server, {
 const PORT = 3005;
 
 let botCount = 0;
-global.botSessions = {}; // เปลี่ยนจาก let เป็น global เพื่อให้สามารถเข้าถึงได้ในคำสั่ง
+const botSessions = {};
 const prefix = "/";
-const commands = {};
+const commandsGlobal = {}; // คำสั่งทั่วไป (ถ้ามี)
 const commandDescriptions = [];
 const commandUsage = {}; // ติดตามการใช้งานคำสั่ง
 
@@ -31,14 +32,30 @@ if (!fs.existsSync(botsDir)) {
     fs.mkdirSync(botsDir);
 }
 
-// โหลดคำสั่งจากโฟลเดอร์ commands
-const commandsPath = path.join(__dirname, 'commands');
-if (fs.existsSync(commandsPath)) {
-    fs.readdirSync(commandsPath).forEach((file) => {
+// ตั้งค่า multer สำหรับการอัปโหลดไฟล์คำสั่ง
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const botName = req.params.botName;
+        const commandsPath = path.join(botsDir, botName, 'commands');
+        if (!fs.existsSync(commandsPath)) {
+            fs.mkdirSync(commandsPath, { recursive: true });
+        }
+        cb(null, commandsPath);
+    },
+    filename: (req, file, cb) => {
+        cb(null, file.originalname);
+    }
+});
+const upload = multer({ storage: storage });
+
+// โหลดคำสั่งจากโฟลเดอร์ commands (ถ้ามี)
+const commandsPathGlobal = path.join(__dirname, 'commands');
+if (fs.existsSync(commandsPathGlobal)) {
+    fs.readdirSync(commandsPathGlobal).forEach((file) => {
         if (file.endsWith(".js")) {
             const command = require(`./commands/${file}`);
             if (command.config && command.config.name) {
-                commands[command.config.name.toLowerCase()] = command;
+                commandsGlobal[command.config.name.toLowerCase()] = command;
                 commandDescriptions.push({
                     name: command.config.name,
                     description: command.config.description || "ไม่มีคำอธิบาย",
@@ -83,46 +100,38 @@ function generateBotData() {
     const onlineBots = Object.values(botSessions).filter(bot => bot.status === 'online').length;
     const activeBots = Object.values(botSessions).filter(bot => bot.status === 'active').length;
 
-    // สร้างแถวตารางบอทพร้อมข้อมูลปิง
-    const botRows = Object.entries(botSessions).map(([token, bot]) => `
-        <tr id="bot-${encodeURIComponent(token)}">
-            <td>
-                <i class="fas fa-robot me-2" style="color: var(--primary-color);"></i>
-                <span class="bot-name">${bot.name}</span>
-            </td>
-            <td>
-                <span class="${bot.status === 'online' ? 'status-online' : 'status-offline'}">
-                    <i class="fas fa-circle"></i>
-                    ${bot.status === 'online' ? 'ออนไลน์' : 'ออฟไลน์'}
-                </span>
-            </td>
-            <td>
-                <span class="runtime" data-start-time="${bot.startTime}">
-                    กำลังคำนวณ...
-                </span>
-            </td>
-            <td>
-                <span class="ping">${bot.ping || 'N/A'} ms</span>
-            </td>
-            <td>
-                <button class="btn btn-warning btn-sm edit-btn" data-token="${encodeURIComponent(token)}"><i class="fas fa-edit"></i> แก้ไข</button>
-                <button class="btn btn-danger btn-sm delete-btn" data-token="${encodeURIComponent(token)}"><i class="fas fa-trash-alt"></i> ลบ</button>
-            </td>
-        </tr>
-    `).join('') || `
+    const botRows = Object.entries(botSessions).map(([token, bot]) => {
+        return `
+            <tr id="bot-${encodeURIComponent(token)}">
+                <td>
+                    <i class="fas fa-robot me-2" style="color: var(--primary-color);"></i>
+                    <span class="bot-name">${bot.name}</span>
+                </td>
+                <td>
+                    <span class="${bot.status === 'online' ? 'status-online' : 'status-offline'}">
+                        <i class="fas fa-circle"></i>
+                        ${bot.status === 'online' ? 'ออนไลน์' : 'ออฟไลน์'}
+                    </span>
+                </td>
+                <td>
+                    <span class="runtime" data-start-time="${bot.startTime}">
+                        กำลังคำนวณ...
+                    </span>
+                </td>
+                <td>
+                    <button class="btn btn-warning btn-sm edit-btn" data-token="${encodeURIComponent(token)}"><i class="fas fa-edit"></i> แก้ไข</button>
+                    <button class="btn btn-danger btn-sm delete-btn" data-token="${encodeURIComponent(token)}"><i class="fas fa-trash-alt"></i> ลบ</button>
+                    <button class="btn btn-secondary btn-sm upload-command-btn" data-bot-name="${encodeURIComponent(bot.name)}"><i class="fas fa-upload"></i> อัปโหลดคำสั่ง</button>
+                </td>
+            </tr>
+        `;
+    }).join('') || `
         <tr>
-            <td colspan="5" class="text-center">ไม่มีบอทที่กำลังทำงาน</td>
+            <td colspan="4" class="text-center">ไม่มีบอทที่กำลังทำงาน</td>
         </tr>
     `;
 
-    return { 
-        totalBots, 
-        onlineBots, 
-        activeBots, 
-        botRows, 
-        commandDescriptions, 
-        websitePing 
-    };
+    return { totalBots, onlineBots, activeBots, botRows, commandDescriptions };
 }
 
 // ฟังก์ชันช่วยเหลือในการสร้างข้อมูลคำสั่ง
@@ -144,23 +153,23 @@ function generateCommandData() {
 // โหลดบอทจากไฟล์ที่เก็บไว้เมื่อตอนเริ่มต้นเซิร์ฟเวอร์
 function loadBotsFromFiles() {
     fs.readdirSync(botsDir).forEach(file => {
-        if (file.endsWith('.json')) {
-            const filePath = path.join(botsDir, file);
-            try {
-                const botData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-                const { appState, token, name, startTime, password, adminID } = botData;
-                startBot(appState, token, name, startTime, password, adminID, false).catch(err => {
-                    console.error(`ไม่สามารถเริ่มต้นบอทจากไฟล์: ${filePath}, error=${err.message}`);
-                });
-            } catch (err) {
-                console.error(`ไม่สามารถอ่านไฟล์บอท: ${filePath}, error=${err.message}`);
+        const botPath = path.join(botsDir, file);
+        if (fs.lstatSync(botPath).isDirectory()) {
+            const botConfigPath = path.join(botPath, 'config.json');
+            if (fs.existsSync(botConfigPath)) {
+                try {
+                    const botData = JSON.parse(fs.readFileSync(botConfigPath, 'utf-8'));
+                    const { appState, token, name, startTime, password } = botData;
+                    startBot(appState, token, name, startTime, password, false).catch(err => {
+                        console.error(`ไม่สามารถเริ่มต้นบอทจากไฟล์: ${botConfigPath}, error=${err.message}`);
+                    });
+                } catch (err) {
+                    console.error(`ไม่สามารถอ่านไฟล์บอท: ${botConfigPath}, error=${err.message}`);
+                }
             }
         }
     });
 }
-
-// ตัวแปรสำหรับเก็บค่าปิงของเว็บไซต์
-let websitePing = 0;
 
 // หน้าแดชบอร์ดหลัก
 app.get("/", (req, res) => {
@@ -177,7 +186,7 @@ app.get("/", (req, res) => {
             <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
+                /* CSS */
                 :root {
                     --primary-color: #0d6efd;
                     --secondary-color: #6c757d;
@@ -253,26 +262,24 @@ app.get("/", (req, res) => {
                     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
                 }
 
-                .bot-table, .command-table {
+                .bot-table {
                     width: 100%;
                     border-collapse: collapse;
                     margin-top: 20px;
                 }
 
-                .bot-table th, .bot-table td,
-                .command-table th, .command-table td {
+                .bot-table th, .bot-table td {
                     padding: 12px 15px;
                     text-align: left;
                 }
 
-                .bot-table th, .command-table th {
+                .bot-table th {
                     background-color: var(--primary-color);
                     color: #fff;
                     font-weight: 600;
                 }
 
-                .bot-table tr:nth-child(even),
-                .command-table tr:nth-child(even) {
+                .bot-table tr:nth-child(even) {
                     background-color: #f1f1f1;
                 }
 
@@ -321,15 +328,29 @@ app.get("/", (req, res) => {
                     color: var(--info-color);
                 }
 
-                .ping {
-                    font-weight: 500;
-                    color: var(--accent-color);
-                }
-
                 .bot-name {
                     font-family: 'Press Start 2P', cursive;
                     color: var(--bot-name-color);
                     font-size: 1.1rem;
+                }
+
+                .website-ping {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background-color: rgba(255, 255, 255, 0.8);
+                    padding: 10px 15px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    font-size: 1rem;
+                    color: var(--text-color);
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .ping-icon {
+                    color: var(--info-color);
                 }
 
                 @media (max-width: 768px) {
@@ -339,19 +360,25 @@ app.get("/", (req, res) => {
                     .glass-card {
                         margin-bottom: 20px;
                     }
-                    .bot-table th, .bot-table td,
-                    .command-table th, .command-table td {
+                    .bot-table th, .bot-table td {
                         padding: 8px 10px;
                     }
-                }
-
-                /* Styles for Edit and Delete Buttons */
-                .btn-edit, .btn-delete {
-                    margin-right: 5px;
+                    .website-ping {
+                        top: 10px;
+                        right: 10px;
+                        font-size: 0.9rem;
+                        padding: 8px 12px;
+                    }
                 }
             </style>
         </head>
         <body>
+            <!-- ปิงเว็บไซต์ที่มุมขวาบนสุด -->
+            <div class="website-ping">
+                <i class="fas fa-tachometer-alt ping-icon"></i>
+                <span id="websitePing">- ms</span>
+            </div>
+
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
@@ -401,13 +428,6 @@ app.get("/", (req, res) => {
                             <div class="stats-label">บอททำงานแล้ว</div>
                         </div>
                     </div>
-                    <div class="col-md-3 col-sm-6 mb-3">
-                        <div class="stats-card">
-                            <i class="fas fa-tachometer-alt fa-2x mb-3" style="color: var(--accent-color);"></i>
-                            <div class="stats-number" id="websitePing">${data.websitePing} ms</div>
-                            <div class="stats-label">Ping เว็บไซต์</div>
-                        </div>
-                    </div>
                 </div>
 
                 <div class="row">
@@ -425,7 +445,6 @@ app.get("/", (req, res) => {
                                             <th>ชื่อบอท</th>
                                             <th>สถานะ</th>
                                             <th>เวลารัน</th>
-                                            <th>ปิง</th>
                                             <th>การจัดการ</th>
                                         </tr>
                                     </thead>
@@ -469,23 +488,11 @@ app.get("/", (req, res) => {
                     });
                 }
 
-                // ฟังก์ชันส่งปิงไปยังเซิร์ฟเวอร์
-                function sendPing() {
-                    const timestamp = Date.now();
-                    socket.emit('ping', timestamp);
-                }
-
-                // ส่งปิงทุกๆ 5 วินาที
-                setInterval(sendPing, 5000);
-                // ส่งปิงทันทีเมื่อโหลดหน้า
-                sendPing();
-
                 // รับข้อมูลอัปเดตจากเซิร์ฟเวอร์
                 socket.on('updateBots', (data) => {
                     document.getElementById('totalBots').textContent = data.totalBots;
                     document.getElementById('onlineBots').textContent = data.onlineBots;
                     document.getElementById('activeBots').textContent = data.activeBots;
-                    document.getElementById('websitePing').textContent = data.websitePing + ' ms';
 
                     const botTableBody = document.getElementById('botTableBody');
                     if (botTableBody) {
@@ -495,11 +502,33 @@ app.get("/", (req, res) => {
                     updateRuntime();
                 });
 
+                socket.on('updateCommands', (data) => {
+                    const commandTableBody = document.getElementById('commandTableBody');
+                    if (commandTableBody) {
+                        commandTableBody.innerHTML = data;
+                    }
+                });
+
+                // ฟังก์ชันอัปเดตปิงเว็บไซต์
+                function sendPing() {
+                    const startTime = Date.now();
+                    socket.emit('customPing', startTime);
+                }
+
+                socket.on('customPong', (pongTime) => {
+                    const latency = Date.now() - pongTime;
+                    document.getElementById('websitePing').textContent = latency + ' ms';
+                });
+
+                // ส่ง ping ทุกๆ 1 วินาที
+                setInterval(sendPing, 1000);
+                sendPing(); // ส่ง ping ทันทีเมื่อโหลดหน้า
+
                 // อัปเดตเวลารันทุกวินาที
                 setInterval(updateRuntime, 1000);
                 document.addEventListener('DOMContentLoaded', updateRuntime);
 
-                // Event Delegation สำหรับปุ่มลบและแก้ไข
+                // Event Delegation สำหรับปุ่มลบ, แก้ไข และอัปโหลดคำสั่ง
                 document.addEventListener('click', function(event) {
                     if (event.target.closest('.delete-btn')) {
                         const token = decodeURIComponent(event.target.closest('.delete-btn').getAttribute('data-token'));
@@ -516,7 +545,6 @@ app.get("/", (req, res) => {
                             .then(data => {
                                 if (data.success) {
                                     alert('ลบบอทสำเร็จ');
-                                    // การอัปเดตจะถูกจัดการผ่าน Socket.io
                                 } else {
                                     alert(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด');
                                 }
@@ -545,7 +573,6 @@ app.get("/", (req, res) => {
                                 .then(data => {
                                     if (data.success) {
                                         alert('แก้ไขโทเค่นสำเร็จ');
-                                        // การอัปเดตจะถูกจัดการผ่าน Socket.io
                                     } else {
                                         alert(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด');
                                     }
@@ -556,6 +583,76 @@ app.get("/", (req, res) => {
                                 });
                             }
                         }
+                    }
+
+                    if (event.target.closest('.upload-command-btn')) {
+                        const botName = decodeURIComponent(event.target.closest('.upload-command-btn').getAttribute('data-bot-name'));
+                        const formHtml = \`
+                            <div class="modal fade" id="uploadCommandModal" tabindex="-1" aria-labelledby="uploadCommandModalLabel" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <form id="uploadCommandForm" enctype="multipart/form-data">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="uploadCommandModalLabel">อัปโหลดคำสั่งสำหรับ \${botName}</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="mb-3">
+                                                    <label for="commandFile" class="form-label">ไฟล์คำสั่ง (.js)</label>
+                                                    <input type="file" class="form-control" id="commandFile" name="commandFile" accept=".js" required>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+                                                <button type="submit" class="btn btn-primary">อัปโหลด</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        \`;
+
+                        // เพิ่ม modal ลงใน body
+                        document.body.insertAdjacentHTML('beforeend', formHtml);
+                        const uploadCommandModal = new bootstrap.Modal(document.getElementById('uploadCommandModal'));
+                        uploadCommandModal.show();
+
+                        // Handle การส่งแบบฟอร์ม
+                        document.getElementById('uploadCommandForm').addEventListener('submit', function(e) {
+                            e.preventDefault();
+                            const fileInput = document.getElementById('commandFile');
+                            if (fileInput.files.length === 0) {
+                                alert('กรุณาเลือกไฟล์คำสั่งที่ต้องการอัปโหลด');
+                                return;
+                            }
+                            const formData = new FormData();
+                            formData.append('commandFile', fileInput.files[0]);
+
+                            fetch(\`/upload-command/\${encodeURIComponent(botName)}\`, {
+                                method: 'POST',
+                                body: formData
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    alert('อัปโหลดคำสั่งสำเร็จ');
+                                    uploadCommandModal.hide();
+                                    // Reload commands for the bot
+                                    socket.emit('reloadCommands', botName);
+                                } else {
+                                    alert(data.message || 'เกิดข้อผิดพลาดในการอัปโหลดคำสั่ง');
+                                }
+                            })
+                            .catch(err => {
+                                console.error(err);
+                                alert('เกิดข้อผิดพลาดในการอัปโหลดคำสั่ง');
+                            });
+                        });
+
+                        // เมื่อ modal ถูกปิด ให้ลบ modal ออกจาก DOM
+                        document.getElementById('uploadCommandModal').addEventListener('hidden.bs.modal', function () {
+                            document.getElementById('uploadCommandModal').remove();
+                        });
                     }
                 });
             </script>
@@ -579,7 +676,7 @@ app.get("/start", (req, res) => {
                         </div>`;
     } else if (error === 'missing-fields') {
         errorMessage = `<div class="alert alert-danger" role="alert">
-                            กรุณากรอกทั้งโทเค็น, รหัสผ่าน และ ID แอดมิน
+                            กรุณากรอกทั้งโทเค็นและรหัสผ่าน
                         </div>`;
     } else if (error === 'invalid-password') {
         errorMessage = `<div class="alert alert-danger" role="alert">
@@ -598,7 +695,7 @@ app.get("/start", (req, res) => {
             <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
+                /* CSS */
                 :root {
                     --primary-color: #0d6efd;
                     --secondary-color: #6c757d;
@@ -705,12 +802,6 @@ app.get("/start", (req, res) => {
                     0%, 100% { transform: translateY(0); }
                     50% { transform: translateY(-10px); }
                 }
-
-                @media (max-width: 768px) {
-                    .glass-card {
-                        margin-bottom: 20px;
-                    }
-                }
             </style>
         </head>
         <body>
@@ -771,18 +862,6 @@ app.get("/start", (req, res) => {
                                 title="กรุณากรอกรหัสผ่าน 6 หลัก"
                             />
                         </div>
-                        <div class="mb-3">
-                            <label for="adminID" class="form-label">ID แอดมินของบอท</label>
-                            <input 
-                                type="text" 
-                                id="adminID" 
-                                name="adminID" 
-                                class="form-control" 
-                                placeholder="61555184860915" 
-                                required
-                                title="กรุณากรอก ID แอดมินของบอท"
-                            />
-                        </div>
                         <button type="submit" class="btn btn-primary w-100">
                             <i class="fas fa-play me-2"></i>
                             เริ่มบอท
@@ -818,7 +897,7 @@ app.get("/bots", (req, res) => {
             <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
+                /* CSS */
                 :root {
                     --primary-color: #0d6efd;
                     --secondary-color: #6c757d;
@@ -910,6 +989,11 @@ app.get("/bots", (req, res) => {
                     gap: 6px;
                 }
 
+                .ping-time {
+                    font-weight: 500;
+                    color: var(--info-color);
+                }
+
                 .footer {
                     background: var(--primary-color);
                     border-top: 2px solid var(--primary-color);
@@ -933,29 +1017,10 @@ app.get("/bots", (req, res) => {
                     color: var(--info-color);
                 }
 
-                .ping {
-                    font-weight: 500;
-                    color: var(--accent-color);
-                }
-
                 .bot-name {
                     font-family: 'Press Start 2P', cursive;
                     color: var(--bot-name-color);
                     font-size: 1.1rem;
-                }
-
-                @media (max-width: 768px) {
-                    .glass-card {
-                        margin-bottom: 20px;
-                    }
-                    .bot-table th, .bot-table td {
-                        padding: 8px 10px;
-                    }
-                }
-
-                /* Styles for Edit and Delete Buttons */
-                .btn-edit, .btn-delete {
-                    margin-right: 5px;
                 }
             </style>
         </head>
@@ -999,7 +1064,6 @@ app.get("/bots", (req, res) => {
                                     <th>ชื่อบอท</th>
                                     <th>สถานะ</th>
                                     <th>เวลารัน</th>
-                                    <th>ปิง</th>
                                     <th>การจัดการ</th>
                                 </tr>
                             </thead>
@@ -1022,7 +1086,6 @@ app.get("/bots", (req, res) => {
             <script>
                 const socket = io();
 
-                // ฟังก์ชันอัปเดตเวลารัน
                 function updateRuntime() {
                     const runtimeElements = document.querySelectorAll('.runtime');
                     const now = Date.now();
@@ -1041,23 +1104,11 @@ app.get("/bots", (req, res) => {
                     });
                 }
 
-                // ฟังก์ชันส่งปิงไปยังเซิร์ฟเวอร์
-                function sendPing() {
-                    const timestamp = Date.now();
-                    socket.emit('ping', timestamp);
-                }
-
-                // ส่งปิงทุกๆ 5 วินาที
-                setInterval(sendPing, 5000);
-                // ส่งปิงทันทีเมื่อโหลดหน้า
-                sendPing();
-
                 // รับข้อมูลอัปเดตจากเซิร์ฟเวอร์
                 socket.on('updateBots', (data) => {
                     document.getElementById('totalBots').textContent = data.totalBots;
                     document.getElementById('onlineBots').textContent = data.onlineBots;
                     document.getElementById('activeBots').textContent = data.activeBots;
-                    document.getElementById('websitePing').textContent = data.websitePing + ' ms';
 
                     const botTableBody = document.getElementById('botTableBody');
                     if (botTableBody) {
@@ -1067,11 +1118,33 @@ app.get("/bots", (req, res) => {
                     updateRuntime();
                 });
 
+                socket.on('updateCommands', (data) => {
+                    const commandTableBody = document.getElementById('commandTableBody');
+                    if (commandTableBody) {
+                        commandTableBody.innerHTML = data;
+                    }
+                });
+
+                // ฟังก์ชันอัปเดตปิงเว็บไซต์
+                function sendPing() {
+                    const startTime = Date.now();
+                    socket.emit('customPing', startTime);
+                }
+
+                socket.on('customPong', (pongTime) => {
+                    const latency = Date.now() - pongTime;
+                    document.getElementById('websitePing').textContent = latency + ' ms';
+                });
+
+                // ส่ง ping ทุกๆ 1 วินาที
+                setInterval(sendPing, 1000);
+                sendPing(); // ส่ง ping ทันทีเมื่อโหลดหน้า
+
                 // อัปเดตเวลารันทุกวินาที
                 setInterval(updateRuntime, 1000);
                 document.addEventListener('DOMContentLoaded', updateRuntime);
 
-                // Event Delegation สำหรับปุ่มลบและแก้ไข
+                // Event Delegation สำหรับปุ่มลบ, แก้ไข และอัปโหลดคำสั่ง
                 document.addEventListener('click', function(event) {
                     if (event.target.closest('.delete-btn')) {
                         const token = decodeURIComponent(event.target.closest('.delete-btn').getAttribute('data-token'));
@@ -1088,7 +1161,6 @@ app.get("/bots", (req, res) => {
                             .then(data => {
                                 if (data.success) {
                                     alert('ลบบอทสำเร็จ');
-                                    // การอัปเดตจะถูกจัดการผ่าน Socket.io
                                 } else {
                                     alert(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด');
                                 }
@@ -1117,7 +1189,6 @@ app.get("/bots", (req, res) => {
                                 .then(data => {
                                     if (data.success) {
                                         alert('แก้ไขโทเค่นสำเร็จ');
-                                        // การอัปเดตจะถูกจัดการผ่าน Socket.io
                                     } else {
                                         alert(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด');
                                     }
@@ -1129,11 +1200,409 @@ app.get("/bots", (req, res) => {
                             }
                         }
                     }
+
+                    if (event.target.closest('.upload-command-btn')) {
+                        const botName = decodeURIComponent(event.target.closest('.upload-command-btn').getAttribute('data-bot-name'));
+                        const formHtml = \`
+                            <div class="modal fade" id="uploadCommandModal" tabindex="-1" aria-labelledby="uploadCommandModalLabel" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <form id="uploadCommandForm" enctype="multipart/form-data">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="uploadCommandModalLabel">อัปโหลดคำสั่งสำหรับ \${botName}</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="mb-3">
+                                                    <label for="commandFile" class="form-label">ไฟล์คำสั่ง (.js)</label>
+                                                    <input type="file" class="form-control" id="commandFile" name="commandFile" accept=".js" required>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+                                                <button type="submit" class="btn btn-primary">อัปโหลด</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        \`;
+
+                        // เพิ่ม modal ลงใน body
+                        document.body.insertAdjacentHTML('beforeend', formHtml);
+                        const uploadCommandModal = new bootstrap.Modal(document.getElementById('uploadCommandModal'));
+                        uploadCommandModal.show();
+
+                        // Handle การส่งแบบฟอร์ม
+                        document.getElementById('uploadCommandForm').addEventListener('submit', function(e) {
+                            e.preventDefault();
+                            const fileInput = document.getElementById('commandFile');
+                            if (fileInput.files.length === 0) {
+                                alert('กรุณาเลือกไฟล์คำสั่งที่ต้องการอัปโหลด');
+                                return;
+                            }
+                            const formData = new FormData();
+                            formData.append('commandFile', fileInput.files[0]);
+
+                            fetch(\`/upload-command/\${encodeURIComponent(botName)}\`, {
+                                method: 'POST',
+                                body: formData
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    alert('อัปโหลดคำสั่งสำเร็จ');
+                                    uploadCommandModal.hide();
+                                    // Reload commands for the bot
+                                    socket.emit('reloadCommands', botName);
+                                } else {
+                                    alert(data.message || 'เกิดข้อผิดพลาดในการอัปโหลดคำสั่ง');
+                                }
+                            })
+                            .catch(err => {
+                                console.error(err);
+                                alert('เกิดข้อผิดพลาดในการอัปโหลดคำสั่ง');
+                            });
+                        });
+
+                        // เมื่อ modal ถูกปิด ให้ลบ modal ออกจาก DOM
+                        document.getElementById('uploadCommandModal').addEventListener('hidden.bs.modal', function () {
+                            document.getElementById('uploadCommandModal').remove();
+                        });
+                    }
                 });
             </script>
         </body>
         </html>
     `);
+});
+
+// หน้าเพิ่มบอท (POST /start)
+app.post('/start', async (req, res) => {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+        return res.redirect('/start?error=missing-fields');
+    }
+
+    const passwordRegex = /^\d{6}$/;
+    if (!passwordRegex.test(password)) {
+        return res.redirect('/start?error=invalid-password');
+    }
+
+    try {
+        const appState = JSON.parse(token);
+        const tokenKey = token.trim();
+        if (botSessions[tokenKey]) {
+            return res.redirect('/start?error=already-running');
+        }
+
+        const botName = `✨${generateBotName()}✨`;
+        const startTime = Date.now();
+
+        await startBot(appState, tokenKey, botName, startTime, password, true);
+        res.redirect('/bots');
+        io.emit('updateBots', generateBotData());
+    } catch (err) {
+        console.error(chalk.red(`❌ เกิดข้อผิดพลาดในการเริ่มบอท: ${err.message}`));
+        res.redirect('/start?error=invalid-token');
+    }
+});
+
+// ฟังก์ชันเริ่มต้นบอท
+async function startBot(appState, token, name, startTime, password, saveToFile = true) {
+    return new Promise((resolve, reject) => {
+        login({ appState }, (err, api) => {
+            if (err) {
+                console.error(chalk.red(`❌ การเข้าสู่ระบบล้มเหลวสำหรับโทเค็น: ${token}`));
+                return reject(err);
+            }
+
+            if (botSessions[token]) {
+                console.log(chalk.yellow(`⚠️ บอทกำลังทำงานอยู่กับโทเค็น: ${token}`));
+                return reject(new Error('บอทกำลังทำงานอยู่'));
+            }
+
+            const botDir = path.join(botsDir, name);
+            const commandsPath = path.join(botDir, 'commands');
+
+            // สร้างโฟลเดอร์บอทและโฟลเดอร์คำสั่งถ้ายังไม่มี
+            if (!fs.existsSync(botDir)) {
+                fs.mkdirSync(botDir, { recursive: true });
+            }
+            if (!fs.existsSync(commandsPath)) {
+                fs.mkdirSync(commandsPath, { recursive: true });
+            }
+
+            // โหลดคำสั่งเฉพาะของบอท
+            const botCommands = {};
+            fs.readdirSync(commandsPath).forEach(file => {
+                if (file.endsWith('.js')) {
+                    try {
+                        const command = require(path.join(commandsPath, file));
+                        if (command.config && command.config.name) {
+                            botCommands[command.config.name.toLowerCase()] = command;
+                            console.log(`📦 โหลดคำสั่งสำหรับ ${name}: ${command.config.name}`);
+                        }
+                    } catch (error) {
+                        console.error(`❌ ไม่สามารถโหลดคำสั่งจากไฟล์ ${file} ของบอท ${name}: ${error.message}`);
+                    }
+                }
+            });
+
+            botSessions[token] = { 
+                api, 
+                name, 
+                startTime, 
+                status: 'online',
+                password: password.toString(),
+                commands: botCommands // เพิ่มคำสั่งเฉพาะของบอท
+            };
+            botCount = Math.max(botCount, parseInt(name.replace(/✨/g, '').replace('Bot ', '') || '0'));
+
+            console.log(chalk.green(figlet.textSync("Bot Started!", { horizontalLayout: "full" })));
+            console.log(chalk.green(`✅ ${name} กำลังทำงานด้วยโทเค็น: ${token}`));
+            console.log(chalk.green(`🔑 รหัสผ่านสำหรับลบ/แก้ไขโทเค่น: ${password}`));
+
+            api.setOptions({ listenEvents: true });
+
+            api.listenMqtt(async (err, event) => {
+                if (err) {
+                    console.error(chalk.red(`❌ เกิดข้อผิดพลาด: ${err}`));
+                    // บอทออฟไลน์
+                    if (botSessions[token]) {
+                        botSessions[token].status = 'offline';
+                        io.emit('updateBots', generateBotData());
+
+                        // ตั้งเวลา 60 วินาทีเพื่อลบอัตโนมัติหากยังคงออฟไลน์
+                        setTimeout(() => {
+                            if (botSessions[token] && botSessions[token].status === 'offline') {
+                                deleteBotServer(token); 
+                            }
+                        }, 60000);
+                    }
+                    return;
+                }
+
+                console.log(chalk.blue(`📩 รับอีเวนต์: ${event.type}`));
+
+                // จัดการอีเวนต์
+                if (event.logMessageType && events[event.logMessageType]) {
+                    for (const eventHandler of events[event.logMessageType]) {
+                        try {
+                            await eventHandler.run({ api, event });
+                            console.log(chalk.blue(`🔄 ประมวลผลอีเวนต์: ${eventHandler.config.name}`));
+                        } catch (error) {
+                            console.error(chalk.red(`❌ เกิดข้อผิดพลาดในอีเวนต์ ${eventHandler.config.name}:`, error));
+                        }
+                    }
+                }
+
+                // จัดการข้อความ
+                if (event.type === "message") {
+                    const message = event.body ? event.body.trim() : "";
+                    
+                    if (!message.startsWith(prefix)) return;
+
+                    const args = message.slice(prefix.length).trim().split(/ +/);
+                    const commandName = args.shift().toLowerCase();
+                    const command = botSessions[token].commands[commandName] || commandsGlobal[commandName];
+
+                    if (command && typeof command.run === "function") {
+                        try {
+                            await command.run({ api, event, args });
+                            console.log(chalk.green(`✅ รันคำสั่ง: ${commandName}`));
+                            commandUsage[commandName] = (commandUsage[commandName] || 0) + 1;
+
+                            io.emit('updateBots', generateBotData());
+                            io.emit('updateCommands', generateCommandData());
+                        } catch (error) {
+                            console.error(chalk.red(`❌ เกิดข้อผิดพลาดในคำสั่ง ${commandName}:`, error));
+                            api.sendMessage("❗ การรันคำสั่งล้มเหลว", event.threadID);
+                        }
+                    } else {
+                        api.sendMessage("❗ ไม่พบคำสั่งที่ระบุ", event.threadID);
+                    }
+                }
+
+                io.emit('updateBots', generateBotData());
+            });
+
+            if (saveToFile) {
+                const botData = { appState, token, name, startTime, password };
+                const botConfigPath = path.join(botDir, 'config.json');
+                fs.writeFileSync(botConfigPath, JSON.stringify(botData, null, 4));
+            }
+
+            io.emit('updateBots', generateBotData());
+            resolve();
+        });
+    }
+}
+
+// ฟังก์ชันลบบอทออกจากระบบและไฟล์ (ภายในเซิร์ฟเวอร์)
+async function deleteBotServer(token) {
+    const trimmedToken = token.trim();
+    const bot = botSessions[trimmedToken];
+    if (!bot) return; // ไม่พบบอท
+
+    try {
+        // logout บอท
+        if (typeof bot.api.logout === 'function') {
+            await new Promise((resolve, reject) => {
+                bot.api.logout((err) => {
+                    if (err) return reject(err);
+                    resolve();
+                });
+            });
+        }
+
+        // ลบไฟล์บอท
+        const botDir = path.join(botsDir, bot.name);
+        if (fs.existsSync(botDir)) {
+            fs.rmdirSync(botDir, { recursive: true });
+        }
+
+        delete botSessions[trimmedToken];
+        io.emit('updateBots', generateBotData());
+        console.log(chalk.green(`✅ ลบบอท ${bot.name} ออกจากระบบแล้ว`));
+    } catch (err) {
+        console.error(`ไม่สามารถลบบอทได้: ${err.message}`);
+    }
+}
+
+// Route สำหรับลบบอท (เรียกจาก Client)
+app.post('/delete', async (req, res) => {
+    const { token, code } = req.body;
+
+    if (!token || !code) {
+        return res.json({ success: false, message: 'ข้อมูลไม่ครบถ้วน' });
+    }
+
+    const trimmedToken = token.trim();
+    const bot = botSessions[trimmedToken];
+    if (!bot) {
+        return res.json({ success: false, message: 'ไม่พบบอทที่ต้องการลบ' });
+    }
+
+    if (bot.password.toString() !== code.toString()) {
+        return res.json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
+    }
+
+    // ลบบอท
+    try {
+        if (typeof bot.api.logout === 'function') {
+            await new Promise((resolve, reject) => {
+                bot.api.logout((err) => {
+                    if (err) return reject(err);
+                    resolve();
+                });
+            });
+        }
+
+        const botDir = path.join(botsDir, bot.name);
+        if (fs.existsSync(botDir)) {
+            fs.rmdirSync(botDir, { recursive: true });
+        }
+
+        delete botSessions[trimmedToken];
+        io.emit('updateBots', generateBotData());
+        res.json({ success: true, message: 'ลบบอทสำเร็จ' });
+    } catch (err) {
+        console.error(`ไม่สามารถหยุดบอท: ${err.message}`);
+        res.json({ success: false, message: 'ไม่สามารถหยุดบอทได้' });
+    }
+});
+
+// Route สำหรับแก้ไขโทเค่น
+app.post('/edit', async (req, res) => {
+    const { token, code, newToken } = req.body;
+
+    if (!token || !code || !newToken) {
+        return res.json({ success: false, message: 'ข้อมูลไม่ครบถ้วน' });
+    }
+
+    const trimmedToken = token.trim();
+    const bot = botSessions[trimmedToken];
+    if (!bot) {
+        return res.json({ success: false, message: 'ไม่พบบอทที่ต้องการแก้ไข' });
+    }
+
+    if (bot.password.toString() !== code.toString()) {
+        return res.json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
+    }
+
+    const trimmedNewToken = newToken.trim();
+    if (botSessions[trimmedNewToken]) {
+        return res.json({ success: false, message: 'โทเค่นใหม่ถูกใช้งานแล้ว' });
+    }
+
+    try {
+        if (typeof bot.api.logout === 'function') {
+            await new Promise((resolve, reject) => {
+                bot.api.logout((err) => {
+                    if (err) return reject(err);
+                    resolve();
+                });
+            });
+        }
+
+        const oldBotDir = path.join(botsDir, bot.name);
+        if (fs.existsSync(oldBotDir)) {
+            fs.rmdirSync(oldBotDir, { recursive: true });
+        }
+
+        delete botSessions[trimmedToken];
+
+        const newPassword = generate6DigitCode();
+        let newAppState;
+        try {
+            newAppState = JSON.parse(newToken);
+        } catch (parseError) {
+            throw new Error('newToken ไม่เป็น JSON ที่ถูกต้อง');
+        }
+        const startTime = Date.now();
+        await startBot(newAppState, trimmedNewToken, bot.name, startTime, newPassword, true);
+
+        console.log(chalk.green(`✅ แก้ไขโทเค่นของบอท: ${bot.name} เป็น ${trimmedNewToken}`));
+        io.emit('updateBots', generateBotData());
+        res.json({ success: true, message: 'แก้ไขโทเค่นสำเร็จ' });
+    } catch (err) {
+        console.error(chalk.red(`❌ เกิดข้อผิดพลาดในการแก้ไขโทเค่น: ${err.message}`));
+        res.json({ success: false, message: 'เกิดข้อผิดพลาดในการแก้ไขโทเค่น' });
+    }
+});
+
+// Route สำหรับอัปโหลดคำสั่งเฉพาะของบอท
+app.post('/upload-command/:botName', upload.single('commandFile'), async (req, res) => {
+    const botName = req.params.botName;
+    const file = req.file;
+
+    if (!file) {
+        return res.json({ success: false, message: 'ไม่มีไฟล์ถูกอัปโหลด' });
+    }
+
+    const bot = Object.values(botSessions).find(b => b.name === botName);
+    if (!bot) {
+        return res.json({ success: false, message: 'ไม่พบบอทที่ระบุ' });
+    }
+
+    // ล้าง cache ของคำสั่งที่อัปโหลดใหม่
+    delete require.cache[require.resolve(path.join(botsDir, botName, 'commands', file.filename))];
+
+    try {
+        const command = require(path.join(botsDir, botName, 'commands', file.filename));
+        if (command.config && command.config.name) {
+            bot.commands[command.config.name.toLowerCase()] = command;
+            console.log(`📦 อัปโหลดคำสั่งใหม่สำหรับ ${botName}: ${command.config.name}`);
+            res.json({ success: true, message: 'อัปโหลดคำสั่งสำเร็จ' });
+        } else {
+            res.json({ success: false, message: 'ไฟล์คำสั่งไม่ถูกต้อง' });
+        }
+    } catch (error) {
+        console.error(`❌ ไม่สามารถโหลดคำสั่งจากไฟล์ ${file.filename} ของบอท ${botName}: ${error.message}`);
+        res.json({ success: false, message: 'เกิดข้อผิดพลาดในการโหลดคำสั่ง' });
+    }
 });
 
 // หน้าแสดงคำสั่งที่ใช้
@@ -1151,7 +1620,7 @@ app.get("/commands", (req, res) => {
             <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
+                /* CSS */
                 :root {
                     --primary-color: #0d6efd;
                     --secondary-color: #6c757d;
@@ -1237,14 +1706,251 @@ app.get("/commands", (req, res) => {
                     0%, 100% { transform: translateY(0); }
                     50% { transform: translateY(-10px); }
                 }
+            </style>
+        </head>
+        <body>
+            <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+                <div class="container">
+                    <a class="navbar-brand d-flex align-items-center" href="/">
+                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: #ffffff;"></i>
+                        ระบบจัดการบอท
+                    </a>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav ms-auto">
+                            <li class="nav-item">
+                                <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link active" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
 
-                @media (max-width: 768px) {
-                    .glass-card {
-                        margin-bottom: 20px;
+            <div class="container">
+                <!-- ตารางคำสั่งที่ใช้ -->
+                <div class="glass-card">
+                    <h5 class="mb-4">
+                        <i class="fas fa-terminal me-2" style="color: var(--secondary-color);"></i>
+                        คำสั่งที่ใช้
+                    </h5>
+                    <div class="table-responsive">
+                        <table class="table command-table">
+                            <thead>
+                                <tr>
+                                    <th>ชื่อคำสั่ง</th>
+                                    <th>จำนวนที่ใช้</th>
+                                </tr>
+                            </thead>
+                            <tbody id="commandTableBody">
+                                ${commandsData}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="footer text-center">
+                <div class="container">
+                    <p class="mb-0">© ${new Date().getFullYear()} ระบบจัดการบอท | พัฒนาด้วย ❤️</p>
+                </div>
+            </footer>
+
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        </body>
+        </html>
+    `);
+});
+
+// Route สำหรับอัปโหลดคำสั่งเฉพาะของบอท
+app.post('/upload-command/:botName', upload.single('commandFile'), async (req, res) => {
+    const botName = req.params.botName;
+    const file = req.file;
+
+    if (!file) {
+        return res.json({ success: false, message: 'ไม่มีไฟล์ถูกอัปโหลด' });
+    }
+
+    const bot = Object.values(botSessions).find(b => b.name === botName);
+    if (!bot) {
+        return res.json({ success: false, message: 'ไม่พบบอทที่ระบุ' });
+    }
+
+    // ล้าง cache ของคำสั่งที่อัปโหลดใหม่
+    delete require.cache[require.resolve(path.join(botsDir, botName, 'commands', file.filename))];
+
+    try {
+        const command = require(path.join(botsDir, botName, 'commands', file.filename));
+        if (command.config && command.config.name) {
+            bot.commands[command.config.name.toLowerCase()] = command;
+            console.log(`📦 อัปโหลดคำสั่งใหม่สำหรับ ${botName}: ${command.config.name}`);
+            res.json({ success: true, message: 'อัปโหลดคำสั่งสำเร็จ' });
+        } else {
+            res.json({ success: false, message: 'ไฟล์คำสั่งไม่ถูกต้อง' });
+        }
+    } catch (error) {
+        console.error(`❌ ไม่สามารถโหลดคำสั่งจากไฟล์ ${file.filename} ของบอท ${botName}: ${error.message}`);
+        res.json({ success: false, message: 'เกิดข้อผิดพลาดในการโหลดคำสั่ง' });
+    }
+});
+
+// ฟังก์ชันช่วยเหลือในการสร้างชื่อบอทที่สวยงาม
+function generateBotName() {
+    const adjectives = ["Super", "Mega", "Ultra", "Hyper", "Turbo", "Alpha", "Beta", "Gamma", "Delta"];
+    const nouns = ["Dragon", "Phoenix", "Falcon", "Tiger", "Lion", "Eagle", "Shark", "Wolf", "Leopard"];
+    const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const noun = nouns[Math.floor(Math.random() * nouns.length)];
+    return `${adjective}${noun}`;
+}
+
+// Socket.io สำหรับหน้าแดชบอร์ดหลักและดูบอทรัน
+io.on('connection', (socket) => {
+    console.log(chalk.blue('🔌 Socket.io client connected'));
+    socket.emit('updateBots', generateBotData());
+    socket.emit('updateCommands', generateCommandData());
+
+    socket.on('customPing', (pingTime) => {
+        socket.emit('customPong', pingTime);
+    });
+
+    // รับคำสั่ง Reload Commands สำหรับบอท
+    socket.on('reloadCommands', (botName) => {
+        const bot = Object.values(botSessions).find(b => b.name === botName);
+        if (bot) {
+            const commandsPath = path.join(botsDir, botName, 'commands');
+            bot.commands = {}; // รีเซ็ตคำสั่ง
+            if (fs.existsSync(commandsPath)) {
+                fs.readdirSync(commandsPath).forEach(file => {
+                    if (file.endsWith('.js')) {
+                        try {
+                            const command = require(path.join(commandsPath, file));
+                            if (command.config && command.config.name) {
+                                bot.commands[command.config.name.toLowerCase()] = command;
+                                console.log(`📦 โหลดคำสั่งใหม่สำหรับ ${botName}: ${command.config.name}`);
+                            }
+                        } catch (error) {
+                            console.error(`❌ ไม่สามารถโหลดคำสั่งจากไฟล์ ${file} ของบอท ${botName}: ${error.message}`);
+                        }
                     }
-                    .command-table th, .command-table td {
-                        padding: 8px 10px;
-                    }
+                });
+            }
+            io.emit('updateBots', generateBotData());
+            console.log(`🔄 รีโหลดคำสั่งสำหรับบอท ${botName}`);
+        }
+    });
+
+    socket.on('disconnect', () => {
+        console.log(chalk.red('🔌 Socket.io client disconnected'));
+    });
+});
+
+// หน้าแสดงคำสั่งที่ใช้
+app.get("/commands", (req, res) => {
+    const commandsData = generateCommandData();
+
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="th">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>คำสั่งที่ใช้ | ระบบจัดการบอท</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <style>
+                /* CSS */
+                :root {
+                    --primary-color: #0d6efd;
+                    --secondary-color: #6c757d;
+                    --accent-color: #198754;
+                    --background-color: #f8f9fa;
+                    --card-bg: #ffffff;
+                    --card-border: #dee2e6;
+                    --text-color: #212529;
+                    --success-color: #198754;
+                    --error-color: #dc3545;
+                    --info-color: #0d6efd;
+                }
+
+                body {
+                    background: var(--background-color);
+                    color: var(--text-color);
+                    font-family: 'Roboto', sans-serif;
+                    min-height: 100vh;
+                    position: relative;
+                    overflow-x: hidden;
+                }
+
+                .navbar {
+                    background: var(--primary-color);
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                }
+
+                .navbar-brand {
+                    font-family: 'Kanit', sans-serif;
+                    font-weight: 600;
+                    color: #ffffff !important;
+                }
+
+                .glass-card {
+                    background: var(--card-bg);
+                    border: 1px solid var(--card-border);
+                    border-radius: 16px;
+                    padding: 24px;
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                }
+
+                .glass-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+                }
+
+                .command-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 20px;
+                }
+
+                .command-table th, .command-table td {
+                    padding: 12px 15px;
+                    text-align: left;
+                }
+
+                .command-table th {
+                    background-color: var(--primary-color);
+                    color: #fff;
+                    font-weight: 600;
+                }
+
+                .command-table tr:nth-child(even) {
+                    background-color: #f1f1f1;
+                }
+
+                .footer {
+                    background: var(--primary-color);
+                    border-top: 2px solid var(--primary-color);
+                    padding: 20px 0;
+                    margin-top: 40px;
+                    font-size: 0.9rem;
+                    color: #ffffff;
+                }
+
+                .animate-float {
+                    animation: float 3s ease-in-out infinite;
+                }
+
+                @keyframes float {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-10px); }
                 }
             </style>
         </head>
@@ -1316,342 +2022,9 @@ app.get("/debug/bots", (req, res) => {
         name: bot.name,
         status: bot.status,
         password: bot.password,
-        adminID: bot.adminID,
-        ping: bot.ping || 'N/A'
+        // ลบ ping ออกเพราะไม่ต้องการตรวจสอบปิงแต่ละบอทแล้ว
     }));
     res.json(bots);
-});
-
-// POST /start เพื่อเริ่มต้นบอท
-app.post('/start', async (req, res) => {
-    const { token, password, adminID } = req.body;
-
-    // ตรวจสอบว่ามีการกรอกโทเค็น, รหัสผ่าน และ ID แอดมิน
-    if (!token || !password || !adminID) {
-        return res.redirect('/start?error=missing-fields');
-    }
-
-    // ตรวจสอบรูปแบบของรหัสผ่าน (ต้องเป็นเลข 6 หลัก)
-    const passwordRegex = /^\d{6}$/;
-    if (!passwordRegex.test(password)) {
-        return res.redirect('/start?error=invalid-password');
-    }
-
-    try {
-        const appState = JSON.parse(token);
-        const tokenKey = token.trim();
-        if (botSessions[tokenKey]) {
-            return res.redirect('/start?error=already-running');
-        }
-
-        const botName = `✨${generateBotName()}✨`;
-        const startTime = Date.now();
-
-        await startBot(appState, tokenKey, botName, startTime, password, adminID, true);
-        res.redirect('/bots');
-        io.emit('updateBots', generateBotData());
-    } catch (err) {
-        console.error(chalk.red(`❌ เกิดข้อผิดพลาดในการเริ่มบอท: ${err.message}`));
-        res.redirect('/start?error=invalid-token');
-    }
-});
-
-// ฟังก์ชันเริ่มต้นบอท
-async function startBot(appState, token, name, startTime, password, adminID, saveToFile = true) {
-    return new Promise((resolve, reject) => {
-        login({ appState }, (err, api) => {
-            if (err) {
-                console.error(chalk.red(`❌ การเข้าสู่ระบบล้มเหลวสำหรับโทเค็น: ${token}`));
-                return reject(err);
-            }
-
-            if (botSessions[token]) {
-                console.log(chalk.yellow(`⚠️ บอทกำลังทำงานอยู่กับโทเค็น: ${token}`));
-                return reject(new Error('บอทกำลังทำงานอยู่'));
-            }
-
-            botSessions[token] = { 
-                api, 
-                name, 
-                startTime, 
-                status: 'online',
-                password: password.toString(), // แปลงเป็น string เพื่อความแน่ใจ
-                adminID: adminID.trim(), // เก็บ ID แอดมิน
-                ping: 'N/A', // เริ่มต้นปิงเป็น N/A
-                deletionTimeout: null // เพิ่มตัวแปรสำหรับการลบอัตโนมัติ
-            };
-            botCount = Math.max(botCount, parseInt(name.replace(/✨/g, '').replace('Bot ', '') || '0')); // ปรับ botCount ให้สูงสุด
-
-            console.log(chalk.green(figlet.textSync("Bot Started!", { horizontalLayout: "full" })));
-            console.log(chalk.green(`✅ ${name} กำลังทำงานด้วยโทเค็น: ${token}`));
-            console.log(chalk.green(`🔑 รหัสผ่านสำหรับลบ/แก้ไขโทเค่น: ${password}`)); // แสดงรหัสผ่านใน console
-            console.log(chalk.green(`🔑 ID แอดมิน: ${adminID}`)); // แสดง ID แอดมินใน console
-
-            api.setOptions({ listenEvents: true });
-
-            api.listenMqtt(async (err, event) => {
-                if (err) {
-                    console.error(chalk.red(`❌ เกิดข้อผิดพลาด: ${err}`));
-                    botSessions[token].status = 'offline';
-                    io.emit('updateBots', generateBotData());
-
-                    // ตั้งเวลา 60 วินาทีสำหรับการลบบอทเมื่อออฟไลน์
-                    if (!botSessions[token].deletionTimeout) {
-                        botSessions[token].deletionTimeout = setTimeout(() => {
-                            deleteBot(token);
-                        }, 60000); // 60,000 มิลลิวินาที = 60 วินาที
-                        console.log(chalk.yellow(`⌛ บอท ${name} จะถูกลบในอีก 60 วินาที`));
-                    }
-                    return;
-                }
-
-                // เพิ่มล็อกเมื่อได้รับอีเวนต์
-                console.log(chalk.blue(`📩 รับอีเวนต์: ${event.type}`));
-
-                // จัดการอีเวนต์
-                if (event.logMessageType && events[event.logMessageType]) {
-                    for (const eventHandler of events[event.logMessageType]) {
-                        try {
-                            await eventHandler.run({ api, event });
-                            console.log(chalk.blue(`🔄 ประมวลผลอีเวนต์: ${eventHandler.config.name}`));
-                        } catch (error) {
-                            console.error(chalk.red(`❌ เกิดข้อผิดพลาดในอีเวนต์ ${eventHandler.config.name}:`, error));
-                        }
-                    }
-                }
-
-                // จัดการข้อความ
-                if (event.type === "message") {
-                    const message = event.body ? event.body.trim() : "";
-
-                    if (!message.startsWith(prefix)) return;
-
-                    const args = message.slice(prefix.length).trim().split(/ +/);
-                    const commandName = args.shift().toLowerCase();
-                    const command = commands[commandName];
-
-                    if (command && typeof command.run === "function") {
-                        try {
-                            await command.run({ api, event, args });
-                            console.log(chalk.green(`✅ รันคำสั่ง: ${commandName}`));
-                            // เพิ่มตัวนับการใช้คำสั่ง
-                            commandUsage[commandName] = (commandUsage[commandName] || 0) + 1;
-
-                            io.emit('updateBots', generateBotData());
-                            io.emit('updateCommands', generateCommandData());
-                        } catch (error) {
-                            console.error(chalk.red(`❌ เกิดข้อผิดพลาดในคำสั่ง ${commandName}:`, error));
-                            api.sendMessage("❗ การรันคำสั่งล้มเหลว", event.threadID);
-                        }
-                    } else {
-                        api.sendMessage("❗ ไม่พบคำสั่งที่ระบุ", event.threadID);
-                    }
-                }
-
-                // หากบอทกลับมาทำงานใหม่ขณะนับถอยหลังให้ยกเลิกการลบ
-                if (botSessions[token].status === 'online') {
-                    if (botSessions[token].deletionTimeout) {
-                        clearTimeout(botSessions[token].deletionTimeout);
-                        botSessions[token].deletionTimeout = null;
-                        console.log(chalk.green(`🔄 ยกเลิกการลบบอท ${name}`));
-                    }
-                }
-            });
-
-            // บันทึกข้อมูลบอทลงไฟล์
-            if (saveToFile) {
-                const botData = { appState, token, name, startTime, password, adminID };
-                const botFilePath = path.join(botsDir, `${name.replace(/ /g, '_')}.json`);
-                fs.writeFileSync(botFilePath, JSON.stringify(botData, null, 4));
-            }
-
-            io.emit('updateBots', generateBotData());
-            resolve();
-        });
-    });
-}
-
-// ฟังก์ชันสำหรับลบบอท
-function deleteBot(token) {
-    const bot = botSessions[token];
-    if (!bot) {
-        console.log(chalk.red(`❌ ไม่พบบอทที่ต้องการลบ: ${token}`));
-        return;
-    }
-
-    const { api, name } = bot;
-
-    // หยุดการทำงานของบอท
-    if (typeof api.logout === 'function') {
-        api.logout((err) => {
-            if (err) {
-                console.error(chalk.red(`❌ ไม่สามารถหยุดบอท: ${name}, error=${err.message}`));
-            } else {
-                console.log(chalk.green(`✅ หยุดบอทเรียบร้อย: ${name}`));
-            }
-
-            // ลบไฟล์บอท
-            const botFilePath = path.join(botsDir, `${name.replace(/ /g, '_')}.json`);
-            if (fs.existsSync(botFilePath)) {
-                fs.unlinkSync(botFilePath);
-                console.log(chalk.green(`✅ ลบไฟล์บอท: ${botFilePath}`));
-            }
-
-            // ลบจาก botSessions
-            delete botSessions[token];
-            console.log(chalk.green(`✅ ลบบอทจากระบบ: ${token}`));
-
-            io.emit('updateBots', generateBotData());
-        });
-    } else {
-        console.error(chalk.red(`❌ เมธอด logout ไม่พบใน bot.api สำหรับบอท: ${name}`));
-    }
-}
-
-// Route สำหรับลบบอท
-app.post('/delete', async (req, res) => {
-    const { token, code } = req.body;
-
-    console.log(`ได้รับคำขอลบบอท: token=${token}, code=${code}`);
-
-    if (!token || !code) {
-        console.log('ข้อมูลไม่ครบถ้วน');
-        return res.json({ success: false, message: 'ข้อมูลไม่ครบถ้วน' });
-    }
-
-    const trimmedToken = token.trim(); // ทำการ trim โทเค็นก่อนค้นหา
-    const bot = botSessions[trimmedToken];
-    if (!bot) {
-        console.log('ไม่พบบอทที่ต้องการลบ');
-        return res.json({ success: false, message: 'ไม่พบบอทที่ต้องการลบ' });
-    }
-
-    console.log(`ตรวจสอบรหัสผ่าน: bot.password=${bot.password}, code=${code}`);
-
-    if (bot.password.toString() !== code.toString()) { // ตรวจสอบรหัสผ่าน
-        console.log('รหัสผ่านไม่ถูกต้อง');
-        return res.json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
-    }
-
-    // หยุดการทำงานของบอทและลบทันที
-    try {
-        // ตรวจสอบว่า bot.api มีเมธอด logout หรือไม่
-        if (typeof bot.api.logout === 'function') {
-            await new Promise((resolve, reject) => {
-                bot.api.logout((err) => {
-                    if (err) return reject(err);
-                    resolve();
-                });
-            });
-            console.log(`บอทถูกหยุดทำงาน: ${bot.name}`);
-        } else {
-            throw new Error('เมธอด logout ไม่พบใน bot.api');
-        }
-
-        // ลบไฟล์บอท
-        const botFilePath = path.join(botsDir, `${bot.name.replace(/ /g, '_')}.json`);
-        if (fs.existsSync(botFilePath)) {
-            fs.unlinkSync(botFilePath);
-            console.log(`ลบไฟล์บอท: ${botFilePath}`);
-        }
-
-        // ลบจาก botSessions
-        delete botSessions[trimmedToken];
-        console.log(`ลบบอทจาก botSessions: ${trimmedToken}`);
-
-        io.emit('updateBots', generateBotData());
-        res.json({ success: true, message: 'ลบบอทสำเร็จ' });
-    } catch (err) {
-        console.error(`ไม่สามารถหยุดบอท: ${err.message}`);
-        res.json({ success: false, message: 'ไม่สามารถหยุดบอทได้' });
-    }
-});
-
-// Route สำหรับแก้ไขโทเค่น
-app.post('/edit', async (req, res) => {
-    const { token, code, newToken } = req.body;
-
-    if (!token || !code || !newToken) {
-        return res.json({ success: false, message: 'ข้อมูลไม่ครบถ้วน' });
-    }
-
-    const trimmedToken = token.trim();
-    const bot = botSessions[trimmedToken];
-    if (!bot) {
-        return res.json({ success: false, message: 'ไม่พบบอทที่ต้องการแก้ไข' });
-    }
-
-    if (bot.password.toString() !== code.toString()) { // ตรวจสอบรหัสผ่าน
-        return res.json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
-    }
-
-    const trimmedNewToken = newToken.trim();
-    if (botSessions[trimmedNewToken]) {
-        return res.json({ success: false, message: 'โทเค่นใหม่ถูกใช้งานแล้ว' });
-    }
-
-    try {
-        // หยุดการทำงานของบอท
-        if (typeof bot.api.logout === 'function') {
-            await new Promise((resolve, reject) => {
-                bot.api.logout((err) => {
-                    if (err) return reject(err);
-                    resolve();
-                });
-            });
-            console.log(`หยุดบอท: ${bot.name}`);
-        } else {
-            throw new Error('เมธอด logout ไม่พบใน bot.api');
-        }
-
-        // ลบไฟล์บอทเก่า
-        const oldBotFilePath = path.join(botsDir, `${bot.name.replace(/ /g, '_')}.json`);
-        if (fs.existsSync(oldBotFilePath)) {
-            fs.unlinkSync(oldBotFilePath);
-            console.log(`ลบไฟล์บอทเก่า: ${oldBotFilePath}`);
-        }
-
-        // ลบจาก botSessions
-        delete botSessions[trimmedToken];
-        console.log(`ลบบอทจาก botSessions: ${trimmedToken}`);
-
-        // เริ่มต้นบอทใหม่ด้วยโทเค่นใหม่และรหัสผ่านใหม่
-        const newPassword = generate6DigitCode();
-        let newAppState;
-        try {
-            newAppState = JSON.parse(newToken); // ตรวจสอบว่า newToken เป็น JSON string
-        } catch (parseError) {
-            throw new Error('newToken ไม่เป็น JSON ที่ถูกต้อง');
-        }
-        const startTime = Date.now();
-        await startBot(newAppState, trimmedNewToken, bot.name, startTime, newPassword, bot.adminID, true);
-
-        console.log(chalk.green(`✅ แก้ไขโทเค่นของบอท: ${bot.name} เป็น ${trimmedNewToken}`));
-        io.emit('updateBots', generateBotData());
-        res.json({ success: true, message: 'แก้ไขโทเค่นสำเร็จ' });
-    } catch (err) {
-        console.error(chalk.red(`❌ เกิดข้อผิดพลาดในการแก้ไขโทเค่น: ${err.message}`));
-        res.json({ success: false, message: 'เกิดข้อผิดพลาดในการแก้ไขโทเค่น' });
-    }
-});
-
-// Socket.io สำหรับหน้าแดชบอร์ดหลักและดูบอทรัน
-io.on('connection', (socket) => {
-    console.log(chalk.blue('🔌 Socket.io client connected'));
-
-    // Handle 'ping' event from client
-    socket.on('ping', (timestamp) => {
-        const latency = Date.now() - timestamp;
-        const ping = Math.min(latency, 200);
-        websitePing = ping;
-        io.emit('updateBots', generateBotData());
-    });
-
-    socket.emit('updateBots', generateBotData());
-
-    socket.on('disconnect', () => {
-        console.log(chalk.red('🔌 Socket.io client disconnected'));
-    });
 });
 
 // ฟังก์ชันช่วยเหลือในการสร้างชื่อบอทที่สวยงาม
@@ -1669,12 +2042,3 @@ server.listen(PORT, () => {
     console.log(chalk.green(figlet.textSync("Bot Management", { horizontalLayout: "full" })));
     loadBotsFromFiles();
 });
-
-// ฟังก์ชันช่วยเหลือในการอัปเดตปิงของบอททุกๆ 5 วินาที
-setInterval(() => {
-    Object.values(botSessions).forEach(bot => {
-        // จำลองการปิงด้วยการสุ่มค่าระหว่าง 1-200 ms
-        bot.ping = Math.floor(Math.random() * 200) + 1;
-    });
-    io.emit('updateBots', generateBotData());
-}, 5000); // อัปเดตทุก 5 วินาที
