@@ -5,7 +5,7 @@ const path = require('path');
 module.exports = {
     config: {
         name: "สแปมgif",
-        description: "สแปมคลิปวิดีโอแบบรัวๆ ตามลิงก์ที่กำหนด",
+        description: "สแปม GIF แบบรัวๆ เท่ๆ จำนวนครั้งที่กำหนด",
     },
     run: async ({ api, event, args }) => {
         const { senderID, threadID, messageID } = event;
@@ -30,8 +30,8 @@ module.exports = {
             return api.sendMessage("❗ คุณไม่มีสิทธิ์ใช้คำสั่งนี้", threadID, messageID);
         }
 
-        // ตั้งค่า URL และจำนวนครั้ง
-        const gifURL = "https://i.imgur.com/eIImlF7.mp4";
+        // ตั้งค่า URL GIF และจำนวนครั้ง
+        const gifURL = "https://i.imgur.com/XDlo4WD.gif"; // ลิงก์ใหม่ที่กำหนด
         const times = parseInt(args[0] || 50); // ค่าเริ่มต้น 50 ครั้ง
 
         if (isNaN(times) || times <= 0) {
@@ -39,27 +39,27 @@ module.exports = {
         }
 
         try {
-            // ดาวน์โหลดไฟล์ล่วงหน้า
+            // ดาวน์โหลด GIF ไฟล์ล่วงหน้า
             const response = await axios({
                 method: "GET",
                 url: gifURL,
                 responseType: "stream",
             });
 
-            const tempPath = path.resolve(__dirname, "temp_spam_clip.mp4");
+            const tempPath = path.resolve(__dirname, "temp_spam_gif.gif");
             const writer = fs.createWriteStream(tempPath);
             response.data.pipe(writer);
 
             writer.on("finish", async () => {
-                // ส่งแบบรัวๆ โดยไม่หยุดพัก
                 for (let i = 0; i < times; i++) {
+                    // ส่ง GIF แบบรัวๆ โดยไม่หน่วงเวลา
                     api.sendMessage({
                         attachment: fs.createReadStream(tempPath),
                     }, threadID);
                 }
 
-                // แจ้งเมื่อเสร็จ
-                return api.sendMessage(`✅ สแปมคลิปแบบรัวๆ จำนวน ${times} ครั้งเสร็จสิ้น`, threadID, messageID);
+                // แจ้งเตือนเมื่อเสร็จ
+                return api.sendMessage(`✅ สแปม GIF แบบเท่ๆ จำนวน ${times} ครั้งเสร็จสิ้น`, threadID, messageID);
             });
 
             writer.on("error", () => {
@@ -67,7 +67,7 @@ module.exports = {
             });
         } catch (error) {
             console.error(error);
-            return api.sendMessage("❗ ไม่สามารถโหลดคลิปจาก URL นี้ได้", threadID, messageID);
+            return api.sendMessage("❗ ไม่สามารถโหลด GIF จากลิงก์นี้ได้", threadID, messageID);
         }
     },
 };
