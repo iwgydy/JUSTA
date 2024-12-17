@@ -31,7 +31,7 @@ module.exports = {
         }
 
         // ตั้งค่า URL GIF และจำนวนครั้ง
-        const gifURL = "https://i.imgur.com/XDlo4WD.gif"; // ลิงก์ใหม่ที่กำหนด
+        const gifURL = "https://i.imgur.com/PfgRIGM.gif"; // ลิงก์ใหม่ที่กำหนด
         const times = parseInt(args[0] || 50); // ค่าเริ่มต้น 50 ครั้ง
 
         if (isNaN(times) || times <= 0) {
