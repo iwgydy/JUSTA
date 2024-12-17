@@ -130,7 +130,7 @@ function generateCommandData() {
         const description = commandDescriptions.find(cmd => cmd.name.toLowerCase() === name)?.description || "ไม่มีคำอธิบาย";
         return `
             <tr>
-                <td>${prefix}${name}</td>
+                <td>${name}</td>
                 <td>${count}</td>
                 <td>${description}</td>
             </tr>
@@ -633,6 +633,10 @@ app.get("/start", (req, res) => {
     } else if (error === 'invalid-password') {
         errorMessage = `<div class="alert alert-danger" role="alert">
                             รหัสผ่านไม่ถูกต้อง กรุณากรอกรหัสผ่าน 6 หลัก
+                        </div>`;
+    } else if (error === 'invalid-name') {
+        errorMessage = `<div class="alert alert-danger" role="alert">
+                            ชื่อบอทไม่ถูกต้อง กรุณากรอกชื่อบอทที่มีความยาว 3-20 ตัวอักษร และประกอบด้วย a-z, A-Z, 0-9, -, _
                         </div>`;
     }
 
