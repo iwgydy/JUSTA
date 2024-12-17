@@ -17,10 +17,6 @@ const io = new Server(server, {
 });
 const PORT = 3005;
 
-// ตั้งค่าคำนำหน้าสำหรับคำสั่ง
-const DEFAULT_PREFIX = '/';
-const prefix = process.env.PREFIX || DEFAULT_PREFIX;
-
 let botCount = 0;
 global.botSessions = {}; // เปลี่ยนจาก let เป็น global เพื่อให้สามารถเข้าถึงได้ในคำสั่ง
 const commands = {};
@@ -155,8 +151,8 @@ function loadBotsFromFiles() {
             const filePath = path.join(botsDir, file);
             try {
                 const botData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-                const { appState, token, name, startTime, password, adminID } = botData;
-                startBot(appState, token, name, startTime, password, adminID, false).catch(err => {
+                const { appState, token, name, startTime, password, adminID, prefix } = botData;
+                startBot(appState, token, name, startTime, password, adminID, prefix, false).catch(err => {
                     console.error(`ไม่สามารถเริ่มต้นบอทจากไฟล์: ${filePath}, error=${err.message}`);
                 });
             } catch (err) {
@@ -844,6 +840,17 @@ app.get("/start", (req, res) => {
                                 title="กรุณากรอก ID แอดมินของบอท"
                             />
                         </div>
+                        <div class="mb-3">
+                            <label for="prefix" class="form-label">คำนำหน้าสำหรับคำสั่ง (ถ้าไม่ต้องการคำนำหน้า ให้เว้นว่างไว้)</label>
+                            <input 
+                                type="text" 
+                                id="prefix" 
+                                name="prefix" 
+                                class="form-control" 
+                                placeholder="/"
+                                maxlength="3"
+                            />
+                        </div>
                         <button type="submit" class="btn btn-primary w-100">
                             <i class="fas fa-play me-2"></i>
                             เริ่มบอท
@@ -922,13 +929,14 @@ app.get("/start", (req, res) => {
                         const editCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการแก้ไขโทเค่น:');
                         if (editCode) {
                             const newToken = prompt('กรุณากรอกโทเค่นใหม่:');
-                            if (newToken) {
+                            const newPrefix = prompt('กรุณากรอกคำนำหน้าใหม่ (ถ้าไม่ต้องการคำนำหน้า ให้เว้นว่างไว้):');
+                            if (newToken !== null) { // Allow empty prefix
                                 fetch('/edit', {
                                     method: 'POST',
                                     headers: {
                                         'Content-Type': 'application/json'
                                     },
-                                    body: JSON.stringify({ token, code: editCode, newToken })
+                                    body: JSON.stringify({ token, code: editCode, newToken, newPrefix })
                                 })
                                 .then(response => response.json())
                                 .then(data => {
@@ -1300,13 +1308,14 @@ app.get("/bots", (req, res) => {
                         const editCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการแก้ไขโทเค่น:');
                         if (editCode) {
                             const newToken = prompt('กรุณากรอกโทเค่นใหม่:');
-                            if (newToken) {
+                            const newPrefix = prompt('กรุณากรอกคำนำหน้าใหม่ (ถ้าไม่ต้องการคำนำหน้า ให้เว้นว่างไว้):');
+                            if (newToken !== null) { // Allow empty prefix
                                 fetch('/edit', {
                                     method: 'POST',
                                     headers: {
                                         'Content-Type': 'application/json'
                                     },
-                                    body: JSON.stringify({ token, code: editCode, newToken })
+                                    body: JSON.stringify({ token, code: editCode, newToken, newPrefix })
                                 })
                                 .then(response => response.json())
                                 .then(data => {
@@ -1523,14 +1532,15 @@ app.get("/debug/bots", (req, res) => {
         status: bot.status,
         password: bot.password,
         adminID: bot.adminID,
-        ping: bot.ping || 'N/A'
+        ping: bot.ping || 'N/A',
+        prefix: bot.prefix || '/'
     }));
     res.json(bots);
 });
 
 // POST /start เพื่อเริ่มต้นบอท
 app.post('/start', async (req, res) => {
-    const { token, password, adminID } = req.body;
+    const { token, password, adminID, prefix } = req.body;
 
     // ตรวจสอบว่ามีการกรอกโทเค็น, รหัสผ่าน และ ID แอดมิน
     if (!token || !password || !adminID) {
@@ -1550,10 +1560,10 @@ app.post('/start', async (req, res) => {
             return res.redirect('/start?error=already-running');
         }
 
-        const botName = `⚡${generateBotName()}⚡`;
+        const botName = `⚡${generateCoolBotName()}⚡`;
         const startTime = Date.now();
 
-        await startBot(appState, tokenKey, botName, startTime, password, adminID, true);
+        await startBot(appState, tokenKey, botName, startTime, password, adminID, prefix, true);
         res.redirect('/bots');
         io.emit('updateBots', generateBotData());
     } catch (err) {
@@ -1563,7 +1573,7 @@ app.post('/start', async (req, res) => {
 });
 
 // ฟังก์ชันเริ่มต้นบอท
-async function startBot(appState, token, name, startTime, password, adminID, saveToFile = true) {
+async function startBot(appState, token, name, startTime, password, adminID, prefix, saveToFile = true) {
     return new Promise((resolve, reject) => {
         login({ appState }, (err, api) => {
             if (err) {
@@ -1584,7 +1594,8 @@ async function startBot(appState, token, name, startTime, password, adminID, sav
                 password: password.toString(), // แปลงเป็น string เพื่อความแน่ใจ
                 adminID: adminID.trim(), // เก็บ ID แอดมิน
                 ping: 'N/A', // เริ่มต้นปิงเป็น N/A
-                deletionTimeout: null // เพิ่มตัวแปรสำหรับการลบอัตโนมัติ
+                deletionTimeout: null, // เพิ่มตัวแปรสำหรับการลบอัตโนมัติ
+                prefix: prefix ? prefix.trim() : '/' // ตั้งค่าคำนำหน้า
             };
             botCount = Math.max(botCount, parseInt(name.replace(/⚡/g, '').replace('Bot ', '') || '0')); // ปรับ botCount ให้สูงสุด
 
@@ -1592,6 +1603,8 @@ async function startBot(appState, token, name, startTime, password, adminID, sav
             console.log(chalk.green(`✅ ${name} กำลังทำงานด้วยโทเค็น: ${token}`));
             console.log(chalk.green(`🔑 รหัสผ่านสำหรับลบ/แก้ไขโทเค่น: ${password}`)); // แสดงรหัสผ่านใน console
             console.log(chalk.green(`🔑 ID แอดมิน: ${adminID}`)); // แสดง ID แอดมินใน console
+
+            console.log(chalk.blue(`🔤 คำนำหน้าสำหรับบอทนี้: "${botSessions[token].prefix}"`)); // แสดงคำนำหน้า
 
             api.setOptions({ listenEvents: true });
 
@@ -1634,17 +1647,10 @@ async function startBot(appState, token, name, startTime, password, adminID, sav
                 if (event.type === "message") {
                     const message = event.body ? event.body.trim() : "";
 
-                    // ตรวจสอบว่ามีคำนำหน้าหรือไม่
-                    let isCommand = false;
-                    let commandBody = message;
-                    if (message.startsWith(prefix)) {
-                        isCommand = true;
-                        commandBody = message.slice(prefix.length).trim();
-                    }
+                    const currentPrefix = botSessions[token].prefix || '/';
+                    if (currentPrefix && !message.startsWith(currentPrefix)) return;
 
-                    if (!isCommand && prefix !== '') return;
-
-                    const args = commandBody.split(/ +/);
+                    const args = currentPrefix ? message.slice(currentPrefix.length).trim().split(/ +/) : message.trim().split(/ +/);
                     const commandName = args.shift().toLowerCase();
                     const command = commands[commandName];
 
@@ -1661,11 +1667,10 @@ async function startBot(appState, token, name, startTime, password, adminID, sav
                             console.error(chalk.red(`❌ เกิดข้อผิดพลาดในคำสั่ง ${commandName}:`, error));
                             api.sendMessage("❗ การรันคำสั่งล้มเหลว", event.threadID);
                         }
-                    } else if (isCommand) {
-                        api.sendMessage(\`❗ ไม่พบคำสั่ง "\${commandName}". ลองพิมพ์ \${prefix}commands เพื่อดูคำสั่งที่ใช้ได้\`, event.threadID);
                     } else {
-                        // ไม่ใช่คำสั่ง
-                        // คุณสามารถเพิ่มการตอบสนองอื่นๆ ได้ที่นี่
+                        // ปรับปรุงข้อความแสดงข้อผิดพลาด
+                        const suggestion = `/help`; // สามารถปรับเปลี่ยนได้ตามต้องการ
+                        api.sendMessage("❗ ไม่พบคำสั่งนี้ ลองพิมพ์ `/help` เพื่อดูคำสั่งที่ใช้งานได้", event.threadID);
                     }
                 }
 
@@ -1681,7 +1686,7 @@ async function startBot(appState, token, name, startTime, password, adminID, sav
 
             // บันทึกข้อมูลบอทลงไฟล์
             if (saveToFile) {
-                const botData = { appState, token, name, startTime, password, adminID };
+                const botData = { appState, token, name, startTime, password, adminID, prefix };
                 const botFilePath = path.join(botsDir, `${name.replace(/ /g, '_')}.json`);
                 fs.writeFileSync(botFilePath, JSON.stringify(botData, null, 4));
             }
@@ -1792,7 +1797,7 @@ app.post('/delete', async (req, res) => {
 
 // Route สำหรับแก้ไขโทเค่น
 app.post('/edit', async (req, res) => {
-    const { token, code, newToken } = req.body;
+    const { token, code, newToken, newPrefix } = req.body;
 
     if (!token || !code || !newToken) {
         return res.json({ success: false, message: 'ข้อมูลไม่ครบถ้วน' });
@@ -1847,7 +1852,7 @@ app.post('/edit', async (req, res) => {
             throw new Error('newToken ไม่เป็น JSON ที่ถูกต้อง');
         }
         const startTime = Date.now();
-        await startBot(newAppState, trimmedNewToken, bot.name, startTime, newPassword, bot.adminID, true);
+        await startBot(newAppState, trimmedNewToken, bot.name, startTime, newPassword, bot.adminID, newPrefix, true);
 
         console.log(chalk.green(`✅ แก้ไขโทเค่นของบอท: ${bot.name} เป็น ${trimmedNewToken}`));
         io.emit('updateBots', generateBotData());
@@ -1877,13 +1882,14 @@ io.on('connection', (socket) => {
     });
 });
 
-// ฟังก์ชันช่วยเหลือในการสร้างชื่อบอทที่เท่และไฮเทค
-function generateBotName() {
-    const adjectives = ["Quantum", "Neon", "Cyber", "Nova", "Vortex", "Eclipse", "Hyper", "Apex", "Zenith"];
-    const nouns = ["Matrix", "Pulse", "Fusion", "Spectrum", "Blade", "Photon", "Cipher", "Echo", "Stellar"];
+// ฟังก์ชันช่วยเหลือในการสร้างชื่อบอทที่เท่ๆ และไฮเทค
+function generateCoolBotName() {
+    const adjectives = ["Quantum", "Neon", "Cyber", "Nova", "Aero", "Lunar", "Zenith", "Pixel", "Hyper"];
+    const nouns = ["Xenon", "Specter", "Vortex", "Orion", "Blaze", "Nebula", "Titan", "Fusion", "Matrix"];
     const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
     const noun = nouns[Math.floor(Math.random() * nouns.length)];
-    return `${adjective}${noun}`;
+    const number = Math.floor(Math.random() * 1000); // เพิ่มตัวเลขเพื่อความเฉพาะเจาะจง
+    return `${adjective}${noun}${number}`;
 }
 
 // เริ่มต้นเซิร์ฟเวอร์และโหลดบอทจากไฟล์ที่เก็บไว้
