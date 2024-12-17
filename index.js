@@ -1587,14 +1587,37 @@ app.post('/start', async (req, res) => {
         const botPrefix = prefix.trim();
         const startTime = Date.now();
 
-        await startBot(appState, tokenKey, botName, botPrefix, startTime, password, adminID, true);
+        await startBotWithRetry(appState, tokenKey, botName, botPrefix, startTime, password, adminID, 10);
         res.redirect('/bots');
         io.emit('updateBots', generateBotData());
     } catch (err) {
-        console.error(chalk.red(`❌ เกิดข้อผิดพลาดในการเริ่มบอท: ${err.message}`));
+        console.error(chalk.red(`❌ เกิดข้อผิดพลาดในการเริ่มบอท: ${err ? err.message : err}`));
         res.redirect('/start?error=invalid-token');
     }
 });
+
+// ฟังก์ชันเริ่มต้นบอทด้วยการลองล็อกอินซ้ำ
+async function startBotWithRetry(appState, token, name, prefix, startTime, password, adminID, retries) {
+    let attempt = 0;
+    while (attempt < retries) {
+        try {
+            await startBot(appState, token, name, prefix, startTime, password, adminID, true);
+            console.log(chalk.green(`✅ เริ่มบอทสำเร็จ: ${name}`));
+            return;
+        } catch (err) {
+            attempt++;
+            console.error(chalk.red(`❌ ลองเริ่มบอทครั้งที่ ${attempt} ล้มเหลว: ${err.message}`));
+            if (attempt >= retries) {
+                console.error(chalk.red(`❌ บอท ${name} ล้มเหลวในการล็อกอินหลังจากลอง ${retries} ครั้ง`));
+                await deleteBot(token);
+                io.emit('botDeleted', name);
+                throw new Error(`บอท ${name} ล้มเหลวในการล็อกอิน`);
+            }
+            // รอ 2 วินาทีก่อนลองใหม่
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+    }
+}
 
 // ฟังก์ชันเริ่มต้นบอท
 async function startBot(appState, token, name, prefix, startTime, password, adminID, saveToFile = true) {
@@ -1619,7 +1642,8 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
                 password: password.toString(), // แปลงเป็น string เพื่อความแน่ใจ
                 adminID: adminID.trim(), // เก็บ ID แอดมิน
                 ping: 'N/A', // เริ่มต้นปิงเป็น N/A
-                deletionTimeout: null // เพิ่มตัวแปรสำหรับการลบอัตโนมัติ
+                deletionTimeout: null, // เพิ่มตัวแปรสำหรับการลบอัตโนมัติ
+                retryCount: 0 // เพิ่มตัวนับการลองล็อกอิน
             };
             botCount = Math.max(botCount, parseInt(name.replace(/✨/g, '').replace('Bot ', '') || '0')); // ปรับ botCount ให้สูงสุด
 
@@ -1871,7 +1895,7 @@ app.post('/edit', async (req, res) => {
             throw new Error('newToken ไม่เป็น JSON ที่ถูกต้อง');
         }
         const startTime = Date.now();
-        await startBot(newAppState, trimmedNewToken, bot.name, bot.prefix, startTime, newPassword, bot.adminID, true);
+        await startBotWithRetry(newAppState, trimmedNewToken, bot.name, bot.prefix, startTime, newPassword, bot.adminID, true);
 
         console.log(chalk.green(`✅ แก้ไขโทเค่นของบอท: ${bot.name} เป็น ${trimmedNewToken}`));
         io.emit('updateBots', generateBotData());
@@ -1925,3 +1949,16 @@ setInterval(() => {
     });
     io.emit('updateBots', generateBotData());
 }, 5000); // อัปเดตทุก 5 วินาที
+
+// ฟังก์ชันระบบอัตโนมัติทุก ๆ 1 ชั่วโมง เพื่อลบบอทที่ยังล้มเหลว
+setInterval(() => {
+    console.log(chalk.yellow('🔍 กำลังตรวจสอบบอททั้งหมดสำหรับการลบอัตโนมัติ...'));
+    Object.keys(botSessions).forEach(token => {
+        const bot = botSessions[token];
+        if (bot.status !== 'online') {
+            console.log(chalk.yellow(`⌛ บอท "${bot.name}" ไม่ออนไลน์ จะถูกลบออก`));
+            deleteBot(token);
+            io.emit('botDeleted', bot.name);
+        }
+    });
+}, 3600000); // 3,600,000 มิลลิวินาที = 1 ชั่วโมง
