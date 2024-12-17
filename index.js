@@ -127,14 +127,18 @@ function generateBotData() {
 
 // ฟังก์ชันช่วยเหลือในการสร้างข้อมูลคำสั่ง
 function generateCommandData() {
-    const commandsData = Object.entries(commandUsage).map(([name, count]) => `
+    const commandsData = Object.entries(commandUsage).map(([name, count]) => {
+        const description = commandDescriptions.find(cmd => cmd.name.toLowerCase() === name)?.description || "ไม่มีคำอธิบาย";
+        return `
+            <tr>
+                <td>${prefix}${name}</td>
+                <td>${count}</td>
+                <td>${description}</td>
+            </tr>
+        `;
+    }).join('') || `
         <tr>
-            <td>${prefix}${name}</td>
-            <td>${count}</td>
-        </tr>
-    `).join('') || `
-        <tr>
-            <td colspan="2" class="text-center">ไม่มีคำสั่งที่ถูกใช้งาน</td>
+            <td colspan="3" class="text-center">ไม่มีคำสั่งที่ถูกใช้งาน</td>
         </tr>
     `;
 
@@ -349,6 +353,14 @@ app.get("/", (req, res) => {
                 .btn-edit, .btn-delete {
                     margin-right: 5px;
                 }
+
+                /* Toast Styles */
+                .toast-container {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 1055;
+                }
             </style>
         </head>
         <body>
@@ -439,6 +451,9 @@ app.get("/", (req, res) => {
                 </div>
             </div>
 
+            <!-- Toast Container -->
+            <div class="toast-container"></div>
+
             <footer class="footer text-center">
                 <div class="container">
                     <p class="mb-0">© ${new Date().getFullYear()} ระบบจัดการบอท | พัฒนาด้วย ❤️</p>
@@ -480,6 +495,32 @@ app.get("/", (req, res) => {
                 // ส่งปิงทันทีเมื่อโหลดหน้า
                 sendPing();
 
+                // ฟังก์ชันแสดง Toast
+                function showToast(message, type = 'info') {
+                    const toastContainer = document.querySelector('.toast-container');
+                    const toastEl = document.createElement('div');
+                    toastEl.className = \`toast align-items-center text-bg-\${type} border-0\`;
+                    toastEl.setAttribute('role', 'alert');
+                    toastEl.setAttribute('aria-live', 'assertive');
+                    toastEl.setAttribute('aria-atomic', 'true');
+                    toastEl.innerHTML = \`
+                        <div class="d-flex">
+                            <div class="toast-body">
+                                \${message}
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                    \`;
+                    toastContainer.appendChild(toastEl);
+                    const toast = new bootstrap.Toast(toastEl);
+                    toast.show();
+
+                    // ลบ Toast หลังจากปิด
+                    toastEl.addEventListener('hidden.bs.toast', () => {
+                        toastEl.remove();
+                    });
+                }
+
                 // รับข้อมูลอัปเดตจากเซิร์ฟเวอร์
                 socket.on('updateBots', (data) => {
                     document.getElementById('totalBots').textContent = data.totalBots;
@@ -495,6 +536,16 @@ app.get("/", (req, res) => {
                     updateRuntime();
                 });
 
+                // รับเหตุการณ์เฉพาะเมื่อบอทถูกลบ
+                socket.on('botDeleted', (botName) => {
+                    showToast(\`บอท "\${botName}" ถูกลบเรียบร้อยแล้ว\`, 'success');
+                });
+
+                // รับเหตุการณ์เฉพาะเมื่อบอทไปออฟไลน์
+                socket.on('botOffline', (botName) => {
+                    showToast(\`บอท "\${botName}" กำลังจะถูกลบภายใน 60 วินาที เนื่องจากออฟไลน์\`, 'warning');
+                });
+
                 // อัปเดตเวลารันทุกวินาที
                 setInterval(updateRuntime, 1000);
                 document.addEventListener('DOMContentLoaded', updateRuntime);
@@ -503,6 +554,7 @@ app.get("/", (req, res) => {
                 document.addEventListener('click', function(event) {
                     if (event.target.closest('.delete-btn')) {
                         const token = decodeURIComponent(event.target.closest('.delete-btn').getAttribute('data-token'));
+                        // แทนที่ prompt ด้วย Bootstrap Modal หรือ Toast สำหรับความปลอดภัยและ UX ที่ดีกว่า
                         const deleteCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการลบบอท:');
                         if (deleteCode) {
                             fetch('/delete', {
@@ -515,15 +567,14 @@ app.get("/", (req, res) => {
                             .then(response => response.json())
                             .then(data => {
                                 if (data.success) {
-                                    alert('ลบบอทสำเร็จ');
-                                    // การอัปเดตจะถูกจัดการผ่าน Socket.io
+                                    showToast('ลบบอทสำเร็จ', 'success');
                                 } else {
-                                    alert(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด');
+                                    showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
                                 }
                             })
                             .catch(err => {
                                 console.error(err);
-                                alert('เกิดข้อผิดพลาดในการลบบอท');
+                                showToast('เกิดข้อผิดพลาดในการลบบอท', 'danger');
                             });
                         }
                     }
@@ -544,15 +595,14 @@ app.get("/", (req, res) => {
                                 .then(response => response.json())
                                 .then(data => {
                                     if (data.success) {
-                                        alert('แก้ไขโทเค่นสำเร็จ');
-                                        // การอัปเดตจะถูกจัดการผ่าน Socket.io
+                                        showToast('แก้ไขโทเค่นสำเร็จ', 'success');
                                     } else {
-                                        alert(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด');
+                                        showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
                                     }
                                 })
                                 .catch(err => {
                                     console.error(err);
-                                    alert('เกิดข้อผิดพลาดในการแก้ไขโทเค่น');
+                                    showToast('เกิดข้อผิดพลาดในการแก้ไขโทเค่น', 'danger');
                                 });
                             }
                         }
@@ -711,6 +761,14 @@ app.get("/start", (req, res) => {
                         margin-bottom: 20px;
                     }
                 }
+
+                /* Toast Styles */
+                .toast-container {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 1055;
+                }
             </style>
         </head>
         <body>
@@ -791,6 +849,9 @@ app.get("/start", (req, res) => {
                 </div>
             </div>
 
+            <!-- Toast Container -->
+            <div class="toast-container"></div>
+
             <footer class="footer text-center">
                 <div class="container">
                     <p class="mb-0">© ${new Date().getFullYear()} ระบบจัดการบอท | พัฒนาด้วย ❤️</p>
@@ -798,6 +859,91 @@ app.get("/start", (req, res) => {
             </footer>
 
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+            <script>
+                // ฟังก์ชันแสดง Toast
+                function showToast(message, type = 'info') {
+                    const toastContainer = document.querySelector('.toast-container');
+                    const toastEl = document.createElement('div');
+                    toastEl.className = \`toast align-items-center text-bg-\${type} border-0\`;
+                    toastEl.setAttribute('role', 'alert');
+                    toastEl.setAttribute('aria-live', 'assertive');
+                    toastEl.setAttribute('aria-atomic', 'true');
+                    toastEl.innerHTML = \`
+                        <div class="d-flex">
+                            <div class="toast-body">
+                                \${message}
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                    \`;
+                    toastContainer.appendChild(toastEl);
+                    const toast = new bootstrap.Toast(toastEl);
+                    toast.show();
+
+                    // ลบ Toast หลังจากปิด
+                    toastEl.addEventListener('hidden.bs.toast', () => {
+                        toastEl.remove();
+                    });
+                }
+
+                // Event Delegation สำหรับปุ่มลบและแก้ไข
+                document.addEventListener('click', function(event) {
+                    if (event.target.closest('.delete-btn')) {
+                        const token = decodeURIComponent(event.target.closest('.delete-btn').getAttribute('data-token'));
+                        const deleteCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการลบบอท:');
+                        if (deleteCode) {
+                            fetch('/delete', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ token, code: deleteCode })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    showToast('ลบบอทสำเร็จ', 'success');
+                                } else {
+                                    showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
+                                }
+                            })
+                            .catch(err => {
+                                console.error(err);
+                                showToast('เกิดข้อผิดพลาดในการลบบอท', 'danger');
+                            });
+                        }
+                    }
+
+                    if (event.target.closest('.edit-btn')) {
+                        const token = decodeURIComponent(event.target.closest('.edit-btn').getAttribute('data-token'));
+                        const editCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการแก้ไขโทเค่น:');
+                        if (editCode) {
+                            const newToken = prompt('กรุณากรอกโทเค่นใหม่:');
+                            if (newToken) {
+                                fetch('/edit', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({ token, code: editCode, newToken })
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        showToast('แก้ไขโทเค่นสำเร็จ', 'success');
+                                    } else {
+                                        showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
+                                    }
+                                })
+                                .catch(err => {
+                                    console.error(err);
+                                    showToast('เกิดข้อผิดพลาดในการแก้ไขโทเค่น', 'danger');
+                                });
+                            }
+                        }
+                    }
+                });
+            </script>
         </body>
         </html>
     `);
@@ -957,6 +1103,14 @@ app.get("/bots", (req, res) => {
                 .btn-edit, .btn-delete {
                     margin-right: 5px;
                 }
+
+                /* Toast Styles */
+                .toast-container {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 1055;
+                }
             </style>
         </head>
         <body>
@@ -1011,6 +1165,9 @@ app.get("/bots", (req, res) => {
                 </div>
             </div>
 
+            <!-- Toast Container -->
+            <div class="toast-container"></div>
+
             <footer class="footer text-center">
                 <div class="container">
                     <p class="mb-0">© ${new Date().getFullYear()} ระบบจัดการบอท | พัฒนาด้วย ❤️</p>
@@ -1052,6 +1209,32 @@ app.get("/bots", (req, res) => {
                 // ส่งปิงทันทีเมื่อโหลดหน้า
                 sendPing();
 
+                // ฟังก์ชันแสดง Toast
+                function showToast(message, type = 'info') {
+                    const toastContainer = document.querySelector('.toast-container');
+                    const toastEl = document.createElement('div');
+                    toastEl.className = \`toast align-items-center text-bg-\${type} border-0\`;
+                    toastEl.setAttribute('role', 'alert');
+                    toastEl.setAttribute('aria-live', 'assertive');
+                    toastEl.setAttribute('aria-atomic', 'true');
+                    toastEl.innerHTML = \`
+                        <div class="d-flex">
+                            <div class="toast-body">
+                                \${message}
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                    \`;
+                    toastContainer.appendChild(toastEl);
+                    const toast = new bootstrap.Toast(toastEl);
+                    toast.show();
+
+                    // ลบ Toast หลังจากปิด
+                    toastEl.addEventListener('hidden.bs.toast', () => {
+                        toastEl.remove();
+                    });
+                }
+
                 // รับข้อมูลอัปเดตจากเซิร์ฟเวอร์
                 socket.on('updateBots', (data) => {
                     document.getElementById('totalBots').textContent = data.totalBots;
@@ -1065,6 +1248,16 @@ app.get("/bots", (req, res) => {
                     }
 
                     updateRuntime();
+                });
+
+                // รับเหตุการณ์เฉพาะเมื่อบอทถูกลบ
+                socket.on('botDeleted', (botName) => {
+                    showToast(\`บอท "\${botName}" ถูกลบเรียบร้อยแล้ว\`, 'success');
+                });
+
+                // รับเหตุการณ์เฉพาะเมื่อบอทไปออฟไลน์
+                socket.on('botOffline', (botName) => {
+                    showToast(\`บอท "\${botName}" กำลังจะถูกลบภายใน 60 วินาที เนื่องจากออฟไลน์\`, 'warning');
                 });
 
                 // อัปเดตเวลารันทุกวินาที
@@ -1087,15 +1280,14 @@ app.get("/bots", (req, res) => {
                             .then(response => response.json())
                             .then(data => {
                                 if (data.success) {
-                                    alert('ลบบอทสำเร็จ');
-                                    // การอัปเดตจะถูกจัดการผ่าน Socket.io
+                                    showToast('ลบบอทสำเร็จ', 'success');
                                 } else {
-                                    alert(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด');
+                                    showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
                                 }
                             })
                             .catch(err => {
                                 console.error(err);
-                                alert('เกิดข้อผิดพลาดในการลบบอท');
+                                showToast('เกิดข้อผิดพลาดในการลบบอท', 'danger');
                             });
                         }
                     }
@@ -1116,15 +1308,14 @@ app.get("/bots", (req, res) => {
                                 .then(response => response.json())
                                 .then(data => {
                                     if (data.success) {
-                                        alert('แก้ไขโทเค่นสำเร็จ');
-                                        // การอัปเดตจะถูกจัดการผ่าน Socket.io
+                                        showToast('แก้ไขโทเค่นสำเร็จ', 'success');
                                     } else {
-                                        alert(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด');
+                                        showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
                                     }
                                 })
                                 .catch(err => {
                                     console.error(err);
-                                    alert('เกิดข้อผิดพลาดในการแก้ไขโทเค่น');
+                                    showToast('เกิดข้อผิดพลาดในการแก้ไขโทเค่น', 'danger');
                                 });
                             }
                         }
@@ -1246,6 +1437,14 @@ app.get("/commands", (req, res) => {
                         padding: 8px 10px;
                     }
                 }
+
+                /* Toast Styles */
+                .toast-container {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 1055;
+                }
             </style>
         </head>
         <body>
@@ -1287,6 +1486,7 @@ app.get("/commands", (req, res) => {
                                 <tr>
                                     <th>ชื่อคำสั่ง</th>
                                     <th>จำนวนที่ใช้</th>
+                                    <th>คำอธิบาย</th>
                                 </tr>
                             </thead>
                             <tbody id="commandTableBody">
@@ -1296,6 +1496,9 @@ app.get("/commands", (req, res) => {
                     </div>
                 </div>
             </div>
+
+            <!-- Toast Container -->
+            <div class="toast-container"></div>
 
             <footer class="footer text-center">
                 <div class="container">
@@ -1395,10 +1598,14 @@ async function startBot(appState, token, name, startTime, password, adminID, sav
                     botSessions[token].status = 'offline';
                     io.emit('updateBots', generateBotData());
 
+                    // แจ้งเตือนว่า บอทจะถูกลบภายใน 60 วินาที
+                    io.emit('botOffline', botSessions[token].name);
+
                     // ตั้งเวลา 60 วินาทีสำหรับการลบบอทเมื่อออฟไลน์
                     if (!botSessions[token].deletionTimeout) {
                         botSessions[token].deletionTimeout = setTimeout(() => {
                             deleteBot(token);
+                            io.emit('botDeleted', botSessions[token].name);
                         }, 60000); // 60,000 มิลลิวินาที = 60 วินาที
                         console.log(chalk.yellow(`⌛ บอท ${name} จะถูกลบในอีก 60 วินาที`));
                     }
@@ -1502,6 +1709,7 @@ function deleteBot(token) {
             console.log(chalk.green(`✅ ลบบอทจากระบบ: ${token}`));
 
             io.emit('updateBots', generateBotData());
+            io.emit('botDeleted', name);
         });
     } else {
         console.error(chalk.red(`❌ เมธอด logout ไม่พบใน bot.api สำหรับบอท: ${name}`));
@@ -1560,6 +1768,7 @@ app.post('/delete', async (req, res) => {
         console.log(`ลบบอทจาก botSessions: ${trimmedToken}`);
 
         io.emit('updateBots', generateBotData());
+        io.emit('botDeleted', bot.name);
         res.json({ success: true, message: 'ลบบอทสำเร็จ' });
     } catch (err) {
         console.error(`ไม่สามารถหยุดบอท: ${err.message}`);
