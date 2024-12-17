@@ -130,7 +130,7 @@ function generateCommandData() {
         const description = commandDescriptions.find(cmd => cmd.name.toLowerCase() === name)?.description || "ไม่มีคำอธิบาย";
         return `
             <tr>
-                <td>${prefix}${name}</td>
+                <td>${name}</td>
                 <td>${count}</td>
                 <td>${description}</td>
             </tr>
@@ -140,7 +140,6 @@ function generateCommandData() {
             <td colspan="3" class="text-center">ไม่มีคำสั่งที่ถูกใช้งาน</td>
         </tr>
     `;
-
     return commandsData;
 }
 
@@ -553,7 +552,6 @@ app.get("/", (req, res) => {
                 document.addEventListener('click', function(event) {
                     if (event.target.closest('.delete-btn')) {
                         const token = decodeURIComponent(event.target.closest('.delete-btn').getAttribute('data-token'));
-                        // แทนที่ prompt ด้วย Bootstrap Modal หรือ Toast สำหรับความปลอดภัยและ UX ที่ดีกว่า
                         const deleteCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการลบบอท:');
                         if (deleteCode) {
                             fetch('/delete', {
@@ -583,13 +581,14 @@ app.get("/", (req, res) => {
                         const editCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการแก้ไขโทเค่น:');
                         if (editCode) {
                             const newToken = prompt('กรุณากรอกโทเค่นใหม่:');
-                            if (newToken) {
+                            const newPrefix = prompt('กรุณากรอกคำนำหน้าใหม่ (ถ้าไม่ต้องการคำนำหน้า ให้เว้นว่างไว้):');
+                            if (newToken !== null) { // Allow empty prefix
                                 fetch('/edit', {
                                     method: 'POST',
                                     headers: {
                                         'Content-Type': 'application/json'
                                     },
-                                    body: JSON.stringify({ token, code: editCode, newToken })
+                                    body: JSON.stringify({ token, code: editCode, newToken, newPrefix })
                                 })
                                 .then(response => response.json())
                                 .then(data => {
@@ -1669,8 +1668,8 @@ async function startBot(appState, token, name, startTime, password, adminID, pre
                         }
                     } else {
                         // ปรับปรุงข้อความแสดงข้อผิดพลาด
-                        const suggestion = `/help`; // สามารถปรับเปลี่ยนได้ตามต้องการ
-                        api.sendMessage("❗ ไม่พบคำสั่งนี้ ลองพิมพ์ `/help` เพื่อดูคำสั่งที่ใช้งานได้", event.threadID);
+                        const suggestion = `${currentPrefix}help`; // สามารถปรับเปลี่ยนได้ตามต้องการ
+                        api.sendMessage(\`❗ ไม่พบคำสั่งนี้ ลองพิมพ์ "\${suggestion}" เพื่อดูคำสั่งที่ใช้งานได้\`, event.threadID);
                     }
                 }
 
@@ -1906,4 +1905,4 @@ setInterval(() => {
         bot.ping = Math.floor(Math.random() * 200) + 1;
     });
     io.emit('updateBots', generateBotData());
-}, 5000); // อัปเดตทุก 5 วินาที
+}, 5000); // อัปเดตทุก 5 วินาที ทำให้ทั้งเว็บสวยขึ้นต่างออกไปจากเดิมเหมือนเว็บรันบอทต่างประเทศ
