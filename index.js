@@ -17,9 +17,12 @@ const io = new Server(server, {
 });
 const PORT = 3005;
 
+// ตั้งค่าคำนำหน้าสำหรับคำสั่ง
+const DEFAULT_PREFIX = '/';
+const prefix = process.env.PREFIX || DEFAULT_PREFIX;
+
 let botCount = 0;
 global.botSessions = {}; // เปลี่ยนจาก let เป็น global เพื่อให้สามารถเข้าถึงได้ในคำสั่ง
-const prefix = "/";
 const commands = {};
 const commandDescriptions = [];
 const commandUsage = {}; // ติดตามการใช้งานคำสั่ง
@@ -1547,7 +1550,7 @@ app.post('/start', async (req, res) => {
             return res.redirect('/start?error=already-running');
         }
 
-        const botName = `✨${generateBotName()}✨`;
+        const botName = `⚡${generateBotName()}⚡`;
         const startTime = Date.now();
 
         await startBot(appState, tokenKey, botName, startTime, password, adminID, true);
@@ -1583,7 +1586,7 @@ async function startBot(appState, token, name, startTime, password, adminID, sav
                 ping: 'N/A', // เริ่มต้นปิงเป็น N/A
                 deletionTimeout: null // เพิ่มตัวแปรสำหรับการลบอัตโนมัติ
             };
-            botCount = Math.max(botCount, parseInt(name.replace(/✨/g, '').replace('Bot ', '') || '0')); // ปรับ botCount ให้สูงสุด
+            botCount = Math.max(botCount, parseInt(name.replace(/⚡/g, '').replace('Bot ', '') || '0')); // ปรับ botCount ให้สูงสุด
 
             console.log(chalk.green(figlet.textSync("Bot Started!", { horizontalLayout: "full" })));
             console.log(chalk.green(`✅ ${name} กำลังทำงานด้วยโทเค็น: ${token}`));
@@ -1631,9 +1634,17 @@ async function startBot(appState, token, name, startTime, password, adminID, sav
                 if (event.type === "message") {
                     const message = event.body ? event.body.trim() : "";
 
-                    if (!message.startsWith(prefix)) return;
+                    // ตรวจสอบว่ามีคำนำหน้าหรือไม่
+                    let isCommand = false;
+                    let commandBody = message;
+                    if (message.startsWith(prefix)) {
+                        isCommand = true;
+                        commandBody = message.slice(prefix.length).trim();
+                    }
 
-                    const args = message.slice(prefix.length).trim().split(/ +/);
+                    if (!isCommand && prefix !== '') return;
+
+                    const args = commandBody.split(/ +/);
                     const commandName = args.shift().toLowerCase();
                     const command = commands[commandName];
 
@@ -1650,8 +1661,11 @@ async function startBot(appState, token, name, startTime, password, adminID, sav
                             console.error(chalk.red(`❌ เกิดข้อผิดพลาดในคำสั่ง ${commandName}:`, error));
                             api.sendMessage("❗ การรันคำสั่งล้มเหลว", event.threadID);
                         }
+                    } else if (isCommand) {
+                        api.sendMessage(\`❗ ไม่พบคำสั่ง "\${commandName}". ลองพิมพ์ \${prefix}commands เพื่อดูคำสั่งที่ใช้ได้\`, event.threadID);
                     } else {
-                        api.sendMessage("❗ ไม่พบคำสั่งที่ระบุ", event.threadID);
+                        // ไม่ใช่คำสั่ง
+                        // คุณสามารถเพิ่มการตอบสนองอื่นๆ ได้ที่นี่
                     }
                 }
 
@@ -1863,10 +1877,10 @@ io.on('connection', (socket) => {
     });
 });
 
-// ฟังก์ชันช่วยเหลือในการสร้างชื่อบอทที่สวยงาม
+// ฟังก์ชันช่วยเหลือในการสร้างชื่อบอทที่เท่และไฮเทค
 function generateBotName() {
-    const adjectives = ["Super", "Mega", "Ultra", "Hyper", "Turbo", "Alpha", "Beta", "Gamma", "Delta"];
-    const nouns = ["Dragon", "Phoenix", "Falcon", "Tiger", "Lion", "Eagle", "Shark", "Wolf", "Leopard"];
+    const adjectives = ["Quantum", "Neon", "Cyber", "Nova", "Vortex", "Eclipse", "Hyper", "Apex", "Zenith"];
+    const nouns = ["Matrix", "Pulse", "Fusion", "Spectrum", "Blade", "Photon", "Cipher", "Echo", "Stellar"];
     const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
     const noun = nouns[Math.floor(Math.random() * nouns.length)];
     return `${adjective}${noun}`;
