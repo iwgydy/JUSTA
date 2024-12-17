@@ -1,6 +1,11 @@
+const https = require("https");
+const fs = require("fs");
+const path = require("path");
+const axios = require("axios");
+
 module.exports.config = {
   name: "ดาวน์โหลดติ๊กตอก",
-  version: "1.0.0",
+  version: "1.1.0",
   description: "ดาวน์โหลดวิดีโอ TikTok แบบไม่มีลายน้ำ",
   commandCategory: "video",
   usages: "[ลิงก์ TikTok]",
@@ -8,10 +13,6 @@ module.exports.config = {
 };
 
 module.exports.run = async ({ api, event, args }) => {
-  const https = require("https");
-  const fs = require("fs");
-  const path = require("path");
-
   const videoUrl = args.join(" ");
   if (!videoUrl || !videoUrl.includes("tiktok.com")) {
     return api.sendMessage(
@@ -21,61 +22,57 @@ module.exports.run = async ({ api, event, args }) => {
     );
   }
 
-  const options = {
-    method: "GET",
-    hostname: "tiktok-video-downloader-api.p.rapidapi.com",
-    path: `/media?videoUrl=${encodeURIComponent(videoUrl)}`,
-    headers: {
-      "x-rapidapi-key": "d135e7c350msh72a1738fece929ap11d731jsn0012262e1cd5",
-      "x-rapidapi-host": "tiktok-video-downloader-api.p.rapidapi.com",
-    },
-  };
-
   const startTime = Date.now();
 
   try {
     api.sendMessage(`⏳ กำลังดาวน์โหลดวิดีโอจากลิงก์ที่ให้มา...`, event.threadID, event.messageID);
 
-    const req = https.request(options, function (res) {
-      const chunks = [];
-      res.on("data", (chunk) => chunks.push(chunk));
-      res.on("end", async () => {
-        const body = JSON.parse(Buffer.concat(chunks).toString());
+    // ขยายลิงก์ย่อ TikTok
+    const expandedUrl = await axios.head(videoUrl, { maxRedirects: 10 }).then((response) => response.request.res.responseUrl);
 
-        if (!body.data || !body.data.play) {
-          return api.sendMessage("❌ ไม่พบวิดีโอในลิงก์นี้ กรุณาลองใหม่!", event.threadID, event.messageID);
-        }
+    // เรียก API จาก RapidAPI
+    const options = {
+      method: "GET",
+      url: "https://tiktok-video-downloader-api.p.rapidapi.com/media",
+      params: { videoUrl: expandedUrl },
+      headers: {
+        "x-rapidapi-key": "d135e7c350msh72a1738fece929ap11d731jsn0012262e1cd5",
+        "x-rapidapi-host": "tiktok-video-downloader-api.p.rapidapi.com",
+      },
+    };
 
-        const videoLink = body.data.play;
-        const filePath = path.join(__dirname, "cache", `tiktok_${Date.now()}.mp4`);
+    const response = await axios.request(options);
+    if (!response.data || !response.data.data || !response.data.data.play) {
+      return api.sendMessage("❌ ไม่พบวิดีโอในลิงก์นี้ กรุณาลองใหม่!", event.threadID, event.messageID);
+    }
 
-        // ดาวน์โหลดไฟล์วิดีโอ
-        const file = fs.createWriteStream(filePath);
-        https.get(videoLink, (response) => {
-          response.pipe(file);
-          file.on("finish", () => {
-            file.close();
+    const videoLink = response.data.data.play;
+    const filePath = path.join(__dirname, "cache", `tiktok_${Date.now()}.mp4`);
 
-            const endTime = Date.now();
-            const timeTaken = ((endTime - startTime) / 1000).toFixed(2);
+    // ดาวน์โหลดวิดีโอ
+    const writer = fs.createWriteStream(filePath);
+    const downloadResponse = await axios({
+      url: videoLink,
+      method: "GET",
+      responseType: "stream",
+    });
+    downloadResponse.data.pipe(writer);
 
-            const message = {
-              body: `🎥 ดาวน์โหลดเสร็จสิ้น!\n✅ ใช้เวลา: ${timeTaken} วินาที\n\n📌 ลิงก์: ${videoUrl}`,
-              attachment: fs.createReadStream(filePath),
-            };
+    writer.on("finish", () => {
+      const endTime = Date.now();
+      const timeTaken = ((endTime - startTime) / 1000).toFixed(2);
 
-            api.sendMessage(message, event.threadID, () => fs.unlinkSync(filePath), event.messageID);
-          });
-        });
-      });
+      const message = {
+        body: `🎥 ดาวน์โหลดเสร็จสิ้น!\n✅ ใช้เวลา: ${timeTaken} วินาที\n\n📌 ลิงก์: ${expandedUrl}`,
+        attachment: fs.createReadStream(filePath),
+      };
+
+      api.sendMessage(message, event.threadID, () => fs.unlinkSync(filePath), event.messageID);
     });
 
-    req.on("error", (error) => {
-      console.error("❌ เกิดข้อผิดพลาด:", error);
+    writer.on("error", () => {
       api.sendMessage("❌ เกิดข้อผิดพลาดในการดาวน์โหลดวิดีโอ!", event.threadID, event.messageID);
     });
-
-    req.end();
   } catch (error) {
     console.error("❌ ข้อผิดพลาด:", error);
     api.sendMessage("❌ ไม่สามารถประมวลผลได้ในขณะนี้ โปรดลองอีกครั้ง!", event.threadID, event.messageID);
