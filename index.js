@@ -1,3 +1,4 @@
+// server.js
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -715,7 +716,8 @@ app.get("/", (req, res) => {
                             .then(data => {
                                 if (data.success) {
                                     showToast('รีสตาร์ทบอทสำเร็จ', 'success');
-                                    io.emit('botRestarted', data.botName); // ส่งเหตุการณ์รีสตาร์ทบอท
+                                    socket.emit('updateBots', generateBotData()); // อัปเดตข้อมูลบอท
+                                    // socket.emit('botRestarted', data.botName); // ส่งเหตุการณ์รีสตาร์ทบอท
                                 } else {
                                     showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
                                 }
@@ -1111,7 +1113,8 @@ app.get("/start", (req, res) => {
                             .then(data => {
                                 if (data.success) {
                                     showToast('รีสตาร์ทบอทสำเร็จ', 'success');
-                                    io.emit('botRestarted', data.botName); // ส่งเหตุการณ์รีสตาร์ทบอท
+                                    // socket.emit('updateBots', generateBotData()); // อัปเดตข้อมูลบอท
+                                    // socket.emit('botRestarted', data.botName); // ส่งเหตุการณ์รีสตาร์ทบอท
                                 } else {
                                     showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
                                 }
@@ -1561,7 +1564,8 @@ app.get("/bots", (req, res) => {
                             .then(data => {
                                 if (data.success) {
                                     showToast('รีสตาร์ทบอทสำเร็จ', 'success');
-                                    io.emit('botRestarted', data.botName); // ส่งเหตุการณ์รีสตาร์ทบอท
+                                    socket.emit('updateBots', generateBotData()); // อัปเดตข้อมูลบอท
+                                    // socket.emit('botRestarted', data.botName); // ส่งเหตุการณ์รีสตาร์ทบอท
                                 } else {
                                     showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
                                 }
