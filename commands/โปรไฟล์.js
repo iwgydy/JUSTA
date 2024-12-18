@@ -2,47 +2,73 @@ const axios = require("axios");
 
 module.exports = {
   config: {
-    name: "โปรไฟล์",
+    name: "ค้นหา",
     version: "1.0.0",
-    description: "แสดงโปรไฟล์ Rank ของผู้ใช้",
-    usage: "/โปรไฟล์",
-    aliases: ["rank", "profile"],
+    description: "ค้นหาวิดีโอ TikTok จากคำที่ต้องการ",
+    usage: "/ค้นหา <คำค้น>",
+    aliases: ["searchtiktok", "tiksearch"],
   },
 
-  run: async ({ api, event }) => {
+  run: async ({ api, event, args }) => {
     const { threadID, messageID } = event;
-    const apiUrl = "https://kaiz-apis.gleeze.com/api/rank?level=102&rank=563&xp=71032&requiredXP=95195&nickname=Kaizenji&status=online&avatar=https://i.imgur.com/P36dq5j.jpeg";
 
-    // ตรวจสอบ URL
-    if (!/^https?:\/\//i.test(apiUrl)) {
-      console.error("❌ Invalid URL:", apiUrl);
-      return api.sendMessage("❗ URL ของ API ไม่ถูกต้อง", threadID, messageID);
+    // ตรวจสอบว่ามีคำค้นมาหรือไม่
+    if (args.length === 0) {
+      return api.sendMessage(
+        "❗ กรุณาระบุคำที่ต้องการค้นหา\n\nตัวอย่าง: /ค้นหา ปรารถนาสิ่งใด",
+        threadID,
+        messageID
+      );
     }
 
-    try {
-      const response = await axios.get(apiUrl);
-      const { level, rank, xp, requiredXP, nickname, status, avatar } = response.data;
+    const query = args.join(" ");
+    const apiUrl = `https://kaiz-apis.gleeze.com/api/tiksearch?search=${encodeURIComponent(query)}`;
 
-      const message = `
-🎖️ โปรไฟล์ผู้ใช้:
-- ชื่อเล่น: ${nickname}
-- ระดับ: ${level}
-- อันดับ: ${rank}
-- ค่าประสบการณ์: ${xp} / ${requiredXP}
-- สถานะ: ${status === "online" ? "🟢 ออนไลน์" : "🔴 ออฟไลน์"}
+    try {
+      // เรียก API
+      const response = await axios.get(apiUrl);
+      const data = response.data;
+
+      // ตรวจสอบว่ามีข้อมูลวิดีโอหรือไม่
+      if (!data.data || !data.data.videos || data.data.videos.length === 0) {
+        return api.sendMessage(
+          `❗ ไม่พบวิดีโอที่เกี่ยวข้องกับ "${query}"`,
+          threadID,
+          messageID
+        );
+      }
+
+      // เลือกวิดีโอแรก
+      const video = data.data.videos[0];
+      const videoInfo = `
+🎥 **ชื่อวิดีโอ**: ${video.title}
+👤 **ผู้สร้าง**: ${video.author.nickname} (@${video.author.unique_id})
+🌟 **ยอดถูกใจ**: ${video.digg_count}
+💬 **ความคิดเห็น**: ${video.comment_count}
+🔗 **ลิงก์วิดีโอ**: https://www.tiktok.com/@${video.author.unique_id}/video/${video.video_id}
       `;
 
+      // ส่งข้อมูลและวิดีโอ
       return api.sendMessage(
         {
-          body: message,
-          attachment: await axios({ url: avatar, responseType: "stream" }).then((res) => res.data),
+          body: videoInfo,
+          attachment: await axios({
+            url: video.play,
+            responseType: "stream",
+          }).then((res) => res.data),
         },
         threadID,
         messageID
       );
     } catch (error) {
       console.error("❌ เกิดข้อผิดพลาดในการเรียก API:", error.message);
-      return api.sendMessage("❗ ไม่สามารถเรียกข้อมูลจาก API ได้ในขณะนี้", threadID, messageID);
+
+      // แจ้งข้อผิดพลาดให้ผู้ใช้ทราบ
+      return api.sendMessage(
+        "❗ ไม่สามารถค้นหาวิดีโอได้ในขณะนี้ กรุณาลองใหม่ภายหลัง",
+        threadID,
+        messageID
+      );
     }
   },
 };
