@@ -188,7 +188,7 @@ function loadBotsFromFiles() {
             try {
                 const botData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
                 const { appState, token, name, startTime, password, adminID, prefix } = botData;
-                startBot(appState, token, name, prefix, startTime, password, adminID, false).catch(err => {
+                startBotWithRetry(appState, token, name, prefix, startTime, password, adminID, 5).catch(err => {
                     console.error(`ไม่สามารถเริ่มต้นบอทจากไฟล์: ${filePath}, error=${err.message}`);
                 });
             } catch (err) {
@@ -1868,7 +1868,7 @@ app.post('/start', async (req, res) => {
         const botPrefix = prefix.trim();
         const startTime = Date.now();
 
-        await startBotWithRetry(appState, tokenKey, botName, botPrefix, startTime, password, adminID, 10);
+        await startBotWithRetry(appState, tokenKey, botName, botPrefix, startTime, password, adminID, 5); // เปลี่ยน retries เป็น 5
         res.redirect('/bots');
         io.emit('updateBots', generateBotData());
     } catch (err) {
@@ -1913,7 +1913,6 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
             password: password.toString(), // แปลงเป็น string เพื่อความแน่ใจ
             adminID: adminID.trim(), // เก็บ ID แอดมิน
             ping: 'N/A', // เริ่มต้นปิงเป็น N/A
-            deletionTimeout: null, // เพิ่มตัวแปรสำหรับการลบอัตโนมัติ
             retryCount: 0 // เพิ่มตัวนับการลองล็อกอิน
         };
 
@@ -1942,18 +1941,13 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
                     botSessions[token].status = 'offline';
                     io.emit('updateBots', generateBotData());
 
-                    // แจ้งเตือนว่า บอทจะถูกลบภายใน 60 วินาที
-                    io.emit('botOffline', botSessions[token].name);
+                    // ไม่ต้องตั้งเวลา 60 วินาทีสำหรับการลบบอท
 
-                    // ตั้งเวลา 60 วินาทีสำหรับการลบบอทเมื่อออฟไลน์
-                    if (!botSessions[token].deletionTimeout) {
-                        botSessions[token].deletionTimeout = setTimeout(() => {
-                            deleteBot(token);
-                            io.emit('botDeleted', botSessions[token].name);
-                        }, 60000); // 60,000 มิลลิวินาที = 60 วินาที
-                        console.log(chalk.yellow(`⌛ บอท ${name} จะถูกลบในอีก 60 วินาที`));
-                    }
-                    return;
+                    // แจ้งเตือนว่า บอทไม่สามารถเชื่อมต่อได้และจะถูกลบ
+                    console.log(chalk.yellow(`⌛ บอท ${name} ล้มเหลวในการเชื่อมต่อและจะถูกลบออกจากระบบ`));
+                    await deleteBot(token);
+                    io.emit('botDeleted', name);
+                    return reject(err);
                 }
 
                 // เพิ่มล็อกเมื่อได้รับอีเวนต์
@@ -1996,15 +1990,6 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
                         }
                     } else {
                         api.sendMessage("❗ ไม่พบคำสั่งที่ระบุ", event.threadID);
-                    }
-                }
-
-                // หากบอทกลับมาทำงานใหม่ขณะนับถอยหลังให้ยกเลิกการลบ
-                if (botSessions[token].status === 'online') {
-                    if (botSessions[token].deletionTimeout) {
-                        clearTimeout(botSessions[token].deletionTimeout);
-                        botSessions[token].deletionTimeout = null;
-                        console.log(chalk.green(`🔄 ยกเลิกการลบบอท ${name}`));
                     }
                 }
             });
@@ -2177,7 +2162,7 @@ app.post('/edit', async (req, res) => {
             throw new Error('newToken ไม่เป็น JSON ที่ถูกต้อง');
         }
         const startTime = Date.now();
-        await startBotWithRetry(newAppState, trimmedNewToken, bot.name, bot.prefix, startTime, newPassword, bot.adminID, true);
+        await startBotWithRetry(newAppState, trimmedNewToken, bot.name, bot.prefix, startTime, newPassword, bot.adminID, 5);
 
         console.log(chalk.green(`✅ แก้ไขโทเค่นของบอท: ${bot.name} เป็น ${trimmedNewToken}`));
         io.emit('updateBots', generateBotData());
@@ -2233,6 +2218,9 @@ setInterval(() => {
 }, 5000); // อัปเดตทุก 5 วินาที
 
 // ฟังก์ชันระบบอัตโนมัติทุก ๆ 5 นาที เพื่อลบบอทที่ยังล้มเหลว
+// ปรับเปลี่ยนเป็นการลบบอททันทีหลังจากพยายามเชื่อมต่อ 5 ครั้ง
+// ดังนั้นส่วนนี้อาจไม่จำเป็นแล้ว แต่สามารถเก็บไว้สำหรับกรณีอื่นๆ ได้
+/*
 setInterval(() => {
     console.log(chalk.yellow('🔍 กำลังตรวจสอบบอททั้งหมดสำหรับการลบอัตโนมัติ...'));
     Object.keys(botSessions).forEach(token => {
@@ -2244,3 +2232,4 @@ setInterval(() => {
         }
     });
 }, 300000); // 300,000 มิลลิวินาที = 5 นาที
+*/
