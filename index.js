@@ -18,7 +18,7 @@ const io = new Server(server, {
 const PORT = 3005;
 
 let botCount = 0;
-global.botSessions = {}; // เปลี่ยนจาก let เป็น global เพื่อให้สามารถเข้าถึงได้ในคำสั่ง
+global.botSessions = {}; // ใช้ global เพื่อให้สามารถเข้าถึงได้ในคำสั่ง
 const commands = {};
 const commandDescriptions = [];
 const commandUsage = {}; // ติดตามการใช้งานคำสั่ง
@@ -613,11 +613,6 @@ app.get("/", (req, res) => {
                 // รับเหตุการณ์เฉพาะเมื่อบอทถูกลบ
                 socket.on('botDeleted', (botName) => {
                     showToast(\`บอท "\${botName}" ถูกลบเรียบร้อยแล้ว\`, 'success');
-                });
-
-                // รับเหตุการณ์เฉพาะเมื่อบอทไปออฟไลน์
-                socket.on('botOffline', (botName) => {
-                    showToast(\`บอท "\${botName}" กำลังจะถูกลบภายใน 60 วินาที เนื่องจากออฟไลน์\`, 'warning');
                 });
 
                 // อัปเดตเวลารันทุกวินาที
@@ -1400,11 +1395,6 @@ app.get("/bots", (req, res) => {
                     showToast(\`บอท "\${botName}" ถูกลบเรียบร้อยแล้ว\`, 'success');
                 });
 
-                // รับเหตุการณ์เฉพาะเมื่อบอทไปออฟไลน์
-                socket.on('botOffline', (botName) => {
-                    showToast(\`บอท "\${botName}" กำลังจะถูกลบภายใน 60 วินาที เนื่องจากออฟไลน์\`, 'warning');
-                });
-
                 // อัปเดตเวลารันทุกวินาที
                 setInterval(updateRuntime, 1000);
                 document.addEventListener('DOMContentLoaded', updateRuntime);
@@ -1887,7 +1877,8 @@ async function startBotWithRetry(appState, token, name, prefix, startTime, passw
             return;
         } catch (err) {
             attempt++;
-            console.error(chalk.red(`❌ ลองเริ่มบอทครั้งที่ ${attempt} ล้มเหลว: ${err.message}`));
+            const errorMessage = err && err.message ? err.message : err;
+            console.error(chalk.red(`❌ ลองเริ่มบอทครั้งที่ ${attempt} ล้มเหลว: ${errorMessage}`));
             if (attempt >= retries) {
                 console.error(chalk.red(`❌ บอท ${name} ล้มเหลวในการล็อกอินหลังจากลอง ${retries} ครั้ง`));
                 await deleteBot(token);
@@ -1940,8 +1931,6 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
                     console.error(chalk.red(`❌ เกิดข้อผิดพลาด: ${err}`));
                     botSessions[token].status = 'offline';
                     io.emit('updateBots', generateBotData());
-
-                    // ไม่ต้องตั้งเวลา 60 วินาทีสำหรับการลบบอท
 
                     // แจ้งเตือนว่า บอทไม่สามารถเชื่อมต่อได้และจะถูกลบ
                     console.log(chalk.yellow(`⌛ บอท ${name} ล้มเหลวในการเชื่อมต่อและจะถูกลบออกจากระบบ`));
@@ -2004,7 +1993,7 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
             io.emit('updateBots', generateBotData());
             resolve();
         });
-    });
+    }
 }
 
 // ฟังก์ชันสำหรับลบบอท
@@ -2017,8 +2006,8 @@ function deleteBot(token) {
 
     const { api, name } = bot;
 
-    // หยุดการทำงานของบอท
-    if (typeof api.logout === 'function') {
+    // ถ้ามี api.logout ให้เรียกใช้เพื่อหยุดบอท
+    if (api && typeof api.logout === 'function') {
         api.logout((err) => {
             if (err) {
                 console.error(chalk.red(`❌ ไม่สามารถหยุดบอท: ${name}, error=${err.message}`));
@@ -2041,7 +2030,22 @@ function deleteBot(token) {
             io.emit('botDeleted', name);
         });
     } else {
-        console.error(chalk.red(`❌ เมธอด logout ไม่พบใน bot.api สำหรับบอท: ${name}`));
+        // ถ้าไม่มี api.logout ให้ลบบอทโดยตรง
+        console.log(chalk.yellow(`⚠️ บอท ${name} ไม่มีเมธอด logout จึงลบโดยตรง`));
+
+        // ลบไฟล์บอท
+        const botFilePath = path.join(botsDir, `${name.replace(/ /g, '_')}.json`);
+        if (fs.existsSync(botFilePath)) {
+            fs.unlinkSync(botFilePath);
+            console.log(chalk.green(`✅ ลบไฟล์บอท: ${botFilePath}`));
+        }
+
+        // ลบจาก botSessions
+        delete botSessions[token];
+        console.log(chalk.green(`✅ ลบบอทจากระบบ: ${token}`));
+
+        io.emit('updateBots', generateBotData());
+        io.emit('botDeleted', name);
     }
 }
 
