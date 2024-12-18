@@ -18,7 +18,7 @@ const io = new Server(server, {
 const PORT = 3005;
 
 let botCount = 0;
-global.botSessions = {}; // ใช้ global เพื่อให้สามารถเข้าถึงได้ในคำสั่ง
+global.botSessions = {}; // เปลี่ยนจาก let เป็น global เพื่อให้สามารถเข้าถึงได้ในคำสั่ง
 const commands = {};
 const commandDescriptions = [];
 const commandUsage = {}; // ติดตามการใช้งานคำสั่ง
@@ -188,7 +188,7 @@ function loadBotsFromFiles() {
             try {
                 const botData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
                 const { appState, token, name, startTime, password, adminID, prefix } = botData;
-                startBotWithRetry(appState, token, name, prefix, startTime, password, adminID, 5).catch(err => {
+                startBot(appState, token, name, prefix, startTime, password, adminID, false).catch(err => {
                     console.error(`ไม่สามารถเริ่มต้นบอทจากไฟล์: ${filePath}, error=${err.message}`);
                 });
             } catch (err) {
@@ -1472,7 +1472,371 @@ app.get("/bots", (req, res) => {
     `);
 });
 
-// หน้าเพิ่มบอท POST /start
+// หน้าแสดงคำสั่งที่ใช้
+app.get("/commands", (req, res) => {
+    const commandsData = generateCommandData();
+
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="th">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>คำสั่งที่ใช้ | ระบบจัดการบอท</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <style>
+                /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
+                :root {
+                    --primary-color: #0d6efd;
+                    --secondary-color: #6c757d;
+                    --accent-color: #198754;
+                    --background-color: #f8f9fa;
+                    --card-bg: #ffffff;
+                    --card-border: #dee2e6;
+                    --text-color: #212529;
+                    --success-color: #198754;
+                    --error-color: #dc3545;
+                    --info-color: #0d6efd;
+                }
+
+                body {
+                    background: var(--background-color);
+                    color: var(--text-color);
+                    font-family: 'Roboto', sans-serif;
+                    min-height: 100vh;
+                    position: relative;
+                    overflow-x: hidden;
+                }
+
+                .navbar {
+                    background: var(--primary-color);
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                }
+
+                .navbar-brand {
+                    font-family: 'Kanit', sans-serif;
+                    font-weight: 600;
+                    color: #ffffff !important;
+                }
+
+                .glass-card {
+                    background: var(--card-bg);
+                    border: 1px solid var(--card-border);
+                    border-radius: 16px;
+                    padding: 24px;
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                }
+
+                .glass-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+                }
+
+                .command-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 20px;
+                }
+
+                .command-table th, .command-table td {
+                    padding: 12px 15px;
+                    text-align: left;
+                }
+
+                .command-table th {
+                    background-color: var(--primary-color);
+                    color: #fff;
+                    font-weight: 600;
+                }
+
+                .command-table tr:nth-child(even) {
+                    background-color: #f1f1f1;
+                }
+
+                .footer {
+                    background: var(--primary-color);
+                    border-top: 2px solid var(--primary-color);
+                    padding: 20px 0;
+                    margin-top: 40px;
+                    font-size: 0.9rem;
+                    color: #ffffff;
+                }
+
+                .animate-float {
+                    animation: float 3s ease-in-out infinite;
+                }
+
+                @keyframes float {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-10px); }
+                }
+
+                @media (max-width: 768px) {
+                    .glass-card {
+                        margin-bottom: 20px;
+                    }
+                    .command-table th, .command-table td {
+                        padding: 8px 10px;
+                    }
+                }
+
+                /* Toast Styles */
+                .toast-container {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 1055;
+                }
+            </style>
+        </head>
+        <body>
+            <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+                <div class="container">
+                    <a class="navbar-brand d-flex align-items-center" href="/">
+                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: #ffffff;"></i>
+                        ระบบจัดการบอท
+                    </a>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav ms-auto">
+                            <li class="nav-item">
+                                <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link active" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/how-to-make-bot"><i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="container">
+                <!-- ตารางคำสั่งที่ใช้ -->
+                <div class="glass-card">
+                    <h5 class="mb-4">
+                        <i class="fas fa-terminal me-2" style="color: var(--secondary-color);"></i>
+                        คำสั่งที่ใช้
+                    </h5>
+                    <div class="table-responsive">
+                        <table class="table command-table">
+                            <thead>
+                                <tr>
+                                    <th>ชื่อคำสั่ง</th>
+                                    <th>จำนวนที่ใช้</th>
+                                    <th>คำอธิบาย</th>
+                                </tr>
+                            </thead>
+                            <tbody id="commandTableBody">
+                                ${commandsData}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toast Container -->
+            <div class="toast-container"></div>
+
+            <footer class="footer text-center">
+                <div class="container">
+                    <p class="mb-0">© ${new Date().getFullYear()} ระบบจัดการบอท | พัฒนาด้วย ❤️</p>
+                </div>
+            </footer>
+
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        </body>
+        </html>
+    `);
+});
+
+// หน้า "วิธีทำบอทของคุณเอง"
+app.get("/how-to-make-bot", (req, res) => {
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="th">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>วิธีทำบอทของคุณเอง | ระบบจัดการบอท</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <style>
+                /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
+                :root {
+                    --primary-color: #0d6efd;
+                    --secondary-color: #6c757d;
+                    --accent-color: #198754;
+                    --background-color: #f8f9fa;
+                    --card-bg: #ffffff;
+                    --card-border: #dee2e6;
+                    --text-color: #212529;
+                    --success-color: #198754;
+                    --error-color: #dc3545;
+                    --info-color: #0d6efd;
+                }
+
+                body {
+                    background: var(--background-color);
+                    color: var(--text-color);
+                    font-family: 'Roboto', sans-serif;
+                    min-height: 100vh;
+                    position: relative;
+                    overflow-x: hidden;
+                }
+
+                .navbar {
+                    background: var(--primary-color);
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                }
+
+                .navbar-brand {
+                    font-family: 'Kanit', sans-serif;
+                    font-weight: 600;
+                    color: #ffffff !important;
+                }
+
+                .glass-card {
+                    background: var(--card-bg);
+                    border: 1px solid var(--card-border);
+                    border-radius: 16px;
+                    padding: 24px;
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                }
+
+                .glass-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+                }
+
+                .footer {
+                    background: var(--primary-color);
+                    border-top: 2px solid var(--primary-color);
+                    padding: 20px 0;
+                    margin-top: 40px;
+                    font-size: 0.9rem;
+                    color: #ffffff;
+                }
+
+                .animate-float {
+                    animation: float 3s ease-in-out infinite;
+                }
+
+                @keyframes float {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-10px); }
+                }
+
+                @media (max-width: 768px) {
+                    .glass-card {
+                        margin-bottom: 20px;
+                    }
+                }
+
+                /* Toast Styles */
+                .toast-container {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 1055;
+                }
+            </style>
+        </head>
+        <body>
+            <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+                <div class="container">
+                    <a class="navbar-brand d-flex align-items-center" href="/">
+                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: #ffffff;"></i>
+                        ระบบจัดการบอท
+                    </a>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav ms-auto">
+                            <li class="nav-item">
+                                <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link active" href="/how-to-make-bot"><i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="container">
+                <!-- เนื้อหาของหน้า "วิธีทำบอทของคุณเอง" -->
+                <div class="glass-card">
+                    <h5 class="mb-4">
+                        <i class="fas fa-video me-2" style="color: var(--secondary-color);"></i>
+                        วิธีทำบอทของคุณเอง
+                    </h5>
+                    <p>ขอแนะนำวิธีการทำบอทของคุณเองโดยดูจากคลิปวิดีโอต่อไปนี้:</p>
+                    <div class="ratio ratio-16x9">
+                        <iframe src="https://firebasestorage.googleapis.com/v0/b/goak-71ac8.appspot.com/o/XRecorder_18122024_114720.mp4?alt=media&token=1f243d3d-91ed-448f-83c7-3ee01d0407e4" allowfullscreen></iframe>
+                    </div>
+                    <hr>
+                    <h6>ขั้นตอนเบื้องต้น:</h6>
+                    <ol>
+                        <li>ดาวน์โหลดซอฟต์แวร์ที่จำเป็นจาก <a href="https://github.com/c3cbot/c3c-ufc-utility/archive/refs/tags/1.5.zip" target="_blank">GitHub</a>.</li>
+                        <li>แตกไฟล์ ZIP ที่ดาวน์โหลดมาและเปิดโปรเจกต์ในโปรแกรมแก้ไขโค้ดของคุณ.</li>
+                        <li>ตั้งค่าการเชื่อมต่อกับ API และปรับแต่งการตั้งค่าตามความต้องการของคุณ.</li>
+                        <li>รันเซิร์ฟเวอร์และตรวจสอบบอทของคุณผ่านหน้าแดชบอร์ด.</li>
+                        <li>ปรับแต่งคำสั่งและอีเวนต์เพิ่มเติมเพื่อเพิ่มความสามารถให้กับบอทของคุณ.</li>
+                    </ol>
+                    <p>สำหรับรายละเอียดเพิ่มเติม โปรดดูวิดีโอที่แนบมาด้านบน.</p>
+                </div>
+            </div>
+
+            <!-- Toast Container -->
+            <div class="toast-container"></div>
+
+            <footer class="footer text-center">
+                <div class="container">
+                    <p class="mb-0">© ${new Date().getFullYear()} ระบบจัดการบอท | พัฒนาด้วย ❤️</p>
+                </div>
+            </footer>
+
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        </body>
+        </html>
+    `);
+});
+
+// Route ชั่วคราวสำหรับตรวจสอบบอททั้งหมดและโทเค็น (เพื่อช่วยในการ Debug)
+app.get("/debug/bots", (req, res) => {
+    const bots = Object.entries(botSessions).map(([token, bot]) => ({
+        token,
+        name: bot.name,
+        status: bot.status,
+        password: bot.password,
+        adminID: bot.adminID,
+        ping: bot.ping || 'N/A',
+        prefix: bot.prefix
+    }));
+    res.json(bots);
+});
+
+// POST /start เพื่อเริ่มต้นบอท
 app.post('/start', async (req, res) => {
     const { token, prefix, name, password, adminID } = req.body;
 
@@ -1504,7 +1868,8 @@ app.post('/start', async (req, res) => {
         const botPrefix = prefix.trim();
         const startTime = Date.now();
 
-        await startBotWithRetry(appState, tokenKey, botName, botPrefix, startTime, password, adminID, 5); // retries = 5
+        // ปรับจำนวนครั้งในการลองเชื่อมต่อเป็น 5 ครั้ง
+        await startBotWithRetry(appState, tokenKey, botName, botPrefix, startTime, password, adminID, 5);
         res.redirect('/bots');
         io.emit('updateBots', generateBotData());
     } catch (err) {
@@ -1523,8 +1888,7 @@ async function startBotWithRetry(appState, token, name, prefix, startTime, passw
             return;
         } catch (err) {
             attempt++;
-            const errorMessage = err && err.message ? err.message : err;
-            console.error(chalk.red(`❌ ลองเริ่มบอทครั้งที่ ${attempt} ล้มเหลว: ${errorMessage}`));
+            console.error(chalk.red(`❌ ลองเริ่มบอทครั้งที่ ${attempt} ล้มเหลว: ${err.message}`));
             if (attempt >= retries) {
                 console.error(chalk.red(`❌ บอท ${name} ล้มเหลวในการล็อกอินหลังจากลอง ${retries} ครั้ง`));
                 await deleteBot(token);
@@ -1550,6 +1914,7 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
             password: password.toString(), // แปลงเป็น string เพื่อความแน่ใจ
             adminID: adminID.trim(), // เก็บ ID แอดมิน
             ping: 'N/A', // เริ่มต้นปิงเป็น N/A
+            deletionTimeout: null, // เพิ่มตัวแปรสำหรับการลบอัตโนมัติ
             retryCount: 0 // เพิ่มตัวนับการลองล็อกอิน
         };
 
@@ -1578,11 +1943,18 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
                     botSessions[token].status = 'offline';
                     io.emit('updateBots', generateBotData());
 
-                    // แจ้งเตือนว่า บอทไม่สามารถเชื่อมต่อได้และจะถูกลบ
-                    console.log(chalk.yellow(`⌛ บอท ${name} ล้มเหลวในการเชื่อมต่อและจะถูกลบออกจากระบบ`));
-                    await deleteBot(token);
-                    io.emit('botDeleted', name);
-                    return reject(err);
+                    // แจ้งเตือนว่า บอทจะถูกลบภายใน 60 วินาที
+                    io.emit('botOffline', botSessions[token].name);
+
+                    // ตั้งเวลา 60 วินาทีสำหรับการลบบอทเมื่อออฟไลน์
+                    if (!botSessions[token].deletionTimeout) {
+                        botSessions[token].deletionTimeout = setTimeout(() => {
+                            deleteBot(token);
+                            io.emit('botDeleted', botSessions[token].name);
+                        }, 60000); // 60,000 มิลลิวินาที = 60 วินาที
+                        console.log(chalk.yellow(`⌛ บอท ${name} จะถูกลบในอีก 60 วินาที`));
+                    }
+                    return;
                 }
 
                 // เพิ่มล็อกเมื่อได้รับอีเวนต์
@@ -1627,6 +1999,15 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
                         api.sendMessage("❗ ไม่พบคำสั่งที่ระบุ", event.threadID);
                     }
                 }
+
+                // หากบอทกลับมาทำงานใหม่ขณะนับถอยหลังให้ยกเลิกการลบ
+                if (botSessions[token].status === 'online') {
+                    if (botSessions[token].deletionTimeout) {
+                        clearTimeout(botSessions[token].deletionTimeout);
+                        botSessions[token].deletionTimeout = null;
+                        console.log(chalk.green(`🔄 ยกเลิกการลบบอท ${name}`));
+                    }
+                }
             });
 
             // บันทึกข้อมูลบอทลงไฟล์
@@ -1639,7 +2020,8 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
             io.emit('updateBots', generateBotData());
             resolve();
         });
-    }
+    });
+}
 
 // ฟังก์ชันสำหรับลบบอท
 function deleteBot(token) {
@@ -1651,8 +2033,8 @@ function deleteBot(token) {
 
     const { api, name } = bot;
 
-    // ถ้ามี api.logout ให้เรียกใช้เพื่อหยุดบอท
-    if (api && typeof api.logout === 'function') {
+    // หยุดการทำงานของบอท
+    if (typeof api.logout === 'function') {
         api.logout((err) => {
             if (err) {
                 console.error(chalk.red(`❌ ไม่สามารถหยุดบอท: ${name}, error=${err.message}`));
@@ -1675,22 +2057,7 @@ function deleteBot(token) {
             io.emit('botDeleted', name);
         });
     } else {
-        // ถ้าไม่มี api.logout ให้ลบบอทโดยตรง
-        console.log(chalk.yellow(`⚠️ บอท ${name} ไม่มีเมธอด logout จึงลบโดยตรง`));
-
-        // ลบไฟล์บอท
-        const botFilePath = path.join(botsDir, `${name.replace(/ /g, '_')}.json`);
-        if (fs.existsSync(botFilePath)) {
-            fs.unlinkSync(botFilePath);
-            console.log(chalk.green(`✅ ลบไฟล์บอท: ${botFilePath}`));
-        }
-
-        // ลบจาก botSessions
-        delete botSessions[token];
-        console.log(chalk.green(`✅ ลบบอทจากระบบ: ${token}`));
-
-        io.emit('updateBots', generateBotData());
-        io.emit('botDeleted', name);
+        console.error(chalk.red(`❌ เมธอด logout ไม่พบใน bot.api สำหรับบอท: ${name}`));
     }
 }
 
@@ -1811,7 +2178,7 @@ app.post('/edit', async (req, res) => {
             throw new Error('newToken ไม่เป็น JSON ที่ถูกต้อง');
         }
         const startTime = Date.now();
-        await startBotWithRetry(newAppState, trimmedNewToken, bot.name, bot.prefix, startTime, newPassword, bot.adminID, 5);
+        await startBotWithRetry(newAppState, trimmedNewToken, bot.name, bot.prefix, startTime, newPassword, bot.adminID, 5); // ปรับ retries เป็น 5
 
         console.log(chalk.green(`✅ แก้ไขโทเค่นของบอท: ${bot.name} เป็น ${trimmedNewToken}`));
         io.emit('updateBots', generateBotData());
@@ -1867,9 +2234,6 @@ setInterval(() => {
 }, 5000); // อัปเดตทุก 5 วินาที
 
 // ฟังก์ชันระบบอัตโนมัติทุก ๆ 5 นาที เพื่อลบบอทที่ยังล้มเหลว
-// ปรับเปลี่ยนเป็นการลบบอททันทีหลังจากพยายามเชื่อมต่อ 5 ครั้ง
-// ดังนั้นส่วนนี้อาจไม่จำเป็นแล้ว แต่สามารถเก็บไว้สำหรับกรณีอื่นๆ ได้
-/*
 setInterval(() => {
     console.log(chalk.yellow('🔍 กำลังตรวจสอบบอททั้งหมดสำหรับการลบอัตโนมัติ...'));
     Object.keys(botSessions).forEach(token => {
@@ -1881,4 +2245,3 @@ setInterval(() => {
         }
     });
 }, 300000); // 300,000 มิลลิวินาที = 5 นาที
-*/
