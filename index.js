@@ -79,7 +79,7 @@ function generate6DigitCode() {
 // ฟังก์ชันช่วยเหลือในการสร้างข้อมูลบอทสำหรับการอัปเดตแบบเรียลไทม์
 function generateBotData() {
     const totalBots = Object.keys(botSessions).length;
-    const onlineBots = Object.values(botSessions).filter(bot => bot.status === 'online').length;
+    const onlineBots = Object.values(botSessions).filter(bot => bot.status === 'online' || bot.status === 'active').length;
     const activeBots = Object.values(botSessions).filter(bot => bot.status === 'active').length;
 
     // สร้างแถวตารางบอทพร้อมข้อมูลปิงและสถานะใหม่
@@ -628,7 +628,6 @@ app.get("/", (req, res) => {
                 document.addEventListener('click', function(event) {
                     if (event.target.closest('.delete-btn')) {
                         const token = decodeURIComponent(event.target.closest('.delete-btn').getAttribute('data-token'));
-                        // แทนที่ prompt ด้วย Bootstrap Modal หรือ Toast สำหรับความปลอดภัยและ UX ที่ดีกว่า
                         const deleteCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการลบบอท:');
                         if (deleteCode) {
                             fetch('/delete', {
@@ -2238,8 +2237,8 @@ setInterval(() => {
     console.log(chalk.yellow('🔍 กำลังตรวจสอบบอททั้งหมดสำหรับการลบอัตโนมัติ...'));
     Object.keys(botSessions).forEach(token => {
         const bot = botSessions[token];
-        if (bot.status === 'connection_failed') {
-            console.log(chalk.yellow(`⌛ บอท "${bot.name}" ไม่สามารถเชื่อมต่อได้จะถูกลบออก`));
+        if (bot.status === 'connection_failed' || bot.status === 'offline') { // ตรวจสอบทั้งสองสถานะ
+            console.log(chalk.yellow(`⌛ บอท "${bot.name}" จะถูกลบออกเนื่องจากสถานะ "${bot.status}"`));
             deleteBot(token);
             io.emit('botDeleted', bot.name);
         }
