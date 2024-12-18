@@ -1,104 +1,114 @@
+const { loadImage, createCanvas } = require("canvas");
+const fs = require("fs-extra");
 const axios = require("axios");
 
 module.exports = {
-  config: {
-    name: "จับคู่",
-    description: "จับคู่ความรักระหว่างผู้ใช้คำสั่งกับสมาชิกในกลุ่ม พร้อมรูปคู่",
-    usage: "/matchlove",
-    aliases: ["จับคู่", "love", "match"],
-    permissions: {
-      user: [],
-      bot: ["SEND_MESSAGES", "ATTACH_FILES"],
-    },
-    cooldown: 5,
-  },
-
-  run: async ({ api, event }) => {
-    const { threadID, messageID, senderID } = event;
-
-    try {
-      // ดึงข้อมูลสมาชิกในกลุ่ม
-      const threadInfo = await api.getThreadInfo(threadID);
-      const participants = threadInfo.participantIDs;
-
-      // ตรวจสอบว่ามีสมาชิกเพียงพอ
-      if (participants.length < 2) {
-        return api.sendMessage("❗ ต้องมีสมาชิกอย่างน้อย 2 คนในกลุ่มเพื่อเล่นเกมนี้!", threadID, messageID);
-      }
-
-      // กำหนดคนแรกเป็นผู้ใช้คำสั่ง
-      const person1 = senderID;
-
-      // สุ่มคนที่สองจากสมาชิกในกลุ่ม (ไม่รวมผู้ใช้คำสั่ง)
-      let person2 = participants[Math.floor(Math.random() * participants.length)];
-      while (person1 === person2) {
-        person2 = participants[Math.floor(Math.random() * participants.length)];
-      }
-
-      // สุ่มเปอร์เซ็นต์ความรัก
-      const lovePercentage = Math.floor(Math.random() * 100) + 1;
-
-      // ดึงชื่อผู้ใช้
-      const name1 = await getName(api, person1);
-      const name2 = await getName(api, person2);
-
-      // สร้างแถบความรัก
-      const loveBar = createLoveBar(lovePercentage);
-
-      // สร้างข้อความตกแต่ง
-      const loveMessage = getLoveMessage(lovePercentage);
-
-      // ดึงรูปคู่จาก API
-      const response = await axios.get("https://api.joshweb.click/cdp");
-      const images = response.data.result;
-      const imageOne = images.one;
-      const imageTwo = images.two;
-
-      // ส่งข้อความพร้อมรูปภาพ
-      return api.sendMessage(
-        {
-          body: `✨💖 **คู่รักในกลุ่มนี้คือ...** 💖✨\n\n` +
-          `❤️ **คนแรก**: [ ${name1} ]\n` +
-          `💙 **คนที่สอง**: [ ${name2} ]\n\n` +
-          `🔮 **เปอร์เซ็นต์ความรัก**: ${lovePercentage}%\n` +
-          `${loveBar}\n\n` +
-          `${loveMessage}\n` +
-          `💌 *ลองตั้งรูปคู่กันดูสิ!*`,
-          attachment: [
-            await axios({ url: imageOne, responseType: "stream" }).then((res) => res.data),
-            await axios({ url: imageTwo, responseType: "stream" }).then((res) => res.data),
-          ],
-        },
-        threadID,
-        messageID
-      );
-
-    } catch (error) {
-      console.error("❌ เกิดข้อผิดพลาดในการจับคู่:", error);
-      return api.sendMessage("❗ ไม่สามารถจับคู่ความรักได้ในขณะนี้ กรุณาลองใหม่ภายหลัง", threadID, messageID);
-    }
+  name: 'แฮก',
+  description: 'แฮกโปรไฟล์และสร้างรูปภาพพร้อมข้อความที่กำหนด',
+  author: 'John Lester',
+  execute(api, event, args) {
+    runCommand(api, event, args);
   },
 };
 
-// ฟังก์ชันช่วยดึงชื่อผู้ใช้
-async function getName(api, userID) {
-  const userInfo = await api.getUserInfo(userID);
-  return userInfo[userID]?.name || "ไม่ทราบชื่อ";
+async function runCommand(api, event, args) {
+  const { senderID, threadID, messageID } = event;
+  const id = Object.keys(event.mentions)[0] || senderID;
+
+  // ดึงข้อมูลผู้ใช้ (ชื่อ)
+  const userInfo = await api.getUserInfo(id);
+  const name = userInfo[id].name;
+
+  if (!name) {
+    return api.sendMessage("กรุณาระบุเนื้อหาของความคิดเห็นบนบอร์ด", threadID, messageID);
+  }
+
+  const pathImg = __dirname + '/cache/background.png';
+  const pathAvt = __dirname + '/cache/avatar.png';
+
+  // URL ภาพพื้นหลัง
+  const background = [
+    "https://i.imgur.com/VQXViKI.png"
+  ];
+  const randomBackground = background[Math.floor(Math.random() * background.length)];
+
+  // ดาวน์โหลดรูปโปรไฟล์ Facebook
+  let avatarBuffer = (await axios.get(
+    `https://graph.facebook.com/${id}/picture?width=720&height=720&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`,
+    { responseType: "arraybuffer" }
+  )).data;
+  fs.writeFileSync(pathAvt, Buffer.from(avatarBuffer, "utf-8"));
+
+  // ดาวน์โหลดภาพพื้นหลัง
+  let backgroundBuffer = (await axios.get(randomBackground, { responseType: "arraybuffer" })).data;
+  fs.writeFileSync(pathImg, Buffer.from(backgroundBuffer, "utf-8"));
+
+  // โหลดภาพ
+  const baseImage = await loadImage(pathImg);
+  const avatarImage = await loadImage(pathAvt);
+
+  // สร้างแคนวาส
+  const canvas = createCanvas(baseImage.width, baseImage.height);
+  const ctx = canvas.getContext("2d");
+
+  // วาดภาพพื้นหลังและโปรไฟล์
+  ctx.drawImage(baseImage, 0, 0, canvas.width, canvas.height);
+  ctx.drawImage(avatarImage, 83, 437, 100, 101);
+
+  // ตั้งค่าฟอนต์และเขียนข้อความ
+  ctx.font = "400 23px Arial";
+  ctx.fillStyle = "#1878F3";
+  ctx.textAlign = "start";
+
+  const lines = await wrapText(ctx, name, 1160);
+  ctx.fillText(lines.join('\n'), 200, 497);
+
+  // แปลงผลลัพธ์เป็นไฟล์ภาพ
+  const imageBuffer = canvas.toBuffer();
+  fs.writeFileSync(pathImg, imageBuffer);
+
+  // ส่งภาพในแชท
+  api.sendMessage(
+    { body: `นี่คือโปรไฟล์ของคุณ!`, attachment: fs.createReadStream(pathImg) },
+    threadID,
+    () => {
+      fs.unlinkSync(pathImg);
+      fs.unlinkSync(pathAvt);
+    },
+    messageID
+  );
 }
 
-// ฟังก์ชันสร้างแถบความรัก (Love Bar)
-function createLoveBar(percentage) {
-  const fullHearts = Math.floor(percentage / 10); // จำนวน ❤️ เต็ม
-  const emptyHearts = 10 - fullHearts; // จำนวน ♡ ว่าง
-  return `💖 `.repeat(fullHearts) + `🤍 `.repeat(emptyHearts);
-}
+// ฟังก์ชันตัดคำสำหรับข้อความที่ยาวเกิน
+async function wrapText(ctx, text, maxWidth) {
+  if (ctx.measureText(text).width < maxWidth) return [text];
+  if (ctx.measureText('W').width > maxWidth) return null;
 
-// ฟังก์ชันสร้างข้อความตามเปอร์เซ็นต์ความรัก
-function getLoveMessage(percentage) {
-  if (percentage <= 10) return "💔 ความรักนี้ดูเหมือนจะห่างไกล แต่ก็อย่ายอมแพ้!";
-  if (percentage <= 30) return "🧡 ยังมีความหวังสำหรับคุณสองคน อย่าลืมสานสัมพันธ์ให้ดี!";
-  if (percentage <= 50) return "💛 ความรักนี้ต้องการการดูแลเพิ่มขึ้น!";
-  if (percentage <= 70) return "💚 คุณสองคนมีโอกาสไปต่อในอนาคต!";
-  if (percentage <= 90) return "💖 ความรักของคุณสองคนกำลังไปได้สวย!";
-  return "💞 คุณสองคนคือคู่รักที่สมบูรณ์แบบที่สุด! ขอยินดีด้วย!";
+  const words = text.split(' ');
+  const lines = [];
+  let line = '';
+
+  while (words.length > 0) {
+    let split = false;
+    while (ctx.measureText(words[0]).width >= maxWidth) {
+      const temp = words[0];
+      words[0] = temp.slice(0, -1);
+      if (split) words[1] = `${temp.slice(-1)}${words[1]}`;
+      else {
+        split = true;
+        words.splice(1, 0, temp.slice(-1));
+      }
+    }
+
+    if (ctx.measureText(`${line}${words[0]}`).width < maxWidth) {
+      line += `${words.shift()} `;
+    } else {
+      lines.push(line.trim());
+      line = '';
+    }
+
+    if (words.length === 0) lines.push(line.trim());
+  }
+
+  return lines;
 }
