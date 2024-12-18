@@ -202,6 +202,18 @@ function loadBotsFromFiles() {
 // ตัวแปรสำหรับเก็บค่าปิงของเว็บไซต์
 let websitePing = 0;
 
+// ฟังก์ชันเพื่อเรียกใช้งาน Middleware ทั้งหมด
+async function runMiddlewares(api, event) {
+    const middlewares = global.middleware || [];
+    for (let mw of middlewares) {
+        await new Promise((resolve, reject) => {
+            mw(api, event, () => {
+                resolve();
+            });
+        });
+    }
+}
+
 // หน้าแดชบอร์ดหลัก
 app.get("/", (req, res) => {
     const data = generateBotData(); // เรียกใช้ generateBotData()
@@ -1115,11 +1127,6 @@ app.get("/start", (req, res) => {
         </body>
         </html>
     `);
-});
-
-// หน้าเพิ่มบอท (ยังไม่แน่ใจว่าคุณต้องการให้เป็น active หรือไม่ แต่ตามโค้ดเดิม)
-app.get("/start", (req, res) => {
-    // ... โค้ดเดิมที่ไม่เปลี่ยนแปลง
 });
 
 // หน้าแสดงบอทรัน
@@ -2078,6 +2085,21 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
 
                     if (!message.startsWith(botSessions[token].prefix)) return;
 
+                    // เรียกใช้งาน Middleware ก่อนประมวลผลคำสั่ง
+                    try {
+                        await runMiddlewares(api, event);
+                    } catch (mwError) {
+                        console.error(chalk.red(`❌ เกิดข้อผิดพลาดใน Middleware: ${mwError.message}`));
+                        return;
+                    }
+
+                    // ตรวจสอบสถานะบอทหลังจาก Middleware
+                    const threadID = event.threadID;
+                    if (global.botStatus[threadID] === false) {
+                        // บอทถูกปิดในกลุ่มนี้ จะไม่ดำเนินการคำสั่งใด ๆ
+                        return;
+                    }
+
                     const args = message.slice(botSessions[token].prefix.length).trim().split(/ +/);
                     const commandName = args.shift().toLowerCase();
                     const command = commands[commandName];
@@ -2398,3 +2420,21 @@ setInterval(() => {
         }
     });
 }, 300000); // 300,000 มิลลิวินาที = 5 นาที
+
+// Middleware เพื่อตรวจสอบสถานะบอทก่อนดำเนินการคำสั่งอื่น
+global.middleware = global.middleware || [];
+global.middleware.push(async (api, event, next) => {
+    const { threadID } = event;
+    global.botStatus = global.botStatus || {};
+
+    console.log(`ตรวจสอบสถานะบอทสำหรับกลุ่ม ${threadID}: ${global.botStatus[threadID] === false ? 'ปิด' : 'เปิด'}`);
+
+    if (global.botStatus[threadID] === false) {
+        // หากบอทปิดการทำงานในกลุ่มนี้ จะไม่ตอบสนองใดๆ
+        api.sendMessage("🛑 บอทถูกปิดในกลุ่มนี้แล้ว", threadID, event.messageID);
+        return; // หยุดการดำเนินการคำสั่ง
+    }
+
+    // หากบอทเปิดการทำงาน ให้ดำเนินการคำสั่งต่อ
+    next();
+});
