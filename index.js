@@ -1,7 +1,7 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const login = require("ws3-fca"); // เปลี่ยนจาก ryuu-fca-api เป็น ws3-fca
+const login = require('ryuu-fca-api'); // ตรวจสอบว่าติดตั้งแพ็กเกจนี้แล้ว
 const chalk = require('chalk');
 const figlet = require('figlet');
 const fs = require('fs');
@@ -1918,7 +1918,7 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
             retryCount: 0 // เพิ่มตัวนับการลองล็อกอิน
         };
 
-        login({ appState: appState }, (err, api) => { // ปรับพารามิเตอร์ appState ให้ตรงกับ ws3-fca
+        login({ appState }, (err, api) => {
             if (err) {
                 console.error(chalk.red(`❌ การเข้าสู่ระบบล้มเหลวสำหรับโทเค็น: ${token}`));
                 botSessions[token].status = 'connection_failed'; // เปลี่ยนสถานะเป็น 'connection_failed'
