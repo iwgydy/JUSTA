@@ -1,66 +1,113 @@
 const axios = require("axios");
-const fs = require("fs");
+const fs = require("fs-extra");
+const { loadImage, createCanvas } = require("canvas");
 
-module.exports.config = {
-  name: "โหลดtiktok",
-  version: "1.0",
-  hasPermssion: 0,
-  credits: "YourName",
-  description: "ดาวน์โหลดวิดีโอ TikTok แบบไม่มีลายน้ำ",
-  commandCategory: "ดาวน์โหลด",
-  usages: "โหลดtiktok [ลิ้งค์ TikTok]",
-  cooldowns: 5,
-};
+module.exports = {
+  config: {
+    name: "จับคู่วี1",
+    version: "1.0.0",
+    description: "จับคู่สุ่มกับสมาชิกในกลุ่ม",
+    usage: "/จับคู่วี1",
+    aliases: ["pairv1", "คู่รัก"],
+  },
 
-module.exports.run = async function ({ api, event, args }) {
-  try {
-    // ตรวจสอบว่าผู้ใช้ใส่ลิ้งค์มาหรือไม่
-    if (args.length === 0) {
-      return api.sendMessage("❌ กรุณาใส่ลิ้งค์ TikTok ที่ต้องการดาวน์โหลด เช่น: โหลดtiktok https://vm.tiktok.com/ZS6Rts7R4/", event.threadID, event.messageID);
-    }
+  run: async ({ api, event, Users }) => {
+    const { threadID, senderID, messageID } = event;
 
-    const tiktokUrl = args[0];
-    const apiUrl = `https://nethwieginedev.vercel.app/api/tiktokdl?link=${encodeURIComponent(tiktokUrl)}`;
+    try {
+      // ดึงข้อมูลผู้ใช้และกลุ่ม
+      const userInfo = await api.getThreadInfo(threadID);
+      const allMembers = userInfo.userInfo;
+      const botID = api.getCurrentUserID();
+      const senderGender = allMembers.find((u) => u.id === senderID)?.gender || "UNKNOWN";
 
-    api.sendMessage("🔄 กำลังดาวน์โหลดวิดีโอจาก TikTok แบบไม่มีลายน้ำ โปรดรอสักครู่...", event.threadID, event.messageID);
-
-    // เรียก API เพื่อดึงลิ้งค์วิดีโอ
-    const response = await axios.get(apiUrl);
-    const { success, link } = response.data;
-
-    if (!success || !link) {
-      return api.sendMessage("❌ ไม่สามารถดาวน์โหลดวิดีโอได้ โปรดตรวจสอบลิ้งค์และลองใหม่อีกครั้ง!", event.threadID, event.messageID);
-    }
-
-    // ดาวน์โหลดวิดีโอ
-    const filePath = __dirname + `/cache/tiktok_${Date.now()}.mp4`;
-    const videoResponse = await axios({
-      url: link,
-      method: "GET",
-      responseType: "stream",
-    });
-
-    const writer = fs.createWriteStream(filePath);
-    videoResponse.data.pipe(writer);
-
-    writer.on("finish", () => {
-      api.sendMessage(
-        {
-          body: "✨ ดาวน์โหลดวิดีโอ TikTok เสร็จเรียบร้อยแล้ว!",
-          attachment: fs.createReadStream(filePath),
-        },
-        event.threadID,
-        () => fs.unlinkSync(filePath), // ลบไฟล์หลังส่งเสร็จ
-        event.messageID
+      // คัดกรองสมาชิกเพื่อตั้งค่าการจับคู่
+      let candidates = allMembers.filter(
+        (u) => u.id !== senderID && u.id !== botID && !u.isGroupAdmin
       );
-    });
 
-    writer.on("error", () => {
-      api.sendMessage("❌ เกิดข้อผิดพลาดในการดาวน์โหลดวิดีโอ", event.threadID, event.messageID);
-    });
+      if (senderGender === "FEMALE") {
+        candidates = candidates.filter((u) => u.gender === "MALE");
+      } else if (senderGender === "MALE") {
+        candidates = candidates.filter((u) => u.gender === "FEMALE");
+      }
 
-  } catch (error) {
-    console.error("❌ เกิดข้อผิดพลาด:", error);
-    api.sendMessage("❌ ไม่สามารถดาวน์โหลดวิดีโอ TikTok ได้ โปรดลองใหม่อีกครั้ง!", event.threadID, event.messageID);
-  }
+      if (candidates.length === 0) {
+        return api.sendMessage(
+          "❌ ไม่พบสมาชิกที่สามารถจับคู่ได้ในขณะนี้",
+          threadID,
+          messageID
+        );
+      }
+
+      // เลือกคู่แบบสุ่ม
+      const randomIndex = Math.floor(Math.random() * candidates.length);
+      const pairedUser = candidates[randomIndex];
+      const pairedUserID = pairedUser.id;
+      const pairedUserName = await Users.getNameUser(pairedUserID);
+
+      // ดาวน์โหลดภาพโปรไฟล์
+      const firstUserProfile = `https://graph.facebook.com/${senderID}/picture?width=720&height=720&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
+      const secondUserProfile = `https://graph.facebook.com/${pairedUserID}/picture?width=720&height=720&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
+
+      const pathFirstUser = `${__dirname}/cache/firstUser.png`;
+      const pathSecondUser = `${__dirname}/cache/secondUser.png`;
+      const pathBackground = `${__dirname}/cache/background.png`;
+
+      // ดาวน์โหลดไฟล์
+      const [firstUserBuffer, secondUserBuffer] = await Promise.all([
+        axios.get(firstUserProfile, { responseType: "arraybuffer" }).then((res) => res.data),
+        axios.get(secondUserProfile, { responseType: "arraybuffer" }).then((res) => res.data),
+      ]);
+      fs.writeFileSync(pathFirstUser, Buffer.from(firstUserBuffer));
+      fs.writeFileSync(pathSecondUser, Buffer.from(secondUserBuffer));
+
+      // ดาวน์โหลดภาพพื้นหลัง
+      const backgroundUrl = "https://i.postimg.cc/wjJ29HRB/background1.png";
+      const backgroundBuffer = await axios
+        .get(backgroundUrl, { responseType: "arraybuffer" })
+        .then((res) => res.data);
+      fs.writeFileSync(pathBackground, Buffer.from(backgroundBuffer));
+
+      // สร้างภาพจับคู่
+      const baseImage = await loadImage(pathBackground);
+      const firstAvatar = await loadImage(pathFirstUser);
+      const secondAvatar = await loadImage(pathSecondUser);
+
+      const canvas = createCanvas(baseImage.width, baseImage.height);
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(baseImage, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(firstAvatar, 100, 150, 300, 300); // วางโปรไฟล์ผู้เรียกคำสั่ง
+      ctx.drawImage(secondAvatar, 900, 150, 300, 300); // วางโปรไฟล์คู่ที่จับคู่
+
+      const resultPath = `${__dirname}/cache/pair_result.png`;
+      const imageBuffer = canvas.toBuffer();
+      fs.writeFileSync(resultPath, imageBuffer);
+
+      // ส่งข้อความและภาพกลับในแชท
+      return api.sendMessage(
+        {
+          body: `💞 ขอแสดงความยินดี! คุณถูกจับคู่กับ ${pairedUserName}\nโอกาสที่เหมาะสมคือ ${Math.floor(Math.random() * 101)}%`,
+          mentions: [
+            {
+              tag: pairedUserName,
+              id: pairedUserID,
+            },
+          ],
+          attachment: fs.createReadStream(resultPath),
+        },
+        threadID,
+        () => {
+          fs.unlinkSync(pathFirstUser);
+          fs.unlinkSync(pathSecondUser);
+          fs.unlinkSync(pathBackground);
+          fs.unlinkSync(resultPath);
+        },
+        messageID
+      );
+    } catch (error) {
+      console.error("❌ เกิดข้อผิดพลาดในการจับคู่:", error.message);
+      return api.sendMessage("❗ ไม่สามารถจับคู่ได้ในขณะนี้", threadID, messageID);
+    }
+  },
 };
