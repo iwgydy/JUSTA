@@ -1,68 +1,67 @@
-const axios = require("axios");
-const fs = require("fs");
-const path = require("path");
+const request = require('request');
+const fs = require('fs');
+const path = require('path');
 
-module.exports = {
-  config: {
-    name: "texttospeech",
-    description: "แปลงข้อความเป็นเสียง (ฟรี)",
-    usage: "/texttospeech [ข้อความ]",
-    aliases: ["tts", "เสียง"],
-    permissions: {
-      user: [],
-      bot: ["SEND_MESSAGES", "ATTACH_FILES"],
-    },
-    cooldown: 3,
-  },
+module.exports.config = {
+    name: "เสียง", // ชื่อคำสั่งภาษาไทย
+    description: "แปลงข้อความเป็นเสียงพูด",
+    usage: "เสียง <ข้อความ>", // วิธีใช้งาน
+};
 
-  run: async ({ api, event, args }) => {
-    const { threadID, messageID } = event;
-
-    if (!args.length) {
-      return api.sendMessage(
-        "❗ กรุณาระบุข้อความที่ต้องการแปลงเป็นเสียง เช่น: /texttospeech สวัสดี",
-        threadID,
-        messageID
-      );
+module.exports.run = async ({ api, event, args }) => {
+    const ข้อความ = args.join(" "); // รวมข้อความทั้งหมดที่พิมพ์หลังคำสั่ง
+    if (!ข้อความ) {
+        return api.sendMessage("❗ กรุณาใส่ข้อความที่ต้องการแปลงเป็นเสียง", event.threadID);
     }
 
-    const text = args.join(" ");
-    const lang = "th"; // ภาษาไทย
-    const tempFilePath = path.join(__dirname, "temp.mp3");
+    api.sendMessage("⏳ กำลังแปลงข้อความเป็นเสียง...", event.threadID);
 
-    try {
-      // สร้าง URL สำหรับ Google Translate TTS
-      const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(
-        text
-      )}&tl=${lang}`;
+    // เรียกใช้งาน API
+    const ตัวเลือก = {
+        method: 'POST',
+        url: 'https://api-voice.botnoi.ai/openapi/v1/generate_audio',
+        body: JSON.stringify({
+            text: ข้อความ,
+            speaker: "77", // เลือกเสียงที่ต้องการ
+            volume: 1,
+            speed: 1,
+            type_media: "m4a",
+            save_file: "true",
+            language: "th"
+        }),
+        headers: {
+            'Botnoi-Token': 'dVg3a3BCVGlLblN6N3JHeGpReVJvOVo0RElGMzU2MTg5NA==',
+            'Content-Type': 'application/json'
+        }
+    };
 
-      // ดึงข้อมูลเสียงจาก URL
-      const response = await axios.get(url, {
-        responseType: "arraybuffer",
-      });
+    request(ตัวเลือก, (ข้อผิดพลาด, การตอบกลับ) => {
+        if (ข้อผิดพลาด) {
+            return api.sendMessage(`❌ เกิดข้อผิดพลาด: ${ข้อผิดพลาด.message}`, event.threadID);
+        }
 
-      // บันทึกไฟล์เสียงลงในไฟล์ชั่วคราว
-      fs.writeFileSync(tempFilePath, response.data);
+        try {
+            const ผลลัพธ์ = JSON.parse(การตอบกลับ.body);
+            const ไฟล์เสียง = ผลลัพธ์.file; // URL ไฟล์เสียงที่ได้จาก API
 
-      // ส่งไฟล์เสียงกลับไปในแชท
-      await api.sendMessage(
-        {
-          body: `🔊 เสียงที่แปลงจากข้อความ "${text}"`,
-          attachment: fs.createReadStream(tempFilePath),
-        },
-        threadID,
-        messageID
-      );
+            if (!ไฟล์เสียง) {
+                return api.sendMessage("❗ ไม่พบไฟล์เสียงที่สร้างขึ้น", event.threadID);
+            }
 
-      // ลบไฟล์ชั่วคราว
-      fs.unlinkSync(tempFilePath);
-    } catch (error) {
-      console.error("❌ เกิดข้อผิดพลาดในการแปลงข้อความเป็นเสียง:", error);
-      return api.sendMessage(
-        "❗ ไม่สามารถแปลงข้อความเป็นเสียงได้ในขณะนี้ กรุณาลองใหม่ภายหลัง",
-        threadID,
-        messageID
-      );
-    }
-  },
+            // ดาวน์โหลดไฟล์เสียงชั่วคราว
+            const ที่เก็บไฟล์ = path.join(__dirname, "เสียง.m4a");
+            const ไฟล์ = fs.createWriteStream(ที่เก็บไฟล์);
+
+            request(ไฟล์เสียง).pipe(ไฟล์).on('finish', () => {
+                api.sendMessage({
+                    body: "🎙️ นี่คือเสียงที่แปลงจากข้อความ:",
+                    attachment: fs.createReadStream(ที่เก็บไฟล์)
+                }, event.threadID, () => {
+                    fs.unlinkSync(ที่เก็บไฟล์); // ลบไฟล์หลังส่งเสร็จ
+                });
+            });
+        } catch (ข้อผิดพลาด) {
+            api.sendMessage("❌ เกิดข้อผิดพลาดในการแปลงไฟล์เสียง", event.threadID);
+        }
+    });
 };
