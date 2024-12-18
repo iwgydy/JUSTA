@@ -19,7 +19,8 @@ module.exports = {
       const userInfo = await api.getThreadInfo(threadID);
       const allMembers = userInfo.userInfo;
       const botID = api.getCurrentUserID();
-      const senderGender = allMembers.find((u) => u.id === senderID)?.gender || "UNKNOWN";
+      const senderGender =
+        allMembers.find((u) => u.id === senderID)?.gender || "UNKNOWN";
 
       // คัดกรองสมาชิกเพื่อตั้งค่าการจับคู่
       let candidates = allMembers.filter(
@@ -44,7 +45,15 @@ module.exports = {
       const randomIndex = Math.floor(Math.random() * candidates.length);
       const pairedUser = candidates[randomIndex];
       const pairedUserID = pairedUser.id;
-      const pairedUserName = await Users.getNameUser(pairedUserID);
+
+      // ดึงชื่อผู้ใช้
+      let pairedUserName;
+      try {
+        pairedUserName = await Users.getNameUser(pairedUserID);
+      } catch (error) {
+        console.warn("⚠️ ไม่สามารถดึงชื่อผู้ใช้ได้:", error.message);
+        pairedUserName = pairedUser?.name || "สมาชิกนิรนาม";
+      }
 
       // ดาวน์โหลดภาพโปรไฟล์
       const firstUserProfile = `https://graph.facebook.com/${senderID}/picture?width=720&height=720&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
