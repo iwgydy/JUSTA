@@ -1,52 +1,53 @@
-const axios = require("axios");
+const axios = require('axios');
 
-module.exports.config = {
-  name: "ค้นหาอวตาร์",
-  version: "1.1",
-  hasPermssion: 0,
-  credits: "YourName",
-  description: "ค้นหาอวตาร์จาก API ด้วยหมายเลข ID",
-  commandCategory: "fun",
-  usages: "ค้นหาอวตาร์ <หมายเลข ID>",
-  cooldowns: 5,
-};
+module.exports = {
+    config: {
+        name: 'ai3x', // คำสั่งที่ใช้เรียก
+        description: 'คุยกับ AI 3X',
+        usage: 'ai3x [ข้อความ]',
+    },
+    run: async ({ api, event, args }) => {
+        const start = Date.now(); // เริ่มจับเวลาประมวลผล
 
-module.exports.run = async function ({ api, event, args }) {
-  try {
-    const id = args[0];
-    if (!id || isNaN(id) || id < 1 || id > 846) {
-      return api.sendMessage("❌ กรุณาระบุหมายเลข ID ที่ต้องการค้นหา (ระหว่าง 1-846)", event.threadID, event.messageID);
-    }
+        // ตรวจสอบว่ามีการส่งข้อความมาหรือไม่
+        if (args.length === 0) {
+            return api.sendMessage("กรุณาส่งข้อความเพื่อถาม AI", event.threadID);
+        }
 
-    const response = await axios.get(`https://api.joshweb.click/canvas/search?id=${id}`);
-    const data = response.data;
+        const prompt = args.join(' '); // รวมข้อความทั้งหมด
+        const senderID = event.senderID; // ID ของผู้ส่ง
 
-    if (!data || !data.data) {
-      return api.sendMessage("❌ ไม่พบอวตาร์ที่ตรงกับหมายเลขนี้ กรุณาลองใหม่", event.threadID, event.messageID);
-    }
+        try {
+            // ส่งคำขอไปยัง API
+            const response = await axios.get(`https://kaiz-apis.gleeze.com/api/gpt-4o-pro`, {
+                params: {
+                    q: prompt,
+                    uid: senderID,
+                    imageUrl: "สวัสดี", // เพิ่ม URL ของภาพถ้าต้องการ
+                },
+            });
 
-    const { imgAnime, colorBg, dm } = data.data;
+            const end = Date.now(); // จับเวลาสิ้นสุด
+            const elapsedTime = ((end - start) / 1000).toFixed(2); // คำนวณเวลาที่ใช้ในหน่วยวินาที
 
-    if (!imgAnime) {
-      return api.sendMessage("❌ ไม่พบข้อมูลอวตาร์ กรุณาลองใหม่", event.threadID, event.messageID);
-    }
+            // ตรวจสอบว่าข้อมูลจาก API มี `response` หรือไม่
+            const aiResponse = response.data.response || "ไม่สามารถรับคำตอบจาก AI ได้";
 
-    const imageStream = await axios({
-      url: imgAnime,
-      method: "GET",
-      responseType: "stream",
-    });
+            // ส่งข้อความตอบกลับพร้อมเวลา
+            api.sendMessage(
+                `🤖 ตอบจาก AI: ${aiResponse}\n\n⏳ ใช้เวลาประมวลผลทั้งหมด: ${elapsedTime} วินาที`,
+                event.threadID
+            );
+        } catch (error) {
+            const end = Date.now();
+            const elapsedTime = ((end - start) / 1000).toFixed(2);
 
-    api.sendMessage(
-      {
-        body: `🎨 อวตาร์หมายเลข: ${id}\n🌈 สีพื้นหลัง: ${colorBg}\n🧍 ประเภท: ${dm}`,
-        attachment: imageStream.data,
-      },
-      event.threadID,
-      event.messageID
-    );
-  } catch (error) {
-    console.error("❌ เกิดข้อผิดพลาด:", error.message);
-    api.sendMessage("❌ ไม่สามารถค้นหาอวตาร์ได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง!", event.threadID, event.messageID);
-  }
+            // ส่งข้อความเมื่อเกิดข้อผิดพลาด
+            console.error("❌ เกิดข้อผิดพลาด:", error.message || error);
+            api.sendMessage(
+                `❌ ไม่สามารถติดต่อ AI ได้\n⏳ ใช้เวลาประมวลผลทั้งหมด: ${elapsedTime} วินาที`,
+                event.threadID
+            );
+        }
+    },
 };
