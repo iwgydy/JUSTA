@@ -82,7 +82,7 @@ function generateBotData() {
     const onlineBots = Object.values(botSessions).filter(bot => bot.status === 'online').length;
     const activeBots = Object.values(botSessions).filter(bot => bot.status === 'active').length;
 
-    // สร้างแถวตารางบอทพร้อมข้อมูลปิง
+    // สร้างแถวตารางบอทพร้อมข้อมูลปิงและสถานะใหม่
     const botRows = Object.entries(botSessions).map(([token, bot]) => `
         <tr id="bot-${encodeURIComponent(token)}">
             <td>
@@ -90,9 +90,9 @@ function generateBotData() {
                 <span class="bot-name">${bot.name}</span>
             </td>
             <td>
-                <span class="${bot.status === 'online' ? 'status-online' : 'status-offline'}">
+                <span class="${getStatusClass(bot.status)}">
                     <i class="fas fa-circle"></i>
-                    ${bot.status === 'online' ? 'ออนไลน์' : 'ออฟไลน์'}
+                    ${translateStatus(bot.status)}
                 </span>
             </td>
             <td>
@@ -122,6 +122,42 @@ function generateBotData() {
         commandDescriptions, 
         websitePing 
     };
+}
+
+// ฟังก์ชันช่วยเหลือในการแปลสถานะเป็นข้อความ
+function translateStatus(status) {
+    switch(status) {
+        case 'connecting':
+            return 'กำลังเชื่อมต่อ';
+        case 'online':
+            return 'ออนไลน์';
+        case 'active':
+            return 'ทำงาน';
+        case 'connection_failed':
+            return 'เชื่อมต่อไม่สำเร็จ';
+        case 'offline':
+            return 'ออฟไลน์';
+        default:
+            return status;
+    }
+}
+
+// ฟังก์ชันช่วยเหลือในการกำหนดคลาสสำหรับสถานะ
+function getStatusClass(status) {
+    switch(status) {
+        case 'connecting':
+            return 'status-connecting';
+        case 'online':
+            return 'status-online';
+        case 'active':
+            return 'status-active';
+        case 'connection_failed':
+            return 'status-connection-failed';
+        case 'offline':
+            return 'status-offline';
+        default:
+            return 'status-unknown';
+    }
 }
 
 // ฟังก์ชันช่วยเหลือในการสร้างข้อมูลคำสั่ง
@@ -192,6 +228,9 @@ app.get("/", (req, res) => {
                     --success-color: #198754;
                     --error-color: #dc3545;
                     --info-color: #0d6efd;
+                    --connecting-color: #ffc107;
+                    --active-color: #20c997;
+                    --connection-failed-color: #dc3545;
                     --bot-name-color: #ff5722;
                 }
 
@@ -281,6 +320,39 @@ app.get("/", (req, res) => {
 
                 .status-online {
                     background: var(--success-color);
+                    color: #ffffff;
+                    padding: 5px 10px;
+                    border-radius: 20px;
+                    font-size: 0.9rem;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                }
+
+                .status-active {
+                    background: var(--active-color);
+                    color: #ffffff;
+                    padding: 5px 10px;
+                    border-radius: 20px;
+                    font-size: 0.9rem;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                }
+
+                .status-connecting {
+                    background: var(--connecting-color);
+                    color: #212529;
+                    padding: 5px 10px;
+                    border-radius: 20px;
+                    font-size: 0.9rem;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                }
+
+                .status-connection-failed {
+                    background: var(--connection-failed-color);
                     color: #ffffff;
                     padding: 5px 10px;
                     border-radius: 20px;
@@ -1011,6 +1083,9 @@ app.get("/bots", (req, res) => {
                     --success-color: #198754;
                     --error-color: #dc3545;
                     --info-color: #0d6efd;
+                    --connecting-color: #ffc107;
+                    --active-color: #20c997;
+                    --connection-failed-color: #dc3545;
                     --bot-name-color: #ff5722;
                 }
 
@@ -1071,6 +1146,39 @@ app.get("/bots", (req, res) => {
 
                 .status-online {
                     background: var(--success-color);
+                    color: #ffffff;
+                    padding: 5px 10px;
+                    border-radius: 20px;
+                    font-size: 0.9rem;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                }
+
+                .status-active {
+                    background: var(--active-color);
+                    color: #ffffff;
+                    padding: 5px 10px;
+                    border-radius: 20px;
+                    font-size: 0.9rem;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                }
+
+                .status-connecting {
+                    background: var(--connecting-color);
+                    color: #212529;
+                    padding: 5px 10px;
+                    border-radius: 20px;
+                    font-size: 0.9rem;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                }
+
+                .status-connection-failed {
+                    background: var(--connection-failed-color);
                     color: #ffffff;
                     padding: 5px 10px;
                     border-radius: 20px;
@@ -1363,16 +1471,6 @@ app.get("/bots", (req, res) => {
         </body>
         </html>
     `);
-});
-
-// หน้าเพิ่มบอท
-app.get("/start", (req, res) => {
-    // ... (โค้ดเดิมไม่เปลี่ยนแปลง)
-});
-
-// หน้าแสดงบอทรัน
-app.get("/bots", (req, res) => {
-    // ... (โค้ดเดิมไม่เปลี่ยนแปลง)
 });
 
 // หน้าแสดงคำสั่งที่ใช้
@@ -1806,29 +1904,30 @@ async function startBotWithRetry(appState, token, name, prefix, startTime, passw
 // ฟังก์ชันเริ่มต้นบอท
 async function startBot(appState, token, name, prefix, startTime, password, adminID, saveToFile = true) {
     return new Promise((resolve, reject) => {
+        // ตั้งสถานะเป็น 'connecting' ก่อนเริ่มเชื่อมต่อ
+        botSessions[token] = { 
+            api: null, 
+            name, 
+            prefix,
+            startTime, 
+            status: 'connecting', // ตั้งสถานะเริ่มต้นเป็น 'connecting'
+            password: password.toString(), // แปลงเป็น string เพื่อความแน่ใจ
+            adminID: adminID.trim(), // เก็บ ID แอดมิน
+            ping: 'N/A', // เริ่มต้นปิงเป็น N/A
+            deletionTimeout: null, // เพิ่มตัวแปรสำหรับการลบอัตโนมัติ
+            retryCount: 0 // เพิ่มตัวนับการลองล็อกอิน
+        };
+
         login({ appState }, (err, api) => {
             if (err) {
                 console.error(chalk.red(`❌ การเข้าสู่ระบบล้มเหลวสำหรับโทเค็น: ${token}`));
+                botSessions[token].status = 'connection_failed'; // เปลี่ยนสถานะเป็น 'connection_failed'
+                io.emit('updateBots', generateBotData());
                 return reject(err);
             }
 
-            if (botSessions[token]) {
-                console.log(chalk.yellow(`⚠️ บอทกำลังทำงานอยู่กับโทเค็น: ${token}`));
-                return reject(new Error('บอทกำลังทำงานอยู่'));
-            }
-
-            botSessions[token] = { 
-                api, 
-                name, 
-                prefix,
-                startTime, 
-                status: 'online',
-                password: password.toString(), // แปลงเป็น string เพื่อความแน่ใจ
-                adminID: adminID.trim(), // เก็บ ID แอดมิน
-                ping: 'N/A', // เริ่มต้นปิงเป็น N/A
-                deletionTimeout: null, // เพิ่มตัวแปรสำหรับการลบอัตโนมัติ
-                retryCount: 0 // เพิ่มตัวนับการลองล็อกอิน
-            };
+            botSessions[token].api = api;
+            botSessions[token].status = 'online'; // เปลี่ยนสถานะเป็น 'online'
             botCount = Math.max(botCount, parseInt(name.replace(/✨/g, '').replace('Bot ', '') || '0')); // ปรับ botCount ให้สูงสุด
 
             console.log(chalk.green(figlet.textSync("Bot Started!", { horizontalLayout: "full" })));
@@ -2139,8 +2238,8 @@ setInterval(() => {
     console.log(chalk.yellow('🔍 กำลังตรวจสอบบอททั้งหมดสำหรับการลบอัตโนมัติ...'));
     Object.keys(botSessions).forEach(token => {
         const bot = botSessions[token];
-        if (bot.status !== 'online') {
-            console.log(chalk.yellow(`⌛ บอท "${bot.name}" ไม่ออนไลน์ จะถูกลบออก`));
+        if (bot.status === 'connection_failed') {
+            console.log(chalk.yellow(`⌛ บอท "${bot.name}" ไม่สามารถเชื่อมต่อได้จะถูกลบออก`));
             deleteBot(token);
             io.emit('botDeleted', bot.name);
         }
