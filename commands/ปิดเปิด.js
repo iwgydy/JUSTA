@@ -51,10 +51,11 @@ module.exports = {
 
 // Middleware เพื่อตรวจสอบสถานะบอทก่อนดำเนินการคำสั่งอื่น
 global.middleware = global.middleware || [];
-global.middleware.push((api, event, next) => {
+global.middleware.push(async (api, event, next) => {
     const { threadID } = event;
     global.botStatus = global.botStatus || {};
 
+    // ตรวจสอบสถานะบอทในกลุ่ม
     if (global.botStatus[threadID] === false) {
         // หากบอทปิดการทำงานในกลุ่มนี้ จะไม่ตอบสนองใดๆ
         return;
