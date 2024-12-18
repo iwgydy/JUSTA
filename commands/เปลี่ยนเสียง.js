@@ -25,7 +25,7 @@ module.exports.run = async ({ api, event, args }) => {
             speaker: "2", // เลือกเสียงที่ต้องการ
             volume: 1,
             speed: 1,
-            type_media: "m4a",
+            type_media: "mp3",
             save_file: "true",
             language: "th"
         }),
@@ -41,15 +41,15 @@ module.exports.run = async ({ api, event, args }) => {
         }
 
         try {
-            const ผลลัพธ์ = JSON.parse(การตอบกลับ.body);
-            const ไฟล์เสียง = ผลลัพธ์.file; // URL ไฟล์เสียงที่ได้จาก API
+            const ผลลัพธ์ = JSON.parse(การตอบกลับ.body.toString('utf-8')); // แปลง Byte String เป็น JSON
+            const ไฟล์เสียง = ผลลัพธ์.audio_url; // URL ไฟล์เสียง
 
             if (!ไฟล์เสียง) {
                 return api.sendMessage("❗ ไม่พบไฟล์เสียงที่สร้างขึ้น", event.threadID);
             }
 
             // ดาวน์โหลดไฟล์เสียงชั่วคราว
-            const ที่เก็บไฟล์ = path.join(__dirname, "เสียง.m4a");
+            const ที่เก็บไฟล์ = path.join(__dirname, "เสียง.mp3"); // เปลี่ยนเป็น .mp3 ตาม API
             const ไฟล์ = fs.createWriteStream(ที่เก็บไฟล์);
 
             request(ไฟล์เสียง).pipe(ไฟล์).on('finish', () => {
