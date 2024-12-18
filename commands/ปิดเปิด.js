@@ -1,8 +1,10 @@
+// commands/ตั้งค่าบอท.js
 module.exports = {
     config: {
         name: "ตั้งค่าบอท",
         description: "คำสั่งเปิด/ปิดการทำงานของบอทในกลุ่ม",
         usage: "/ตั้งค่าบอท [เปิดบอท | ปิดบอท]",
+        aliases: ["botsettings", "togglebot"],
     },
     run: async ({ api, event, args }) => {
         const { senderID, threadID, messageID } = event;
@@ -48,19 +50,3 @@ module.exports = {
         );
     },
 };
-
-// Middleware เพื่อตรวจสอบสถานะบอทก่อนดำเนินการคำสั่งอื่น
-global.middleware = global.middleware || [];
-global.middleware.push(async (api, event, next) => {
-    const { threadID } = event;
-    global.botStatus = global.botStatus || {};
-
-    // ตรวจสอบสถานะบอทในกลุ่ม
-    if (global.botStatus[threadID] === false) {
-        // หากบอทปิดการทำงานในกลุ่มนี้ จะไม่ตอบสนองใดๆ
-        return;
-    }
-
-    // หากบอทเปิดการทำงาน ให้ดำเนินการคำสั่งต่อ
-    next();
-});
