@@ -22,7 +22,7 @@ module.exports.run = async ({ api, event, args }) => {
         url: 'https://api-voice.botnoi.ai/openapi/v1/generate_audio',
         body: JSON.stringify({
             text: ข้อความ,
-            speaker: "77", // เลือกเสียงที่ต้องการ
+            speaker: "2", // เลือกเสียงที่ต้องการ
             volume: 1,
             speed: 1,
             type_media: "m4a",
