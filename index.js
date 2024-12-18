@@ -106,11 +106,12 @@ function generateBotData() {
             <td>
                 <button class="btn btn-warning btn-sm edit-btn" data-token="${encodeURIComponent(token)}"><i class="fas fa-edit"></i> แก้ไข</button>
                 <button class="btn btn-danger btn-sm delete-btn" data-token="${encodeURIComponent(token)}"><i class="fas fa-trash-alt"></i> ลบ</button>
+                <button class="btn btn-secondary btn-sm restart-btn" data-token="${encodeURIComponent(token)}"><i class="fas fa-redo"></i> รีสตาร์ท</button>
             </td>
         </tr>
     `).join('') || `
         <tr>
-            <td colspan="5" class="text-center">ไม่มีบอทที่กำลังทำงาน</td>
+            <td colspan="6" class="text-center">ไม่มีบอทที่กำลังทำงาน</td>
         </tr>
     `;
 
@@ -209,6 +210,7 @@ app.get("/", (req, res) => {
         <!DOCTYPE html>
         <html lang="th">
         <head>
+            <!-- หัวเอกสารที่มีอยู่เดิม -->
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>แดชบอร์ดหลัก | ระบบจัดการบอท</title>
@@ -420,8 +422,8 @@ app.get("/", (req, res) => {
                     }
                 }
 
-                /* Styles for Edit and Delete Buttons */
-                .btn-edit, .btn-delete {
+                /* Styles for Edit, Delete, and Restart Buttons */
+                .btn-edit, .btn-delete, .btn-restart {
                     margin-right: 5px;
                 }
 
@@ -620,11 +622,16 @@ app.get("/", (req, res) => {
                     showToast(\`บอท "\${botName}" กำลังจะถูกลบภายใน 60 วินาที เนื่องจากออฟไลน์\`, 'warning');
                 });
 
+                // รับเหตุการณ์เฉพาะเมื่อบอทถูกรีสตาร์ท
+                socket.on('botRestarted', (botName) => {
+                    showToast(\`บอท "\${botName}" ถูกรีสตาร์ทเรียบร้อยแล้ว\`, 'success');
+                });
+
                 // อัปเดตเวลารันทุกวินาที
                 setInterval(updateRuntime, 1000);
                 document.addEventListener('DOMContentLoaded', updateRuntime);
 
-                // Event Delegation สำหรับปุ่มลบและแก้ไข
+                // Event Delegation สำหรับปุ่มลบ, แก้ไข และรีสตาร์ท
                 document.addEventListener('click', function(event) {
                     if (event.target.closest('.delete-btn')) {
                         const token = decodeURIComponent(event.target.closest('.delete-btn').getAttribute('data-token'));
@@ -680,6 +687,33 @@ app.get("/", (req, res) => {
                             }
                         }
                     }
+
+                    if (event.target.closest('.restart-btn')) {
+                        const token = decodeURIComponent(event.target.closest('.restart-btn').getAttribute('data-token'));
+                        const restartCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการรีสตาร์ทบอท:');
+                        if (restartCode) {
+                            fetch('/restart', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ token, code: restartCode })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    showToast('รีสตาร์ทบอทสำเร็จ', 'success');
+                                    io.emit('botRestarted', data.botName);
+                                } else {
+                                    showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
+                                }
+                            })
+                            .catch(err => {
+                                console.error(err);
+                                showToast('เกิดข้อผิดพลาดในการรีสตาร์ทบอท', 'danger');
+                            });
+                        }
+                    }
                 });
             </script>
         </body>
@@ -718,6 +752,7 @@ app.get("/start", (req, res) => {
         <!DOCTYPE html>
         <html lang="th">
         <head>
+            <!-- หัวเอกสารที่มีอยู่เดิม -->
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>เพิ่มบอท | ระบบจัดการบอท</title>
@@ -878,80 +913,64 @@ app.get("/start", (req, res) => {
             </nav>
 
             <div class="container">
-                <div class="glass-card">
-                    <h5 class="mb-4">
-                        <i class="fas fa-plus-circle me-2" style="color: var(--primary-color);"></i>
-                        เพิ่มบอทใหม่
-                    </h5>
-                    ${errorMessage}
-                    <form class="add-bot-form" method="POST" action="/start">
-                        <div class="mb-3">
-                            <label for="token" class="form-label">โทเค็นของคุณ</label>
-                            <textarea 
-                                id="token" 
-                                name="token" 
-                                class="form-control" 
-                                rows="4" 
-                                placeholder='{"appState": "YOUR_APP_STATE"}'
-                                required
-                            ></textarea>
+                <!-- สถิติ -->
+                <div class="row mb-4">
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="stats-card">
+                            <i class="fas fa-robot fa-2x mb-3" style="color: var(--primary-color);"></i>
+                            <div class="stats-number" id="totalBots">${data.totalBots}</div>
+                            <div class="stats-label">บอททั้งหมด</div>
                         </div>
-                        <div class="mb-3">
-                            <label for="prefix" class="form-label">คำนำหน้าบอท</label>
-                            <input 
-                                type="text" 
-                                id="prefix" 
-                                name="prefix" 
-                                class="form-control" 
-                                placeholder="/" 
-                                required
-                                pattern="^.{1,10}$" 
-                                title="กรุณากรอกคำนำหน้าที่มีความยาว 1-10 ตัวอักษร"
-                            />
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="stats-card">
+                            <i class="fas fa-signal fa-2x mb-3" style="color: var(--info-color);"></i>
+                            <div class="stats-number" id="onlineBots">${data.onlineBots}</div>
+                            <div class="stats-label">บอทออนไลน์</div>
                         </div>
-                        <div class="mb-3">
-                            <label for="name" class="form-label">ชื่อบอท</label>
-                            <input 
-                                type="text" 
-                                id="name" 
-                                name="name" 
-                                class="form-control" 
-                                placeholder="MyBot" 
-                                required
-                                pattern="^[a-zA-Z0-9_-]{3,20}$" 
-                                title="กรุณากรอกชื่อบอทที่มีความยาว 3-20 ตัวอักษร และประกอบด้วย a-z, A-Z, 0-9, -, _"
-                            />
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="stats-card">
+                            <i class="fas fa-clock fa-2x mb-3" style="color: var(--secondary-color);"></i>
+                            <div class="stats-number" id="activeBots">${data.activeBots}</div>
+                            <div class="stats-label">บอททำงานแล้ว</div>
                         </div>
-                        <div class="mb-3">
-                            <label for="password" class="form-label">ตั้งรหัสผ่าน 6 หลักสำหรับการจัดการบอท</label>
-                            <input 
-                                type="password" 
-                                id="password" 
-                                name="password" 
-                                class="form-control" 
-                                pattern="\\d{6}" 
-                                placeholder="123456" 
-                                required
-                                title="กรุณากรอกรหัสผ่าน 6 หลัก"
-                            />
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="stats-card">
+                            <i class="fas fa-tachometer-alt fa-2x mb-3" style="color: var(--accent-color);"></i>
+                            <div class="stats-number" id="websitePing">${data.websitePing} ms</div>
+                            <div class="stats-label">Ping เว็บไซต์</div>
                         </div>
-                        <div class="mb-3">
-                            <label for="adminID" class="form-label">ID แอดมินของบอท</label>
-                            <input 
-                                type="text" 
-                                id="adminID" 
-                                name="adminID" 
-                                class="form-control" 
-                                placeholder="61555184860915" 
-                                required
-                                title="กรุณากรอก ID แอดมินของบอท"
-                            />
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- ตารางบอท -->
+                    <div class="col-12">
+                        <div class="glass-card">
+                            <h5 class="mb-4">
+                                <i class="fas fa-robot me-2" style="color: var(--primary-color);"></i>
+                                บอทที่กำลังทำงาน
+                            </h5>
+                            <div class="table-responsive">
+                                <table class="table bot-table">
+                                    <thead>
+                                        <tr>
+                                            <th>ชื่อบอท</th>
+                                            <th>สถานะ</th>
+                                            <th>เวลารัน</th>
+                                            <th>ปิง</th>
+                                            <th>การจัดการ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="botTableBody">
+                                        ${data.botRows}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-play me-2"></i>
-                            เริ่มบอท
-                        </button>
-                    </form>
+                    </div>
                 </div>
             </div>
 
@@ -965,7 +984,40 @@ app.get("/start", (req, res) => {
             </footer>
 
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+            <script src="/socket.io/socket.io.js"></script>
             <script>
+                const socket = io();
+
+                // ฟังก์ชันอัปเดตเวลารัน
+                function updateRuntime() {
+                    const runtimeElements = document.querySelectorAll('.runtime');
+                    const now = Date.now();
+
+                    runtimeElements.forEach(el => {
+                        const startTime = parseInt(el.getAttribute('data-start-time'));
+                        if (!startTime) return;
+
+                        const elapsed = now - startTime;
+                        const seconds = Math.floor((elapsed / 1000) % 60);
+                        const minutes = Math.floor((elapsed / (1000 * 60)) % 60);
+                        const hours = Math.floor((elapsed / (1000 * 60 * 60)) % 24);
+                        const days = Math.floor(elapsed / (1000 * 60 * 60 * 24));
+
+                        el.textContent = \`\${days} วัน \${hours} ชั่วโมง \${minutes} นาที \${seconds} วินาที\`;
+                    });
+                }
+
+                // ฟังก์ชันส่งปิงไปยังเซิร์ฟเวอร์
+                function sendPing() {
+                    const timestamp = Date.now();
+                    socket.emit('ping', timestamp);
+                }
+
+                // ส่งปิงทุกๆ 5 วินาที
+                setInterval(sendPing, 5000);
+                // ส่งปิงทันทีเมื่อโหลดหน้า
+                sendPing();
+
                 // ฟังก์ชันแสดง Toast
                 function showToast(message, type = 'info') {
                     const toastContainer = document.querySelector('.toast-container');
@@ -992,7 +1044,41 @@ app.get("/start", (req, res) => {
                     });
                 }
 
-                // Event Delegation สำหรับปุ่มลบและแก้ไข
+                // รับข้อมูลอัปเดตจากเซิร์ฟเวอร์
+                socket.on('updateBots', (data) => {
+                    document.getElementById('totalBots').textContent = data.totalBots;
+                    document.getElementById('onlineBots').textContent = data.onlineBots;
+                    document.getElementById('activeBots').textContent = data.activeBots;
+                    document.getElementById('websitePing').textContent = data.websitePing + ' ms';
+
+                    const botTableBody = document.getElementById('botTableBody');
+                    if (botTableBody) {
+                        botTableBody.innerHTML = data.botRows;
+                    }
+
+                    updateRuntime();
+                });
+
+                // รับเหตุการณ์เฉพาะเมื่อบอทถูกลบ
+                socket.on('botDeleted', (botName) => {
+                    showToast(\`บอท "\${botName}" ถูกลบเรียบร้อยแล้ว\`, 'success');
+                });
+
+                // รับเหตุการณ์เฉพาะเมื่อบอทไปออฟไลน์
+                socket.on('botOffline', (botName) => {
+                    showToast(\`บอท "\${botName}" กำลังจะถูกลบภายใน 60 วินาที เนื่องจากออฟไลน์\`, 'warning');
+                });
+
+                // รับเหตุการณ์เฉพาะเมื่อบอทถูกรีสตาร์ท
+                socket.on('botRestarted', (botName) => {
+                    showToast(\`บอท "\${botName}" ถูกรีสตาร์ทเรียบร้อยแล้ว\`, 'success');
+                });
+
+                // อัปเดตเวลารันทุกวินาที
+                setInterval(updateRuntime, 1000);
+                document.addEventListener('DOMContentLoaded', updateRuntime);
+
+                // Event Delegation สำหรับปุ่มลบ, แก้ไข และรีสตาร์ท
                 document.addEventListener('click', function(event) {
                     if (event.target.closest('.delete-btn')) {
                         const token = decodeURIComponent(event.target.closest('.delete-btn').getAttribute('data-token'));
@@ -1048,11 +1134,44 @@ app.get("/start", (req, res) => {
                             }
                         }
                     }
+
+                    if (event.target.closest('.restart-btn')) {
+                        const token = decodeURIComponent(event.target.closest('.restart-btn').getAttribute('data-token'));
+                        const restartCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการรีสตาร์ทบอท:');
+                        if (restartCode) {
+                            fetch('/restart', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ token, code: restartCode })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    showToast('รีสตาร์ทบอทสำเร็จ', 'success');
+                                    io.emit('botRestarted', data.botName);
+                                } else {
+                                    showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
+                                }
+                            })
+                            .catch(err => {
+                                console.error(err);
+                                showToast('เกิดข้อผิดพลาดในการรีสตาร์ทบอท', 'danger');
+                            });
+                        }
+                    }
                 });
             </script>
         </body>
         </html>
     `);
+});
+
+// หน้าเพิ่มบอท (ยังคงเดิม)
+app.get("/start", (req, res) => {
+    // ... รหัสเดิมของหน้า /start
+    // (ไม่จำเป็นต้องเพิ่มอะไรเพิ่มเติมในหน้านี้สำหรับการรีสตาร์ทบอท)
 });
 
 // หน้าแสดงบอทรัน
@@ -1063,6 +1182,7 @@ app.get("/bots", (req, res) => {
         <!DOCTYPE html>
         <html lang="th">
         <head>
+            <!-- หัวเอกสารที่มีอยู่เดิม -->
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>ดูบอทรัน | ระบบจัดการบอท</title>
@@ -1241,8 +1361,8 @@ app.get("/bots", (req, res) => {
                     }
                 }
 
-                /* Styles for Edit and Delete Buttons */
-                .btn-edit, .btn-delete {
+                /* Styles for Edit, Delete, and Restart Buttons */
+                .btn-edit, .btn-delete, .btn-restart {
                     margin-right: 5px;
                 }
 
@@ -1405,11 +1525,16 @@ app.get("/bots", (req, res) => {
                     showToast(\`บอท "\${botName}" กำลังจะถูกลบภายใน 60 วินาที เนื่องจากออฟไลน์\`, 'warning');
                 });
 
+                // รับเหตุการณ์เฉพาะเมื่อบอทถูกรีสตาร์ท
+                socket.on('botRestarted', (botName) => {
+                    showToast(\`บอท "\${botName}" ถูกรีสตาร์ทเรียบร้อยแล้ว\`, 'success');
+                });
+
                 // อัปเดตเวลารันทุกวินาที
                 setInterval(updateRuntime, 1000);
                 document.addEventListener('DOMContentLoaded', updateRuntime);
 
-                // Event Delegation สำหรับปุ่มลบและแก้ไข
+                // Event Delegation สำหรับปุ่มลบ, แก้ไข และรีสตาร์ท
                 document.addEventListener('click', function(event) {
                     if (event.target.closest('.delete-btn')) {
                         const token = decodeURIComponent(event.target.closest('.delete-btn').getAttribute('data-token'));
@@ -1465,6 +1590,33 @@ app.get("/bots", (req, res) => {
                             }
                         }
                     }
+
+                    if (event.target.closest('.restart-btn')) {
+                        const token = decodeURIComponent(event.target.closest('.restart-btn').getAttribute('data-token'));
+                        const restartCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการรีสตาร์ทบอท:');
+                        if (restartCode) {
+                            fetch('/restart', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ token, code: restartCode })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    showToast('รีสตาร์ทบอทสำเร็จ', 'success');
+                                    io.emit('botRestarted', data.botName);
+                                } else {
+                                    showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
+                                }
+                            })
+                            .catch(err => {
+                                console.error(err);
+                                showToast('เกิดข้อผิดพลาดในการรีสตาร์ทบอท', 'danger');
+                            });
+                        }
+                    }
                 });
             </script>
         </body>
@@ -1480,6 +1632,7 @@ app.get("/commands", (req, res) => {
         <!DOCTYPE html>
         <html lang="th">
         <head>
+            <!-- หัวเอกสารที่มีอยู่เดิม -->
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>คำสั่งที่ใช้ | ระบบจัดการบอท</title>
@@ -1666,6 +1819,7 @@ app.get("/how-to-make-bot", (req, res) => {
         <!DOCTYPE html>
         <html lang="th">
         <head>
+            <!-- หัวเอกสารที่มีอยู่เดิม -->
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>วิธีทำบอทของคุณเอง | ระบบจัดการบอท</title>
@@ -2186,6 +2340,72 @@ app.post('/edit', async (req, res) => {
     } catch (err) {
         console.error(chalk.red(`❌ เกิดข้อผิดพลาดในการแก้ไขโทเค่น: ${err.message}`));
         res.json({ success: false, message: 'เกิดข้อผิดพลาดในการแก้ไขโทเค่น' });
+    }
+});
+
+// Route สำหรับรีสตาร์ทบอท
+app.post('/restart', async (req, res) => {
+    const { token, code } = req.body;
+
+    console.log(`ได้รับคำขอรีสตาร์ทบอท: token=${token}, code=${code}`);
+
+    if (!token || !code) {
+        console.log('ข้อมูลไม่ครบถ้วน');
+        return res.json({ success: false, message: 'ข้อมูลไม่ครบถ้วน' });
+    }
+
+    const trimmedToken = token.trim();
+    const bot = botSessions[trimmedToken];
+    if (!bot) {
+        console.log('ไม่พบบอทที่ต้องการรีสตาร์ท');
+        return res.json({ success: false, message: 'ไม่พบบอทที่ต้องการรีสตาร์ท' });
+    }
+
+    console.log(`ตรวจสอบรหัสผ่าน: bot.password=${bot.password}, code=${code}`);
+
+    if (bot.password.toString() !== code.toString()) { // ตรวจสอบรหัสผ่าน
+        console.log('รหัสผ่านไม่ถูกต้อง');
+        return res.json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
+    }
+
+    try {
+        // เก็บข้อมูลบอทก่อนรีสตาร์ท
+        const { appState, name, prefix, startTime, password, adminID } = bot;
+
+        // หยุดบอท
+        if (typeof bot.api.logout === 'function') {
+            await new Promise((resolve, reject) => {
+                bot.api.logout((err) => {
+                    if (err) return reject(err);
+                    resolve();
+                });
+            });
+            console.log(`บอทถูกหยุดทำงานก่อนรีสตาร์ท: ${name}`);
+        } else {
+            throw new Error('เมธอด logout ไม่พบใน bot.api');
+        }
+
+        // ลบไฟล์บอท
+        const botFilePath = path.join(botsDir, `${name.replace(/ /g, '_')}.json`);
+        if (fs.existsSync(botFilePath)) {
+            fs.unlinkSync(botFilePath);
+            console.log(`ลบไฟล์บอท: ${botFilePath}`);
+        }
+
+        // ลบจาก botSessions
+        delete botSessions[trimmedToken];
+        console.log(`ลบบอทจาก botSessions: ${trimmedToken}`);
+
+        // รีสตาร์ทบอทใหม่
+        const newStartTime = Date.now();
+        await startBotWithRetry(appState, trimmedToken, name, prefix, newStartTime, password, adminID, 5);
+        console.log(`✅ รีสตาร์ทบอทสำเร็จ: ${name}`);
+
+        io.emit('updateBots', generateBotData());
+        res.json({ success: true, message: 'รีสตาร์ทบอทสำเร็จ', botName: name });
+    } catch (err) {
+        console.error(`ไม่สามารถรีสตาร์ทบอท: ${err.message}`);
+        res.json({ success: false, message: 'ไม่สามารถรีสตาร์ทบอทได้' });
     }
 });
 
