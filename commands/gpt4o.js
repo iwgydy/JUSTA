@@ -37,17 +37,34 @@ module.exports = {
 
       // ตรวจสอบว่าเป็นคำสั่งสร้างภาพ
       if (aiResponse.includes("TOOL_CALL: generateImage")) {
-        // ใช้ regex เพื่อดึง URL ภาพจากข้อความในรูปแบบ Markdown
-        const urlMatch = aiResponse.match(/!.*?(https?:\/\/[^]+)/);
-        const imageUrl = urlMatch ? urlMatch[1] : null;
-        const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+        let imageUrl = null;
 
+        // พยายามจับคู่ URL ภาพจากรูปแบบ Markdown
+        const markdownMatch = aiResponse.match(/!.*?(https?:\/\/[^]+)/);
+        if (markdownMatch && markdownMatch[1]) {
+          imageUrl = markdownMatch[1];
+        }
+
+        // ถ้าไม่พบในรูปแบบ Markdown ให้ลองจับคู่ URL อื่นๆ ที่เป็นภาพ
+        if (!imageUrl) {
+          const urlMatch = aiResponse.match(/https?:\/\/[^\s)]+(?:\.png|\.jpg|\.jpeg|\.gif)/i);
+          if (urlMatch && urlMatch[0]) {
+            imageUrl = urlMatch[0];
+          }
+        }
+
+        const duration = ((Date.now() - startTime) / 1000).toFixed(2);
         console.log("Image URL:", imageUrl);
 
         if (imageUrl) {
           try {
-            // ตรวจสอบว่า URL สามารถเข้าถึงได้
-            const imageResponse = await axios.get(imageUrl, { responseType: "stream" });
+            // เพิ่ม header 'User-Agent' เพื่อป้องกันการบล็อกจากบางเซิร์ฟเวอร์
+            const imageResponse = await axios.get(imageUrl, { 
+              responseType: "stream",
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36'
+              }
+            });
 
             if (imageResponse.status !== 200) {
               throw new Error(`Image URL responded with status code ${imageResponse.status}`);
