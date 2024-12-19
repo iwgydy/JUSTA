@@ -716,7 +716,7 @@ app.get("/", (req, res) => {
                             .then(data => {
                                 if (data.success) {
                                     showToast('รีสตาร์ทบอทสำเร็จ', 'success');
-                                    socket.emit('updateBots', generateBotData()); // อัปเดตข้อมูลบอท
+                                    // socket.emit('updateBots', generateBotData()); // อัปเดตข้อมูลบอท
                                     // socket.emit('botRestarted', data.botName); // ส่งเหตุการณ์รีสตาร์ทบอท
                                 } else {
                                     showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
@@ -1564,7 +1564,7 @@ app.get("/bots", (req, res) => {
                             .then(data => {
                                 if (data.success) {
                                     showToast('รีสตาร์ทบอทสำเร็จ', 'success');
-                                    socket.emit('updateBots', generateBotData()); // อัปเดตข้อมูลบอท
+                                    // socket.emit('updateBots', generateBotData()); // อัปเดตข้อมูลบอท
                                     // socket.emit('botRestarted', data.botName); // ส่งเหตุการณ์รีสตาร์ทบอท
                                 } else {
                                     showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
@@ -2431,6 +2431,10 @@ global.middleware.push(async (api, event, next) => {
     const { threadID, senderID } = event;
     global.botStatus = global.botStatus || {};
 
+    // เพิ่มล็อกเพื่อช่วยในการ Debug
+    console.log(`ตรวจสอบสถานะบอทสำหรับกลุ่ม ${threadID}: ${global.botStatus[threadID] === false ? 'ปิด' : 'เปิด'}`);
+    console.log(`ตรวจสอบสิทธิ์ผู้ส่ง: ${senderID}`);
+
     // ตรวจสอบสถานะบอทในกลุ่ม
     if (global.botStatus[threadID] === false) {
         // ตรวจสอบว่าผู้ส่งเป็นแอดมินของบอทใดบ้าง
@@ -2439,15 +2443,17 @@ global.middleware.push(async (api, event, next) => {
         for (const token in botSessions) {
             if (botSessions[token].adminID === senderID) {
                 isAdmin = true;
+                console.log(`ผู้ส่ง ${senderID} เป็นแอดมินของบอท: ${botSessions[token].name}`);
                 break;
             }
         }
 
         if (!isAdmin) {
+            console.log(`ผู้ส่ง ${senderID} ไม่ใช่แอดมินและบอทถูกปิดในกลุ่ม ${threadID}`);
             // ถ้าไม่ใช่แอดมิน, ไม่ตอบกลับอะไรเลย
             return;
         }
-        // ถ้าเป็นแอดมิน, ให้ดำเนินการคำสั่งต่อ
+        console.log(`ผู้ส่ง ${senderID} เป็นแอดมิน, ให้ดำเนินการคำสั่งต่อ`);
     }
 
     // หากบอทเปิดการทำงาน หรือผู้ส่งเป็นแอดมินเมื่อบอทถูกปิด ให้ดำเนินการคำสั่งต่อ
