@@ -1,97 +1,82 @@
 const axios = require("axios");
+const fs = require("fs");
+const path = require("path");
 
 module.exports = {
-  config: {
-    name: "gpt4o",
-    description: "โต้ตอบกับ GPT-4o หรือสร้างภาพตามคำสั่ง",
-    usage: "/gpt4o [ข้อความหรือคำสั่ง]",
-    aliases: ["ai", "gpt"],
-  },
-
-  run: async ({ api, event, args }) => {
-    const { threadID, messageID, senderID } = event;
-    const query = args.join(" ");
-
-    if (!query) {
-      return api.sendMessage(
-        "❗ กรุณาป้อนข้อความหรือคำสั่งที่ต้องการถาม AI\n\nตัวอย่าง: /gpt4o สวัสดี",
-        threadID,
-        messageID
-      );
-    }
-
-    const startTime = Date.now();
-
-    try {
-      // เรียก API GPT-4o
-      const response = await axios.get("https://kaiz-apis.gleeze.com/api/gpt-4o-pro", {
-        params: {
-          q: query,
-          uid: senderID,
-          imageUrl: encodeURIComponent(query), // ส่งคำสั่งสร้างภาพ
-        },
-      });
-
-      const aiResponse = response.data.response;
-      console.log("AI Response Full:", aiResponse);
-
-      // ตรวจสอบว่าเป็นคำสั่งสร้างภาพ
-      if (aiResponse.includes("TOOL_CALL: generateImage")) {
-        let imageUrl = null;
-
-        // พยายามจับคู่ URL ภาพจากรูปแบบ Markdown
-        const markdownMatch = aiResponse.match(/!.*?(https?:\/\/[^]+)/);
-        if (markdownMatch && markdownMatch[1]) {
-          imageUrl = markdownMatch[1];
+    config: {
+        name: "gpt4o",
+        description: "คุยกับ GPT-4O และสร้างภาพจากข้อความพร้อมตอบกลับอย่างเท่",
+    },
+    run: async ({ api, event, args }) => {
+        const query = args.join(" ");
+        if (!query) {
+            return api.sendMessage("⛔ กรุณากรอกข้อความที่ต้องการถาม GPT-4O", event.threadID);
         }
 
-        // ถ้าไม่พบในรูปแบบ Markdown ให้ลองจับคู่ URL อื่นๆ ที่เป็นภาพ
-        if (!imageUrl) {
-          const urlMatch = aiResponse.match(/https?:\/\/[^\s)]+(?:\.png|\.jpg|\.jpeg|\.gif)/i);
-          if (urlMatch && urlMatch[0]) {
-            imageUrl = urlMatch[0];
-          }
+        const apiUrl = `https://kaiz-apis.gleeze.com/api/gpt-4o-pro?q=${encodeURIComponent(query)}&uid=1&imageUrl=`;
+        const startTime = Date.now(); // เริ่มจับเวลาการประมวลผล
+
+        // แจ้งสถานะเริ่มต้น
+        const statusMsg = await api.sendMessage("⚙️ กำลังดำเนินการ... โปรดรอสักครู่ ⏳", event.threadID);
+
+        try {
+            const response = await axios.get(apiUrl);
+            const data = response.data;
+
+            const endTime = Date.now(); // จับเวลาหลังการประมวลผลเสร็จสิ้น
+            const processingTime = ((endTime - startTime) / 1000).toFixed(2); // คำนวณเวลาเป็นวินาที
+
+            const rightAlignedTime = `🕒 ${processingTime}`.padStart(25, " "); // จัดข้อความเวลาให้อยู่ด้านขวา
+
+            if (data && data.response) {
+                const imageRegex = /\!.*?(.*?)/;
+                const match = imageRegex.exec(data.response);
+
+                if (match && match[1]) {
+                    const imageUrl = match[1];
+                    const imagePath = path.join(__dirname, `../../temp/${Date.now()}.jpg`);
+
+                    // ดาวน์โหลดรูปภาพ
+                    const writer = fs.createWriteStream(imagePath);
+                    const imageResponse = await axios({
+                        url: imageUrl,
+                        method: "GET",
+                        responseType: "stream",
+                    });
+
+                    imageResponse.data.pipe(writer);
+
+                    writer.on("finish", () => {
+                        api.sendMessage({
+                            body: `${rightAlignedTime}\n\n✨ GPT-4O ตอบกลับ:\n${data.response.split("\n\n")[0]}`,
+                            attachment: fs.createReadStream(imagePath),
+                        }, event.threadID, () => {
+                            fs.unlinkSync(imagePath); // ลบไฟล์หลังส่ง
+                        });
+
+                        api.deleteMessage(statusMsg.messageID); // ลบข้อความสถานะ
+                    });
+
+                    writer.on("error", (error) => {
+                        console.error("เกิดข้อผิดพลาดในการดาวน์โหลดรูปภาพ:", error);
+                        api.sendMessage(`${rightAlignedTime}\n\n❗ ไม่สามารถดาวน์โหลดรูปภาพได้`, event.threadID);
+                        api.deleteMessage(statusMsg.messageID); // ลบข้อความสถานะ
+                    });
+                } else {
+                    api.sendMessage(`${rightAlignedTime}\n\n✨ GPT-4O ตอบกลับ:\n${data.response}`, event.threadID);
+                    api.deleteMessage(statusMsg.messageID); // ลบข้อความสถานะ
+                }
+            } else {
+                api.sendMessage(`${rightAlignedTime}\n\n❗ ไม่สามารถรับการตอบกลับจาก GPT-4O ได้ในขณะนี้`, event.threadID);
+                api.deleteMessage(statusMsg.messageID); // ลบข้อความสถานะ
+            }
+        } catch (error) {
+            const endTime = Date.now(); // จับเวลาหลังจากเกิดข้อผิดพลาด
+            const processingTime = ((endTime - startTime) / 1000).toFixed(2); // คำนวณเวลาเป็นวินาที
+            const rightAlignedTime = `🕒 ${processingTime}`.padStart(25, " "); // จัดข้อความเวลาให้อยู่ด้านขวา
+            console.error("เกิดข้อผิดพลาดในการเชื่อมต่อกับ API:", error);
+            api.sendMessage(`${rightAlignedTime}\n\n❗ ขออภัย, เกิดข้อผิดพลาดในการเชื่อมต่อกับ GPT-4O`, event.threadID);
+            api.deleteMessage(statusMsg.messageID); // ลบข้อความสถานะ
         }
-
-        const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-        console.log("Image URL:", imageUrl);
-
-        if (imageUrl) {
-          // ส่งภาพผ่าน URL โดยตรง
-          return api.sendMessage(
-            {
-              body: `✅ สร้างภาพสำเร็จ!\n📂 ใช้เวลาทั้งหมด: ${duration} วินาที`,
-              attachment: imageUrl, // ส่ง URL เป็นแนบ
-            },
-            threadID,
-            messageID
-          );
-        } else {
-          // กรณีไม่พบ URL ในผลลัพธ์
-          return api.sendMessage(
-            "❗ เกิดข้อผิดพลาด: ไม่พบ URL ของภาพในผลลัพธ์ กรุณาลองใหม่อีกครั้ง",
-            threadID,
-            messageID
-          );
-        }
-      } else {
-        const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-
-        // ส่งข้อความตอบกลับ
-        return api.sendMessage(
-          `💬 AI ตอบกลับ:\n${aiResponse}\n\n⌛ ใช้เวลาทั้งหมด: ${duration} วินาที`,
-          threadID,
-          messageID
-        );
-      }
-    } catch (error) {
-      console.error("❌ เกิดข้อผิดพลาดในการเรียก API:", error.message);
-
-      return api.sendMessage(
-        "❗ เกิดข้อผิดพลาดในการติดต่อกับ AI กรุณาลองใหม่อีกครั้ง",
-        threadID,
-        messageID
-      );
-    }
-  },
+    },
 };
