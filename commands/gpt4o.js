@@ -48,7 +48,7 @@ module.exports = {
 
                     writer.on("finish", () => {
                         api.sendMessage({
-                            body: `${rightAlignedTime}\n\n✨ GPT-4O ตอบกลับ:\nภาพที่สร้างขึ้นจากข้อความของคุณ`,
+                            body: `${rightAlignedTime}`,
                             attachment: fs.createReadStream(imagePath),
                         }, event.threadID, () => {
                             fs.unlinkSync(imagePath); // ลบไฟล์หลังส่ง
@@ -63,7 +63,8 @@ module.exports = {
                         api.deleteMessage(statusMsg.messageID); // ลบข้อความสถานะ
                     });
                 } else {
-                    api.sendMessage(`${rightAlignedTime}\n\n✨ GPT-4O ตอบกลับ:\n${data.response}`, event.threadID);
+                    const cleanedResponse = data.response.replace(/TOOL_CALL:.*?\n/g, "").trim();
+                    api.sendMessage(`${rightAlignedTime}\n\n✨ GPT-4O ตอบกลับ:\n${cleanedResponse}`, event.threadID);
                     api.deleteMessage(statusMsg.messageID); // ลบข้อความสถานะ
                 }
             } else {
