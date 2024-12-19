@@ -31,8 +31,13 @@ module.exports = {
           return api.sendMessage("❗ เกิดข้อผิดพลาด: ไม่พบ URL ของภาพในผลลัพธ์", threadID, messageID);
         }
 
-        // ตรวจสอบว่า URL ใช้งานได้หรือไม่
+        // ตรวจสอบ URL ของภาพ
         try {
+          const response = await axios.head(imageUrl);
+          if (response.status !== 200) {
+            throw new Error("URL ใช้งานไม่ได้");
+          }
+
           const imageStream = await axios({
             url: imageUrl,
             responseType: "stream",
