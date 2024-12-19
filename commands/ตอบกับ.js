@@ -6,37 +6,45 @@ module.exports.config = {
   version: "1.0.0",
   hasPermssion: 0,
   credits: "Your Name",
-  description: "ตอบกลับภาพที่คุณส่งหรือภาพที่คุณตอบกลับ",
+  description: "ตอบกลับภาพและส่งภาพกลับ",
   commandCategory: "utility",
-  usages: "[คำอธิบาย]",
+  usages: "",
   cooldowns: 5,
 };
 
-module.exports.run = async function ({ api, event, args }) {
+module.exports.run = async function ({ api, event }) {
   const { messageReply, threadID, messageID } = event;
 
-  // ตรวจสอบว่าเป็นการตอบกลับภาพหรือไม่
-  if (!messageReply || !messageReply.attachments || messageReply.attachments[0].type !== "photo") {
+  // ตรวจสอบว่ามีการตอบกลับข้อความหรือไม่
+  if (!messageReply) {
     return api.sendMessage("❗ กรุณาตอบกลับภาพที่ต้องการ", threadID, messageID);
   }
 
-  try {
-    const imageUrl = messageReply.attachments[0].url;
+  // ตรวจสอบว่าเป็นภาพหรือไม่
+  if (!messageReply.attachments || messageReply.attachments[0].type !== "photo") {
+    return api.sendMessage("❗ กรุณาตอบกลับภาพเท่านั้น", threadID, messageID);
+  }
 
-    // ดาวน์โหลดภาพ
+  try {
+    const imageUrl = messageReply.attachments[0].url; // URL ของภาพที่ตอบกลับ
+
+    // ดาวน์โหลดภาพจาก URL
     const response = await axios.get(imageUrl, { responseType: "arraybuffer" });
     const imagePath = `${__dirname}/cache/replied_image.jpg`;
     fs.writeFileSync(imagePath, Buffer.from(response.data, "binary"));
 
-    // ตอบกลับด้วยภาพเดิม
+    // ส่งภาพกลับ
     return api.sendMessage(
-      { body: "✅ นี่คือภาพที่คุณตอบกลับ!", attachment: fs.createReadStream(imagePath) },
+      {
+        body: "✅ นี่คือภาพที่คุณตอบกลับ!",
+        attachment: fs.createReadStream(imagePath),
+      },
       threadID,
-      () => fs.unlinkSync(imagePath),
+      () => fs.unlinkSync(imagePath), // ลบภาพหลังจากส่งเสร็จ
       messageID
     );
   } catch (error) {
-    console.error("❌ เกิดข้อผิดพลาด:", error);
-    return api.sendMessage("❗ ไม่สามารถดึงภาพได้ กรุณาลองใหม่อีกครั้ง", threadID, messageID);
+    console.error("❌ เกิดข้อผิดพลาดในการประมวลผลภาพ:", error);
+    return api.sendMessage("❗ ไม่สามารถประมวลผลภาพได้ กรุณาลองใหม่อีกครั้ง", threadID, messageID);
   }
 };
