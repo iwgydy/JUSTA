@@ -1117,11 +1117,6 @@ app.get("/start", (req, res) => {
     `);
 });
 
-// หน้าเพิ่มบอท (ยังไม่แน่ใจว่าคุณต้องการให้เป็น active หรือไม่ แต่ตามโค้ดเดิม)
-app.get("/start", (req, res) => {
-    // ... โค้ดเดิมที่ไม่เปลี่ยนแปลง
-});
-
 // หน้าแสดงบอทรัน
 app.get("/bots", (req, res) => {
     const data = generateBotData(); // เรียกใช้ generateBotData()
@@ -1991,8 +1986,7 @@ async function startBotWithRetry(appState, token, name, prefix, startTime, passw
             console.error(chalk.red(`❌ ลองเริ่มบอทครั้งที่ ${attempt} ล้มเหลว: ${err.message}`));
             if (attempt >= retries) {
                 console.error(chalk.red(`❌ บอท ${name} ล้มเหลวในการล็อกอินหลังจากลอง ${retries} ครั้ง`));
-                await deleteBot(token);
-                io.emit('botDeleted', name);
+                await deleteBot(token, false); // ลบบอทโดยไม่ต้อง emit 'botDeleted' อีกครั้ง
                 throw new Error(`บอท ${name} ล้มเหลวในการล็อกอิน`);
             }
             // รอ 2 วินาทีก่อนลองใหม่
@@ -2049,8 +2043,7 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
                     // ตั้งเวลา 60 วินาทีสำหรับการลบบอทเมื่อออฟไลน์
                     if (!botSessions[token].deletionTimeout) {
                         botSessions[token].deletionTimeout = setTimeout(() => {
-                            deleteBot(token);
-                            io.emit('botDeleted', botSessions[token].name);
+                            deleteBot(token, true);
                         }, 60000); // 60,000 มิลลิวินาที = 60 วินาที
                         console.log(chalk.yellow(`⌛ บอท ${name} จะถูกลบในอีก 60 วินาที`));
                     }
@@ -2124,40 +2117,29 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
 }
 
 // ฟังก์ชันสำหรับลบบอท
-function deleteBot(token) {
+function deleteBot(token, emitDeleted = true) {
     const bot = botSessions[token];
     if (!bot) {
         console.log(chalk.red(`❌ ไม่พบบอทที่ต้องการลบ: ${token}`));
         return;
     }
 
-    const { api, name } = bot;
+    const { name } = bot;
 
-    // หยุดการทำงานของบอท
-    if (typeof api.logout === 'function') {
-        api.logout((err) => {
-            if (err) {
-                console.error(chalk.red(`❌ ไม่สามารถหยุดบอท: ${name}, error=${err.message}`));
-            } else {
-                console.log(chalk.green(`✅ หยุดบอทเรียบร้อย: ${name}`));
-            }
+    // ลบไฟล์บอท
+    const botFilePath = path.join(botsDir, `${name.replace(/ /g, '_')}.json`);
+    if (fs.existsSync(botFilePath)) {
+        fs.unlinkSync(botFilePath);
+        console.log(chalk.green(`✅ ลบไฟล์บอท: ${botFilePath}`));
+    }
 
-            // ลบไฟล์บอท
-            const botFilePath = path.join(botsDir, `${name.replace(/ /g, '_')}.json`);
-            if (fs.existsSync(botFilePath)) {
-                fs.unlinkSync(botFilePath);
-                console.log(chalk.green(`✅ ลบไฟล์บอท: ${botFilePath}`));
-            }
+    // ลบจาก botSessions
+    delete botSessions[token];
+    console.log(chalk.green(`✅ ลบบอทจากระบบ: ${token}`));
 
-            // ลบจาก botSessions
-            delete botSessions[token];
-            console.log(chalk.green(`✅ ลบบอทจากระบบ: ${token}`));
-
-            io.emit('updateBots', generateBotData());
-            io.emit('botDeleted', name);
-        });
-    } else {
-        console.error(chalk.red(`❌ เมธอด logout ไม่พบใน bot.api สำหรับบอท: ${name}`));
+    if (emitDeleted) {
+        io.emit('updateBots', generateBotData());
+        io.emit('botDeleted', name);
     }
 }
 
@@ -2188,32 +2170,8 @@ app.post('/delete', async (req, res) => {
 
     // หยุดการทำงานของบอทและลบทันที
     try {
-        // ตรวจสอบว่า bot.api มีเมธอด logout หรือไม่
-        if (typeof bot.api.logout === 'function') {
-            await new Promise((resolve, reject) => {
-                bot.api.logout((err) => {
-                    if (err) return reject(err);
-                    resolve();
-                });
-            });
-            console.log(`บอทถูกหยุดทำงาน: ${bot.name}`);
-        } else {
-            throw new Error('เมธอด logout ไม่พบใน bot.api');
-        }
-
-        // ลบไฟล์บอท
-        const botFilePath = path.join(botsDir, `${bot.name.replace(/ /g, '_')}.json`);
-        if (fs.existsSync(botFilePath)) {
-            fs.unlinkSync(botFilePath);
-            console.log(`ลบไฟล์บอท: ${botFilePath}`);
-        }
-
-        // ลบจาก botSessions
-        delete botSessions[trimmedToken];
-        console.log(`ลบบอทจาก botSessions: ${trimmedToken}`);
-
-        io.emit('updateBots', generateBotData());
-        io.emit('botDeleted', bot.name);
+        // ไม่พึ่งพาเมธอด logout เพื่อลบบอทอย่างถูกต้อง
+        deleteBot(trimmedToken, true);
         res.json({ success: true, message: 'ลบบอทสำเร็จ' });
     } catch (err) {
         console.error(`ไม่สามารถหยุดบอท: ${err.message}`);
@@ -2245,38 +2203,12 @@ app.post('/edit', async (req, res) => {
     }
 
     try {
-        // หยุดการทำงานของบอท
-        if (typeof bot.api.logout === 'function') {
-            await new Promise((resolve, reject) => {
-                bot.api.logout((err) => {
-                    if (err) return reject(err);
-                    resolve();
-                });
-            });
-            console.log(`หยุดบอท: ${bot.name}`);
-        } else {
-            throw new Error('เมธอด logout ไม่พบใน bot.api');
-        }
-
-        // ลบไฟล์บอทเก่า
-        const oldBotFilePath = path.join(botsDir, `${bot.name.replace(/ /g, '_')}.json`);
-        if (fs.existsSync(oldBotFilePath)) {
-            fs.unlinkSync(oldBotFilePath);
-            console.log(`ลบไฟล์บอทเก่า: ${oldBotFilePath}`);
-        }
-
-        // ลบจาก botSessions
-        delete botSessions[trimmedToken];
-        console.log(`ลบบอทจาก botSessions: ${trimmedToken}`);
+        // ลบบอทเก่า
+        deleteBot(trimmedToken, false);
 
         // เริ่มต้นบอทใหม่ด้วยโทเค่นใหม่และรหัสผ่านใหม่
+        const newAppState = JSON.parse(newToken); // ตรวจสอบว่า newToken เป็น JSON string
         const newPassword = generate6DigitCode();
-        let newAppState;
-        try {
-            newAppState = JSON.parse(newToken); // ตรวจสอบว่า newToken เป็น JSON string
-        } catch (parseError) {
-            throw new Error('newToken ไม่เป็น JSON ที่ถูกต้อง');
-        }
         const startTime = Date.now();
         await startBotWithRetry(newAppState, trimmedNewToken, bot.name, bot.prefix, startTime, newPassword, bot.adminID, 5); // ปรับ retries เป็น 5
 
@@ -2315,25 +2247,13 @@ app.post('/restart', async (req, res) => {
     }
 
     try {
-        const { api, name, appState, prefix, startTime, password, adminID } = bot;
+        const { appState, name, prefix, startTime, password, adminID } = bot;
 
-        // หยุดการทำงานของบอท
-        if (typeof api.logout === 'function') {
-            await new Promise((resolve, reject) => {
-                api.logout((err) => {
-                    if (err) return reject(err);
-                    resolve();
-                });
-            });
-            console.log(`✅ หยุดบอทสำหรับรีสตาร์ท: ${name}`);
-        } else {
-            throw new Error('เมธอด logout ไม่พบใน bot.api');
-        }
+        // รีสตาร์ทบอทโดยการลบและเริ่มต้นใหม่
+        deleteBot(trimmedToken, false);
+        await startBotWithRetry(appState, trimmedToken, name, prefix, Date.now(), password, adminID, 5);
 
-        // รีสตาร์ทบอทโดยเรียกใช้ startBot อีกครั้ง
-        await startBot(appState, trimmedToken, name, prefix, Date.now(), password, adminID, false);
         console.log(chalk.green(`✅ รีสตาร์ทบอทสำเร็จ: ${name}`));
-
         io.emit('updateBots', generateBotData());
         res.json({ success: true, message: 'รีสตาร์ทบอทสำเร็จ', botName: name });
     } catch (err) {
@@ -2389,12 +2309,16 @@ setInterval(() => {
 // ฟังก์ชันระบบอัตโนมัติทุก ๆ 5 นาที เพื่อลบบอทที่ยังล้มเหลว
 setInterval(() => {
     console.log(chalk.yellow('🔍 กำลังตรวจสอบบอททั้งหมดสำหรับการลบอัตโนมัติ...'));
+    let botsToDelete = 0;
     Object.keys(botSessions).forEach(token => {
         const bot = botSessions[token];
         if (bot.status === 'connection_failed' || bot.status === 'offline') { // ตรวจสอบทั้งสองสถานะ
             console.log(chalk.yellow(`⌛ บอท "${bot.name}" จะถูกลบออกเนื่องจากสถานะ "${bot.status}"`));
-            deleteBot(token);
-            io.emit('botDeleted', bot.name);
+            deleteBot(token, true);
+            botsToDelete++;
         }
     });
+    if (botsToDelete === 0) {
+        console.log(chalk.green('✅ ไม่มีบอทที่ต้องการลบในครั้งนี้'));
+    }
 }, 300000); // 300,000 มิลลิวินาที = 5 นาที
