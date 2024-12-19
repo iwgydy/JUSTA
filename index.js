@@ -1,4 +1,3 @@
-// index.js
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -7,19 +6,16 @@ const chalk = require('chalk');
 const figlet = require('figlet');
 const fs = require('fs');
 const path = require('path');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const compression = require('compression');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "http://localhost:3005", // ปรับให้เหมาะสมกับความปลอดภัยของคุณ
+        origin: "*", // ปรับให้เหมาะสมกับความปลอดภัยของคุณ
         methods: ["GET", "POST"]
     }
 });
-const PORT = process.env.PORT || 3005;
+const PORT = 3005;
 
 let botCount = 0;
 global.botSessions = {}; // เปลี่ยนจาก let เป็น global เพื่อให้สามารถเข้าถึงได้ในคำสั่ง
@@ -71,20 +67,9 @@ if (fs.existsSync(eventsPath)) {
     });
 }
 
-// Middleware
-app.use(helmet()); // ปรับปรุงความปลอดภัยของ HTTP headers
-app.use(compression()); // บีบอัดการตอบกลับเพื่อเพิ่มประสิทธิภาพ
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
-
-// การตั้งค่า Rate Limiting เพื่อป้องกันการโจมตีแบบ brute-force
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 นาที
-    max: 100, // จำกัด 100 คำขอในช่วงเวลานี้
-    message: "Too many requests from this IP, please try again after 15 minutes"
-});
-app.use(limiter);
 
 // ฟังก์ชันช่วยเหลือในการสร้างรหัส 6 หลัก
 function generate6DigitCode() {
@@ -231,7 +216,6 @@ app.get("/", (req, res) => {
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
             <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-            <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
             <style>
                 /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
                 :root {
@@ -448,15 +432,6 @@ app.get("/", (req, res) => {
                     top: 20px;
                     right: 20px;
                     z-index: 1055;
-                }
-
-                /* เพิ่มการปรับปรุงสำหรับปุ่มและฟอร์ม */
-                .btn-primary, .btn-warning, .btn-danger, .btn-secondary {
-                    border-radius: 8px;
-                }
-
-                .btn-primary:hover, .btn-warning:hover, .btn-danger:hover, .btn-secondary:hover {
-                    opacity: 0.9;
                 }
             </style>
         </head>
@@ -1912,7 +1887,7 @@ app.get("/how-to-make-bot", (req, res) => {
                     </h5>
                     <p>ขอแนะนำวิธีการทำบอทของคุณเองโดยดูจากคลิปวิดีโอต่อไปนี้:</p>
                     <div class="ratio ratio-16x9">
-                        <iframe src="https://www.youtube.com/embed/YOUR_VIDEO_ID" allowfullscreen></iframe>
+                        <iframe src="https://firebasestorage.googleapis.com/v0/b/goak-71ac8.appspot.com/o/XRecorder_18122024_114720.mp4?alt=media&token=1f243d3d-91ed-448f-83c7-3ee01d0407e4" allowfullscreen></iframe>
                     </div>
                     <hr>
                     <h6>ขั้นตอนเบื้องต้น:</h6>
@@ -2346,4 +2321,4 @@ setInterval(() => {
     if (botsToDelete === 0) {
         console.log(chalk.green('✅ ไม่มีบอทที่ต้องการลบในครั้งนี้'));
     }
-}, 300000); // 300,000 มิลลิวินาที = 5 นาที
+}, 300000); // 300,000 มิลลิวินาที 
