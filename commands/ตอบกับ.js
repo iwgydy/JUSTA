@@ -4,72 +4,66 @@ const path = require("path");
 
 module.exports = {
   config: {
-    name: "ตอบกลับภาพ",
-    description: "ตอบกลับหรือดาวน์โหลดภาพที่ผู้ใช้ตอบกลับ",
-    usage: "ไม่ต้องใช้คำสั่งเฉพาะ",
-    eventType: ["message_reply"], // ระบุประเภทของอีเวนต์ที่ต้องการรับ
+    name: "reply_image",
+    description: "ดาวน์โหลดภาพจากข้อความที่ตอบกลับ",
+    usage: "ตอบกลับข้อความที่มีภาพ และพิมพ์คำสั่งนี้",
   },
-
   run: async ({ api, event }) => {
-    const { threadID, messageID, messageReply, senderID } = event;
+    const { threadID, messageID, messageReply } = event;
 
-    // ตรวจสอบว่ามีการตอบกลับข้อความ
-    if (!messageReply) return;
+    // ตรวจสอบว่าเป็นข้อความที่ตอบกลับหรือไม่
+    if (!messageReply || !messageReply.attachments || messageReply.attachments.length === 0) {
+      return api.sendMessage("❌ กรุณาตอบกลับข้อความที่มีภาพแนบ", threadID, messageID);
+    }
 
-    // ตรวจสอบว่ามี attachments ในข้อความที่ถูกตอบกลับ
-    if (messageReply.attachments && messageReply.attachments.length > 0) {
-      // กรองเฉพาะไฟล์ภาพ
-      const imageAttachments = messageReply.attachments.filter(
-        (attachment) => attachment.type === "photo" || attachment.type === "image"
-      );
+    // ตรวจสอบว่ามีไฟล์ประเภทภาพในแนบไฟล์หรือไม่
+    const imageAttachment = messageReply.attachments.find(
+      (attachment) => attachment.type === "photo"
+    );
 
-      if (imageAttachments.length === 0) return; // ไม่มีภาพแนบมา
+    if (!imageAttachment) {
+      return api.sendMessage("❌ ข้อความที่ตอบกลับไม่มีภาพ", threadID, messageID);
+    }
 
-      // ดึง URL ของภาพแรกที่พบ
-      const imageUrl = imageAttachments[0].url;
+    // ดึง URL ของภาพ
+    const imageUrl = imageAttachment.url;
+    if (!imageUrl) {
+      return api.sendMessage("❌ ไม่สามารถดึง URL ของภาพได้", threadID, messageID);
+    }
 
-      try {
-        // ดาวน์โหลดภาพ
-        const response = await axios.get(imageUrl, { responseType: "stream" });
+    // ดาวน์โหลดภาพ
+    try {
+      const response = await axios.get(imageUrl, { responseType: "stream" });
+      const fileName = path.basename(imageUrl);
+      const filePath = path.join(__dirname, "downloads", fileName);
 
-        // สร้างชื่อไฟล์จาก URL
-        const fileName = path.basename(imageUrl).split("?")[0];
-        const filePath = path.join(__dirname, `../downloads/${fileName}`);
+      // สร้างโฟลเดอร์หากยังไม่มี
+      if (!fs.existsSync(path.dirname(filePath))) {
+        fs.mkdirSync(path.dirname(filePath), { recursive: true });
+      }
 
-        // สร้างโฟลเดอร์ดาวน์โหลดถ้ายังไม่มี
-        if (!fs.existsSync(path.dirname(filePath))) {
-          fs.mkdirSync(path.dirname(filePath), { recursive: true });
-        }
+      // บันทึกไฟล์ภาพ
+      const writer = fs.createWriteStream(filePath);
+      response.data.pipe(writer);
 
-        // เขียนไฟล์ลงดิสก์
-        const writer = fs.createWriteStream(filePath);
-        response.data.pipe(writer);
-
-        // รอจนดาวน์โหลดเสร็จสิ้น
-        await new Promise((resolve, reject) => {
-          writer.on("finish", resolve);
-          writer.on("error", reject);
-        });
-
-        // ส่งข้อความตอบกลับพร้อมกับภาพที่ดาวน์โหลด
-        return api.sendMessage(
+      writer.on("finish", () => {
+        api.sendMessage(
           {
-            body: `✅ ดาวน์โหลดภาพสำเร็จ!\n📂 ใช้เวลาทั้งหมด: ${(Date.now() - event.timestamp) / 1000} วินาที`,
+            body: "✅ ดาวน์โหลดภาพสำเร็จ!",
             attachment: fs.createReadStream(filePath),
           },
           threadID,
+          () => fs.unlinkSync(filePath), // ลบไฟล์หลังส่ง
           messageID
         );
-      } catch (error) {
-        console.error("❌ เกิดข้อผิดพลาดในการดาวน์โหลดภาพ:", error.message);
+      });
 
-        // ส่งข้อความแจ้งข้อผิดพลาดให้ผู้ใช้ทราบ
-        return api.sendMessage(
-          "❗ เกิดข้อผิดพลาดในการดาวน์โหลดภาพ กรุณาลองใหม่อีกครั้ง",
-          threadID,
-          messageID
-        );
-      }
+      writer.on("error", () => {
+        api.sendMessage("❌ เกิดข้อผิดพลาดในการดาวน์โหลดภาพ", threadID, messageID);
+      });
+    } catch (error) {
+      console.error("❌ เกิดข้อผิดพลาด:", error.message);
+      api.sendMessage("❌ ไม่สามารถดาวน์โหลดภาพได้ กรุณาลองใหม่", threadID, messageID);
     }
   },
 };
