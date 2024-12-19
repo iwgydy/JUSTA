@@ -217,35 +217,31 @@ app.get("/", (req, res) => {
             <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
-                :root {
-                    --primary-color: #0d6efd;
-                    --secondary-color: #6c757d;
-                    --accent-color: #198754;
-                    --background-color: #f8f9fa;
-                    --card-bg: #ffffff;
-                    --card-border: #dee2e6;
-                    --text-color: #212529;
-                    --success-color: #198754;
-                    --error-color: #dc3545;
-                    --info-color: #0d6efd;
-                    --connecting-color: #ffc107;
-                    --active-color: #20c997;
-                    --connection-failed-color: #dc3545;
-                    --bot-name-color: #ff5722;
-                }
-
+                /* พื้นหลัง */
                 body {
-                    background: var(--background-color);
-                    color: var(--text-color);
+                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png') no-repeat center center fixed;
+                    background-size: cover;
+                    color: #ffffff;
                     font-family: 'Roboto', sans-serif;
                     min-height: 100vh;
                     position: relative;
                     overflow-x: hidden;
                 }
 
+                /* เพิ่ม overlay เพื่อให้เนื้อหาดูชัดเจน */
+                .overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.7);
+                    z-index: -1;
+                }
+
+                /* ปรับแต่ง Navbar */
                 .navbar {
-                    background: var(--primary-color);
+                    background: rgba(13, 110, 253, 0.9) !important;
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                 }
 
@@ -255,45 +251,55 @@ app.get("/", (req, res) => {
                     color: #ffffff !important;
                 }
 
+                .navbar-nav .nav-link {
+                    color: #ffffff !important;
+                    transition: color 0.3s ease;
+                }
+
+                .navbar-nav .nav-link:hover {
+                    color: #ffc107 !important;
+                }
+
+                /* ปรับแต่ง Cards */
                 .stats-card {
-                    background: var(--card-bg);
-                    border: 1px solid var(--card-border);
+                    background: rgba(255, 255, 255, 0.1);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
                     border-radius: 12px;
                     padding: 20px;
                     text-align: center;
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
 
                 .stats-card:hover {
                     transform: translateY(-5px);
-                    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+                    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
                 }
 
                 .stats-number {
                     font-size: 2.5rem;
                     font-weight: 700;
                     margin: 10px 0;
-                    color: var(--primary-color);
+                    color: #ffc107;
                 }
 
                 .stats-label {
                     font-size: 1rem;
-                    color: var(--text-color);
+                    color: #ffffff;
                 }
 
                 .glass-card {
-                    background: var(--card-bg);
-                    border: 1px solid var(--card-border);
+                    background: rgba(255, 255, 255, 0.1);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
                     border-radius: 16px;
                     padding: 24px;
-                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
 
                 .glass-card:hover {
                     transform: translateY(-5px);
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
                 }
 
                 .bot-table, .command-table {
@@ -309,18 +315,19 @@ app.get("/", (req, res) => {
                 }
 
                 .bot-table th, .command-table th {
-                    background-color: var(--primary-color);
+                    background-color: rgba(13, 110, 253, 0.9);
                     color: #fff;
                     font-weight: 600;
                 }
 
                 .bot-table tr:nth-child(even),
                 .command-table tr:nth-child(even) {
-                    background-color: #f1f1f1;
+                    background-color: rgba(255, 255, 255, 0.1);
                 }
 
+                /* ปรับแต่งสถานะ */
                 .status-online {
-                    background: var(--success-color);
+                    background: #198754;
                     color: #ffffff;
                     padding: 5px 10px;
                     border-radius: 20px;
@@ -331,7 +338,7 @@ app.get("/", (req, res) => {
                 }
 
                 .status-active {
-                    background: var(--active-color);
+                    background: #20c997;
                     color: #ffffff;
                     padding: 5px 10px;
                     border-radius: 20px;
@@ -342,7 +349,7 @@ app.get("/", (req, res) => {
                 }
 
                 .status-connecting {
-                    background: var(--connecting-color);
+                    background: #ffc107;
                     color: #212529;
                     padding: 5px 10px;
                     border-radius: 20px;
@@ -353,7 +360,7 @@ app.get("/", (req, res) => {
                 }
 
                 .status-connection-failed {
-                    background: var(--connection-failed-color);
+                    background: #dc3545;
                     color: #ffffff;
                     padding: 5px 10px;
                     border-radius: 20px;
@@ -364,7 +371,7 @@ app.get("/", (req, res) => {
                 }
 
                 .status-offline {
-                    background: var(--error-color);
+                    background: #6c757d;
                     color: #ffffff;
                     padding: 5px 10px;
                     border-radius: 20px;
@@ -374,40 +381,67 @@ app.get("/", (req, res) => {
                     gap: 6px;
                 }
 
+                /* ปรับแต่ง Footer */
                 .footer {
-                    background: var(--primary-color);
-                    border-top: 2px solid var(--primary-color);
+                    background: rgba(13, 110, 253, 0.9);
+                    border-top: 2px solid rgba(255, 193, 7, 0.5);
                     padding: 20px 0;
                     margin-top: 40px;
                     font-size: 0.9rem;
                     color: #ffffff;
                 }
 
-                .animate-float {
-                    animation: float 3s ease-in-out infinite;
+                /* ปรับแต่งปุ่ม */
+                .btn-primary {
+                    background: #ffc107;
+                    border: none;
+                    padding: 10px 20px;
+                    font-size: 1rem;
+                    border-radius: 8px;
+                    transition: background 0.3s ease, transform 0.2s ease;
+                    color: #212529;
+                    font-weight: 600;
                 }
 
-                @keyframes float {
-                    0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-10px); }
+                .btn-primary:hover {
+                    background: #e0a800;
+                    transform: translateY(-2px);
+                }
+
+                .btn-warning, .btn-danger, .btn-secondary {
+                    transition: transform 0.2s ease;
+                }
+
+                .btn-warning:hover, .btn-danger:hover, .btn-secondary:hover {
+                    transform: scale(1.05);
+                }
+
+                /* ปรับแต่ง Toast */
+                .toast-container {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 1055;
+                }
+
+                /* ปรับแต่ง Text */
+                .bot-name {
+                    font-family: 'Press Start 2P', cursive;
+                    color: #ff5722;
+                    font-size: 1.1rem;
                 }
 
                 .runtime {
                     font-weight: 500;
-                    color: var(--info-color);
+                    color: #ffc107;
                 }
 
                 .ping {
                     font-weight: 500;
-                    color: var(--accent-color);
+                    color: #198754;
                 }
 
-                .bot-name {
-                    font-family: 'Press Start 2P', cursive;
-                    color: var(--bot-name-color);
-                    font-size: 1.1rem;
-                }
-
+                /* Responsive */
                 @media (max-width: 768px) {
                     .stats-card {
                         margin-bottom: 20px;
@@ -421,21 +455,19 @@ app.get("/", (req, res) => {
                     }
                 }
 
-                /* Styles for Edit, Delete, and Restart Buttons */
-                .btn-edit, .btn-delete, .btn-restart {
-                    margin-right: 5px;
+                /* เพิ่มแอนิเมชัน */
+                .animate-float {
+                    animation: float 3s ease-in-out infinite;
                 }
 
-                /* Toast Styles */
-                .toast-container {
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    z-index: 1055;
+                @keyframes float {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-10px); }
                 }
             </style>
         </head>
         <body>
+            <div class="overlay"></div>
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
@@ -469,28 +501,28 @@ app.get("/", (req, res) => {
                 <div class="row mb-4">
                     <div class="col-md-3 col-sm-6 mb-3">
                         <div class="stats-card">
-                            <i class="fas fa-robot fa-2x mb-3" style="color: var(--primary-color);"></i>
+                            <i class="fas fa-robot fa-2x mb-3" style="color: #ffc107;"></i>
                             <div class="stats-number" id="totalBots">${data.totalBots}</div>
                             <div class="stats-label">บอททั้งหมด</div>
                         </div>
                     </div>
                     <div class="col-md-3 col-sm-6 mb-3">
                         <div class="stats-card">
-                            <i class="fas fa-signal fa-2x mb-3" style="color: var(--info-color);"></i>
+                            <i class="fas fa-signal fa-2x mb-3" style="color: #198754;"></i>
                             <div class="stats-number" id="onlineBots">${data.onlineBots}</div>
                             <div class="stats-label">บอทออนไลน์</div>
                         </div>
                     </div>
                     <div class="col-md-3 col-sm-6 mb-3">
                         <div class="stats-card">
-                            <i class="fas fa-clock fa-2x mb-3" style="color: var(--secondary-color);"></i>
+                            <i class="fas fa-clock fa-2x mb-3" style="color: #ffc107;"></i>
                             <div class="stats-number" id="activeBots">${data.activeBots}</div>
                             <div class="stats-label">บอททำงานแล้ว</div>
                         </div>
                     </div>
                     <div class="col-md-3 col-sm-6 mb-3">
                         <div class="stats-card">
-                            <i class="fas fa-tachometer-alt fa-2x mb-3" style="color: var(--accent-color);"></i>
+                            <i class="fas fa-tachometer-alt fa-2x mb-3" style="color: #198754;"></i>
                             <div class="stats-number" id="websitePing">${data.websitePing} ms</div>
                             <div class="stats-label">Ping เว็บไซต์</div>
                         </div>
@@ -502,7 +534,7 @@ app.get("/", (req, res) => {
                     <div class="col-12">
                         <div class="glass-card">
                             <h5 class="mb-4">
-                                <i class="fas fa-robot me-2" style="color: var(--primary-color);"></i>
+                                <i class="fas fa-robot me-2" style="color: #ffc107;"></i>
                                 บอทที่กำลังทำงาน
                             </h5>
                             <div class="table-responsive">
@@ -759,31 +791,31 @@ app.get("/start", (req, res) => {
             <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
-                :root {
-                    --primary-color: #0d6efd;
-                    --secondary-color: #6c757d;
-                    --accent-color: #198754;
-                    --background-color: #f8f9fa;
-                    --card-bg: #ffffff;
-                    --card-border: #dee2e6;
-                    --text-color: #212529;
-                    --success-color: #198754;
-                    --error-color: #dc3545;
-                    --info-color: #0d6efd;
-                }
-
+                /* พื้นหลัง */
                 body {
-                    background: var(--background-color);
-                    color: var(--text-color);
+                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png') no-repeat center center fixed;
+                    background-size: cover;
+                    color: #ffffff;
                     font-family: 'Roboto', sans-serif;
                     min-height: 100vh;
                     position: relative;
                     overflow-x: hidden;
                 }
 
+                /* เพิ่ม overlay เพื่อให้เนื้อหาดูชัดเจน */
+                .overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.7);
+                    z-index: -1;
+                }
+
+                /* ปรับแต่ง Navbar */
                 .navbar {
-                    background: var(--primary-color);
+                    background: rgba(13, 110, 253, 0.9) !important;
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                 }
 
@@ -793,65 +825,75 @@ app.get("/start", (req, res) => {
                     color: #ffffff !important;
                 }
 
+                .navbar-nav .nav-link {
+                    color: #ffffff !important;
+                    transition: color 0.3s ease;
+                }
+
+                .navbar-nav .nav-link:hover {
+                    color: #ffc107 !important;
+                }
+
+                /* ปรับแต่ง Cards */
                 .glass-card {
-                    background: var(--card-bg);
-                    border: 1px solid var(--card-border);
+                    background: rgba(255, 255, 255, 0.1);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
                     border-radius: 16px;
                     padding: 24px;
-                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
 
                 .glass-card:hover {
                     transform: translateY(-5px);
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
                 }
 
                 .add-bot-form .form-label {
                     font-weight: 500;
-                    color: var(--text-color);
+                    color: #ffffff;
                 }
 
                 .form-control {
-                    background: #f1f1f1;
-                    border: 1px solid #ced4da;
+                    background: rgba(255, 255, 255, 0.2);
+                    border: 1px solid rgba(255, 255, 255, 0.3);
                     border-radius: 8px;
                     padding: 10px 12px;
                     font-size: 1rem;
                     transition: border-color 0.3s ease, background 0.3s ease;
-                    color: var(--text-color);
+                    color: #ffffff;
                 }
 
                 .form-control::placeholder {
-                    color: #6c757d;
+                    color: #e0e0e0;
                 }
 
                 .form-control:focus {
-                    border-color: var(--primary-color);
-                    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
-                    background: #e9ecef;
-                    color: var(--text-color);
+                    border-color: #ffc107;
+                    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+                    background: rgba(255, 255, 255, 0.3);
+                    color: #ffffff;
                 }
 
                 .btn-primary {
-                    background: var(--primary-color);
+                    background: #ffc107;
                     border: none;
                     padding: 10px 20px;
                     font-size: 1rem;
                     border-radius: 8px;
                     transition: background 0.3s ease, transform 0.2s ease;
-                    color: #fff;
+                    color: #212529;
                     font-weight: 600;
                 }
 
                 .btn-primary:hover {
-                    background: #0b5ed7;
+                    background: #e0a800;
                     transform: translateY(-2px);
                 }
 
                 .footer {
-                    background: var(--primary-color);
-                    border-top: 2px solid var(--primary-color);
+                    background: rgba(13, 110, 253, 0.9);
+                    border-top: 2px solid rgba(255, 193, 7, 0.5);
                     padding: 20px 0;
                     margin-top: 40px;
                     font-size: 0.9rem;
@@ -867,22 +909,24 @@ app.get("/start", (req, res) => {
                     50% { transform: translateY(-10px); }
                 }
 
-                @media (max-width: 768px) {
-                    .glass-card {
-                        margin-bottom: 20px;
-                    }
-                }
-
-                /* Toast Styles */
+                /* ปรับแต่ง Toast */
                 .toast-container {
                     position: fixed;
                     top: 20px;
                     right: 20px;
                     z-index: 1055;
                 }
+
+                /* Responsive */
+                @media (max-width: 768px) {
+                    .glass-card {
+                        margin-bottom: 20px;
+                    }
+                }
             </style>
         </head>
         <body>
+            <div class="overlay"></div>
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
@@ -914,7 +958,7 @@ app.get("/start", (req, res) => {
             <div class="container">
                 <div class="glass-card">
                     <h5 class="mb-4">
-                        <i class="fas fa-plus-circle me-2" style="color: var(--primary-color);"></i>
+                        <i class="fas fa-plus-circle me-2" style="color: #ffc107;"></i>
                         เพิ่มบอทใหม่
                     </h5>
                     ${errorMessage}
@@ -1132,35 +1176,31 @@ app.get("/bots", (req, res) => {
             <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
-                :root {
-                    --primary-color: #0d6efd;
-                    --secondary-color: #6c757d;
-                    --accent-color: #198754;
-                    --background-color: #f8f9fa;
-                    --card-bg: #ffffff;
-                    --card-border: #dee2e6;
-                    --text-color: #212529;
-                    --success-color: #198754;
-                    --error-color: #dc3545;
-                    --info-color: #0d6efd;
-                    --connecting-color: #ffc107;
-                    --active-color: #20c997;
-                    --connection-failed-color: #dc3545;
-                    --bot-name-color: #ff5722;
-                }
-
+                /* พื้นหลัง */
                 body {
-                    background: var(--background-color);
-                    color: var(--text-color);
+                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png') no-repeat center center fixed;
+                    background-size: cover;
+                    color: #ffffff;
                     font-family: 'Roboto', sans-serif;
                     min-height: 100vh;
                     position: relative;
                     overflow-x: hidden;
                 }
 
+                /* เพิ่ม overlay เพื่อให้เนื้อหาดูชัดเจน */
+                .overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.7);
+                    z-index: -1;
+                }
+
+                /* ปรับแต่ง Navbar */
                 .navbar {
-                    background: var(--primary-color);
+                    background: rgba(13, 110, 253, 0.9) !important;
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                 }
 
@@ -1170,43 +1210,56 @@ app.get("/bots", (req, res) => {
                     color: #ffffff !important;
                 }
 
+                .navbar-nav .nav-link {
+                    color: #ffffff !important;
+                    transition: color 0.3s ease;
+                }
+
+                .navbar-nav .nav-link:hover {
+                    color: #ffc107 !important;
+                }
+
+                /* ปรับแต่ง Cards */
                 .glass-card {
-                    background: var(--card-bg);
-                    border: 1px solid var(--card-border);
+                    background: rgba(255, 255, 255, 0.1);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
                     border-radius: 16px;
                     padding: 24px;
-                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
 
                 .glass-card:hover {
                     transform: translateY(-5px);
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
                 }
 
-                .bot-table {
+                .bot-table, .command-table {
                     width: 100%;
                     border-collapse: collapse;
                     margin-top: 20px;
                 }
 
-                .bot-table th, .bot-table td {
+                .bot-table th, .bot-table td,
+                .command-table th, .command-table td {
                     padding: 12px 15px;
                     text-align: left;
                 }
 
-                .bot-table th {
-                    background-color: var(--primary-color);
+                .bot-table th, .command-table th {
+                    background-color: rgba(13, 110, 253, 0.9);
                     color: #fff;
                     font-weight: 600;
                 }
 
-                .bot-table tr:nth-child(even) {
-                    background-color: #f1f1f1;
+                .bot-table tr:nth-child(even),
+                .command-table tr:nth-child(even) {
+                    background-color: rgba(255, 255, 255, 0.1);
                 }
 
+                /* ปรับแต่งสถานะ */
                 .status-online {
-                    background: var(--success-color);
+                    background: #198754;
                     color: #ffffff;
                     padding: 5px 10px;
                     border-radius: 20px;
@@ -1217,7 +1270,7 @@ app.get("/bots", (req, res) => {
                 }
 
                 .status-active {
-                    background: var(--active-color);
+                    background: #20c997;
                     color: #ffffff;
                     padding: 5px 10px;
                     border-radius: 20px;
@@ -1228,7 +1281,7 @@ app.get("/bots", (req, res) => {
                 }
 
                 .status-connecting {
-                    background: var(--connecting-color);
+                    background: #ffc107;
                     color: #212529;
                     padding: 5px 10px;
                     border-radius: 20px;
@@ -1239,7 +1292,7 @@ app.get("/bots", (req, res) => {
                 }
 
                 .status-connection-failed {
-                    background: var(--connection-failed-color);
+                    background: #dc3545;
                     color: #ffffff;
                     padding: 5px 10px;
                     border-radius: 20px;
@@ -1250,7 +1303,7 @@ app.get("/bots", (req, res) => {
                 }
 
                 .status-offline {
-                    background: var(--error-color);
+                    background: #6c757d;
                     color: #ffffff;
                     padding: 5px 10px;
                     border-radius: 20px;
@@ -1260,15 +1313,54 @@ app.get("/bots", (req, res) => {
                     gap: 6px;
                 }
 
+                /* ปรับแต่ง Footer */
                 .footer {
-                    background: var(--primary-color);
-                    border-top: 2px solid var(--primary-color);
+                    background: rgba(13, 110, 253, 0.9);
+                    border-top: 2px solid rgba(255, 193, 7, 0.5);
                     padding: 20px 0;
                     margin-top: 40px;
                     font-size: 0.9rem;
                     color: #ffffff;
                 }
 
+                /* ปรับแต่งปุ่ม */
+                .btn-warning, .btn-danger, .btn-secondary {
+                    transition: transform 0.2s ease;
+                }
+
+                .btn-warning:hover, .btn-danger:hover, .btn-secondary:hover {
+                    transform: scale(1.05);
+                }
+
+                /* ปรับแต่ง Text */
+                .bot-name {
+                    font-family: 'Press Start 2P', cursive;
+                    color: #ff5722;
+                    font-size: 1.1rem;
+                }
+
+                .runtime {
+                    font-weight: 500;
+                    color: #ffc107;
+                }
+
+                .ping {
+                    font-weight: 500;
+                    color: #198754;
+                }
+
+                /* Responsive */
+                @media (max-width: 768px) {
+                    .glass-card {
+                        margin-bottom: 20px;
+                    }
+                    .bot-table th, .bot-table td,
+                    .command-table th, .command-table td {
+                        padding: 8px 10px;
+                    }
+                }
+
+                /* เพิ่มแอนิเมชัน */
                 .animate-float {
                     animation: float 3s ease-in-out infinite;
                 }
@@ -1277,47 +1369,10 @@ app.get("/bots", (req, res) => {
                     0%, 100% { transform: translateY(0); }
                     50% { transform: translateY(-10px); }
                 }
-
-                .runtime {
-                    font-weight: 500;
-                    color: var(--info-color);
-                }
-
-                .ping {
-                    font-weight: 500;
-                    color: var(--accent-color);
-                }
-
-                .bot-name {
-                    font-family: 'Press Start 2P', cursive;
-                    color: var(--bot-name-color);
-                    font-size: 1.1rem;
-                }
-
-                @media (max-width: 768px) {
-                    .glass-card {
-                        margin-bottom: 20px;
-                    }
-                    .bot-table th, .bot-table td {
-                        padding: 8px 10px;
-                    }
-                }
-
-                /* Styles for Edit, Delete, and Restart Buttons */
-                .btn-edit, .btn-delete, .btn-restart {
-                    margin-right: 5px;
-                }
-
-                /* Toast Styles */
-                .toast-container {
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    z-index: 1055;
-                }
             </style>
         </head>
         <body>
+            <div class="overlay"></div>
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
@@ -1350,7 +1405,7 @@ app.get("/bots", (req, res) => {
                 <!-- ตารางบอท -->
                 <div class="glass-card">
                     <h5 class="mb-4">
-                        <i class="fas fa-list me-2" style="color: var(--info-color);"></i>
+                        <i class="fas fa-list me-2" style="color: #198754;"></i>
                         บอทที่กำลังทำงาน
                     </h5>
                     <div class="table-responsive">
@@ -1582,31 +1637,31 @@ app.get("/commands", (req, res) => {
             <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
-                :root {
-                    --primary-color: #0d6efd;
-                    --secondary-color: #6c757d;
-                    --accent-color: #198754;
-                    --background-color: #f8f9fa;
-                    --card-bg: #ffffff;
-                    --card-border: #dee2e6;
-                    --text-color: #212529;
-                    --success-color: #198754;
-                    --error-color: #dc3545;
-                    --info-color: #0d6efd;
-                }
-
+                /* พื้นหลัง */
                 body {
-                    background: var(--background-color);
-                    color: var(--text-color);
+                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png') no-repeat center center fixed;
+                    background-size: cover;
+                    color: #ffffff;
                     font-family: 'Roboto', sans-serif;
                     min-height: 100vh;
                     position: relative;
                     overflow-x: hidden;
                 }
 
+                /* เพิ่ม overlay เพื่อให้เนื้อหาดูชัดเจน */
+                .overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.7);
+                    z-index: -1;
+                }
+
+                /* ปรับแต่ง Navbar */
                 .navbar {
-                    background: var(--primary-color);
+                    background: rgba(13, 110, 253, 0.9) !important;
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                 }
 
@@ -1616,18 +1671,28 @@ app.get("/commands", (req, res) => {
                     color: #ffffff !important;
                 }
 
+                .navbar-nav .nav-link {
+                    color: #ffffff !important;
+                    transition: color 0.3s ease;
+                }
+
+                .navbar-nav .nav-link:hover {
+                    color: #ffc107 !important;
+                }
+
+                /* ปรับแต่ง Cards */
                 .glass-card {
-                    background: var(--card-bg);
-                    border: 1px solid var(--card-border);
+                    background: rgba(255, 255, 255, 0.1);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
                     border-radius: 16px;
                     padding: 24px;
-                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
 
                 .glass-card:hover {
                     transform: translateY(-5px);
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
                 }
 
                 .command-table {
@@ -1642,18 +1707,19 @@ app.get("/commands", (req, res) => {
                 }
 
                 .command-table th {
-                    background-color: var(--primary-color);
+                    background-color: rgba(13, 110, 253, 0.9);
                     color: #fff;
                     font-weight: 600;
                 }
 
                 .command-table tr:nth-child(even) {
-                    background-color: #f1f1f1;
+                    background-color: rgba(255, 255, 255, 0.1);
                 }
 
+                /* ปรับแต่ง Footer */
                 .footer {
-                    background: var(--primary-color);
-                    border-top: 2px solid var(--primary-color);
+                    background: rgba(13, 110, 253, 0.9);
+                    border-top: 2px solid rgba(255, 193, 7, 0.5);
                     padding: 20px 0;
                     margin-top: 40px;
                     font-size: 0.9rem;
@@ -1669,6 +1735,15 @@ app.get("/commands", (req, res) => {
                     50% { transform: translateY(-10px); }
                 }
 
+                /* ปรับแต่ง Toast */
+                .toast-container {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 1055;
+                }
+
+                /* Responsive */
                 @media (max-width: 768px) {
                     .glass-card {
                         margin-bottom: 20px;
@@ -1677,17 +1752,10 @@ app.get("/commands", (req, res) => {
                         padding: 8px 10px;
                     }
                 }
-
-                /* Toast Styles */
-                .toast-container {
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    z-index: 1055;
-                }
             </style>
         </head>
         <body>
+            <div class="overlay"></div>
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
@@ -1720,7 +1788,7 @@ app.get("/commands", (req, res) => {
                 <!-- ตารางคำสั่งที่ใช้ -->
                 <div class="glass-card">
                     <h5 class="mb-4">
-                        <i class="fas fa-terminal me-2" style="color: var(--secondary-color);"></i>
+                        <i class="fas fa-terminal me-2" style="color: #198754;"></i>
                         คำสั่งที่ใช้
                     </h5>
                     <div class="table-responsive">
@@ -1768,31 +1836,31 @@ app.get("/how-to-make-bot", (req, res) => {
             <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* CSS ปรับปรุงสำหรับ UI ที่สวยงามและตอบสนองได้ดี */
-                :root {
-                    --primary-color: #0d6efd;
-                    --secondary-color: #6c757d;
-                    --accent-color: #198754;
-                    --background-color: #f8f9fa;
-                    --card-bg: #ffffff;
-                    --card-border: #dee2e6;
-                    --text-color: #212529;
-                    --success-color: #198754;
-                    --error-color: #dc3545;
-                    --info-color: #0d6efd;
-                }
-
+                /* พื้นหลัง */
                 body {
-                    background: var(--background-color);
-                    color: var(--text-color);
+                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png') no-repeat center center fixed;
+                    background-size: cover;
+                    color: #ffffff;
                     font-family: 'Roboto', sans-serif;
                     min-height: 100vh;
                     position: relative;
                     overflow-x: hidden;
                 }
 
+                /* เพิ่ม overlay เพื่อให้เนื้อหาดูชัดเจน */
+                .overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.7);
+                    z-index: -1;
+                }
+
+                /* ปรับแต่ง Navbar */
                 .navbar {
-                    background: var(--primary-color);
+                    background: rgba(13, 110, 253, 0.9) !important;
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                 }
 
@@ -1802,23 +1870,33 @@ app.get("/how-to-make-bot", (req, res) => {
                     color: #ffffff !important;
                 }
 
+                .navbar-nav .nav-link {
+                    color: #ffffff !important;
+                    transition: color 0.3s ease;
+                }
+
+                .navbar-nav .nav-link:hover {
+                    color: #ffc107 !important;
+                }
+
+                /* ปรับแต่ง Cards */
                 .glass-card {
-                    background: var(--card-bg);
-                    border: 1px solid var(--card-border);
+                    background: rgba(255, 255, 255, 0.1);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
                     border-radius: 16px;
                     padding: 24px;
-                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
 
                 .glass-card:hover {
                     transform: translateY(-5px);
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
                 }
 
                 .footer {
-                    background: var(--primary-color);
-                    border-top: 2px solid var(--primary-color);
+                    background: rgba(13, 110, 253, 0.9);
+                    border-top: 2px solid rgba(255, 193, 7, 0.5);
                     padding: 20px 0;
                     margin-top: 40px;
                     font-size: 0.9rem;
@@ -1834,22 +1912,24 @@ app.get("/how-to-make-bot", (req, res) => {
                     50% { transform: translateY(-10px); }
                 }
 
-                @media (max-width: 768px) {
-                    .glass-card {
-                        margin-bottom: 20px;
-                    }
-                }
-
-                /* Toast Styles */
+                /* ปรับแต่ง Toast */
                 .toast-container {
                     position: fixed;
                     top: 20px;
                     right: 20px;
                     z-index: 1055;
                 }
+
+                /* Responsive */
+                @media (max-width: 768px) {
+                    .glass-card {
+                        margin-bottom: 20px;
+                    }
+                }
             </style>
         </head>
         <body>
+            <div class="overlay"></div>
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
@@ -1882,7 +1962,7 @@ app.get("/how-to-make-bot", (req, res) => {
                 <!-- เนื้อหาของหน้า "วิธีทำบอทของคุณเอง" -->
                 <div class="glass-card">
                     <h5 class="mb-4">
-                        <i class="fas fa-video me-2" style="color: var(--secondary-color);"></i>
+                        <i class="fas fa-video me-2" style="color: #ffc107;"></i>
                         วิธีทำบอทของคุณเอง
                     </h5>
                     <p>ขอแนะนำวิธีการทำบอทของคุณเองโดยดูจากคลิปวิดีโอต่อไปนี้:</p>
@@ -1892,7 +1972,7 @@ app.get("/how-to-make-bot", (req, res) => {
                     <hr>
                     <h6>ขั้นตอนเบื้องต้น:</h6>
                     <ol>
-                        <li>ดาวน์โหลดซอฟต์แวร์ที่จำเป็นจาก <a href="https://github.com/c3cbot/c3c-ufc-utility/archive/refs/tags/1.5.zip" target="_blank">GitHub</a>.</li>
+                        <li>ดาวน์โหลดซอฟต์แวร์ที่จำเป็นจาก <a href="https://github.com/c3cbot/c3c-ufc-utility/archive/refs/tags/1.5.zip" target="_blank" class="text-decoration-none text-warning">GitHub</a>.</li>
                         <li>แตกไฟล์ ZIP ที่ดาวน์โหลดมาและเปิดโปรเจกต์ในโปรแกรมแก้ไขโค้ดของคุณ.</li>
                         <li>ตั้งค่าการเชื่อมต่อกับ API และปรับแต่งการตั้งค่าตามความต้องการของคุณ.</li>
                         <li>รันเซิร์ฟเวอร์และตรวจสอบบอทของคุณผ่านหน้าแดชบอร์ด.</li>
@@ -2321,4 +2401,4 @@ setInterval(() => {
     if (botsToDelete === 0) {
         console.log(chalk.green('✅ ไม่มีบอทที่ต้องการลบในครั้งนี้'));
     }
-}, 300000); // 300,000 มิลลิวินาที 
+}, 300000); // 300,000 มิลลิวินาที = 5 นาที
