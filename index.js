@@ -2086,10 +2086,18 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
                             io.emit('updateCommands', generateCommandData());
                         } catch (error) {
                             console.error(chalk.red(`❌ เกิดข้อผิดพลาดในคำสั่ง ${commandName}:`, error));
-                            api.sendMessage("❗ การรันคำสั่งล้มเหลว", event.threadID);
+                            try {
+                                await api.sendMessage("❗ การรันคำสั่งล้มเหลว", event.threadID);
+                            } catch (sendErr) {
+                                console.error(chalk.red(`❌ ไม่สามารถส่งข้อความแจ้งข้อผิดพลาดได้: ${sendErr.message}`));
+                            }
                         }
                     } else {
-                        api.sendMessage("❗ ไม่พบคำสั่งที่ระบุ", event.threadID);
+                        try {
+                            await api.sendMessage("❗ ไม่พบคำสั่งที่ระบุ", event.threadID);
+                        } catch (sendErr) {
+                            console.error(chalk.red(`❌ ไม่สามารถส่งข้อความแจ้งไม่พบคำสั่งได้: ${sendErr.message}`));
+                        }
                     }
                 }
 
