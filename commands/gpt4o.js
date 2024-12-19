@@ -26,10 +26,8 @@ module.exports = {
             const endTime = Date.now(); // จับเวลาหลังการประมวลผลเสร็จสิ้น
             const processingTime = ((endTime - startTime) / 1000).toFixed(2); // คำนวณเวลาเป็นวินาที
 
-            const rightAlignedTime = `🕒 ${processingTime}`.padStart(25, " "); // จัดข้อความเวลาให้อยู่ด้านขวา
-
             if (data && data.response) {
-                const imageRegex = /\!.*?(.*?)/;
+                const imageRegex = /!.*?(.*?)/;
                 const match = imageRegex.exec(data.response);
 
                 if (match && match[1]) {
@@ -48,7 +46,7 @@ module.exports = {
 
                     writer.on("finish", () => {
                         api.sendMessage({
-                            body: `${rightAlignedTime}`,
+                            body: `🕒 ${processingTime} วินาที`,
                             attachment: fs.createReadStream(imagePath),
                         }, event.threadID, () => {
                             fs.unlinkSync(imagePath); // ลบไฟล์หลังส่ง
@@ -59,24 +57,23 @@ module.exports = {
 
                     writer.on("error", (error) => {
                         console.error("เกิดข้อผิดพลาดในการดาวน์โหลดรูปภาพ:", error);
-                        api.sendMessage(`${rightAlignedTime}\n\n❗ ไม่สามารถดาวน์โหลดรูปภาพได้`, event.threadID);
+                        api.sendMessage(`🕒 ${processingTime} วินาที\n\n❗ ไม่สามารถดาวน์โหลดรูปภาพได้`, event.threadID);
                         api.deleteMessage(statusMsg.messageID); // ลบข้อความสถานะ
                     });
                 } else {
                     const cleanedResponse = data.response.replace(/TOOL_CALL:.*?\n/g, "").trim();
-                    api.sendMessage(`${rightAlignedTime}\n\n✨ GPT-4O ตอบกลับ:\n${cleanedResponse}`, event.threadID);
+                    api.sendMessage(`🕒 ${processingTime} วินาที\n\n✨ GPT-4O ตอบกลับ:\n${cleanedResponse}`, event.threadID);
                     api.deleteMessage(statusMsg.messageID); // ลบข้อความสถานะ
                 }
             } else {
-                api.sendMessage(`${rightAlignedTime}\n\n❗ ไม่สามารถรับการตอบกลับจาก GPT-4O ได้ในขณะนี้`, event.threadID);
+                api.sendMessage(`🕒 ${processingTime} วินาที\n\n❗ ไม่สามารถรับการตอบกลับจาก GPT-4O ได้ในขณะนี้`, event.threadID);
                 api.deleteMessage(statusMsg.messageID); // ลบข้อความสถานะ
             }
         } catch (error) {
             const endTime = Date.now(); // จับเวลาหลังจากเกิดข้อผิดพลาด
             const processingTime = ((endTime - startTime) / 1000).toFixed(2); // คำนวณเวลาเป็นวินาที
-            const rightAlignedTime = `🕒 ${processingTime}`.padStart(25, " "); // จัดข้อความเวลาให้อยู่ด้านขวา
             console.error("เกิดข้อผิดพลาดในการเชื่อมต่อกับ API:", error);
-            api.sendMessage(`${rightAlignedTime}\n\n❗ ขออภัย, เกิดข้อผิดพลาดในการเชื่อมต่อกับ GPT-4O`, event.threadID);
+            api.sendMessage(`🕒 ${processingTime} วินาที\n\n❗ ขออภัย, เกิดข้อผิดพลาดในการเชื่อมต่อกับ GPT-4O`, event.threadID);
             api.deleteMessage(statusMsg.messageID); // ลบข้อความสถานะ
         }
     },
