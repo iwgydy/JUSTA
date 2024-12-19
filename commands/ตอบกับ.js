@@ -6,43 +6,40 @@ module.exports = {
   config: {
     name: "reply_image",
     description: "ดาวน์โหลดภาพจากข้อความที่ตอบกลับ",
-    usage: "ตอบกลับข้อความที่มีภาพ และพิมพ์คำสั่งนี้",
+    usage: "ตอบกลับข้อความที่มีภาพแล้วพิมพ์คำสั่ง",
   },
   run: async ({ api, event }) => {
     const { threadID, messageID, messageReply } = event;
 
-    // ตรวจสอบว่าเป็นข้อความที่ตอบกลับหรือไม่
-    if (!messageReply || !messageReply.attachments || messageReply.attachments.length === 0) {
-      return api.sendMessage("❌ กรุณาตอบกลับข้อความที่มีภาพแนบ", threadID, messageID);
+    // ตรวจสอบว่าผู้ใช้ตอบกลับข้อความที่มีภาพ
+    if (!messageReply || !messageReply.attachments) {
+      return api.sendMessage("❌ กรุณาตอบกลับข้อความที่มีภาพ", threadID, messageID);
     }
 
-    // ตรวจสอบว่ามีไฟล์ประเภทภาพในแนบไฟล์หรือไม่
+    // ดึงไฟล์แนบที่เป็นภาพ
     const imageAttachment = messageReply.attachments.find(
       (attachment) => attachment.type === "photo"
     );
 
     if (!imageAttachment) {
-      return api.sendMessage("❌ ข้อความที่ตอบกลับไม่มีภาพ", threadID, messageID);
+      return api.sendMessage("❌ ไม่มีภาพในข้อความที่ตอบกลับ", threadID, messageID);
     }
 
-    // ดึง URL ของภาพ
+    // URL ของภาพ
     const imageUrl = imageAttachment.url;
-    if (!imageUrl) {
-      return api.sendMessage("❌ ไม่สามารถดึง URL ของภาพได้", threadID, messageID);
+
+    // สร้างโฟลเดอร์สำหรับเก็บภาพ
+    const downloadFolder = path.join(__dirname, "downloads");
+    if (!fs.existsSync(downloadFolder)) {
+      fs.mkdirSync(downloadFolder, { recursive: true });
     }
 
     // ดาวน์โหลดภาพ
     try {
       const response = await axios.get(imageUrl, { responseType: "stream" });
-      const fileName = path.basename(imageUrl);
-      const filePath = path.join(__dirname, "downloads", fileName);
+      const fileName = `downloaded_${Date.now()}.jpg`;
+      const filePath = path.join(downloadFolder, fileName);
 
-      // สร้างโฟลเดอร์หากยังไม่มี
-      if (!fs.existsSync(path.dirname(filePath))) {
-        fs.mkdirSync(path.dirname(filePath), { recursive: true });
-      }
-
-      // บันทึกไฟล์ภาพ
       const writer = fs.createWriteStream(filePath);
       response.data.pipe(writer);
 
@@ -58,12 +55,13 @@ module.exports = {
         );
       });
 
-      writer.on("error", () => {
-        api.sendMessage("❌ เกิดข้อผิดพลาดในการดาวน์โหลดภาพ", threadID, messageID);
+      writer.on("error", (err) => {
+        console.error("❌ เกิดข้อผิดพลาดในการบันทึกภาพ:", err.message);
+        api.sendMessage("❌ เกิดข้อผิดพลาดในการบันทึกภาพ", threadID, messageID);
       });
-    } catch (error) {
-      console.error("❌ เกิดข้อผิดพลาด:", error.message);
-      api.sendMessage("❌ ไม่สามารถดาวน์โหลดภาพได้ กรุณาลองใหม่", threadID, messageID);
+    } catch (err) {
+      console.error("❌ เกิดข้อผิดพลาดในการดาวน์โหลดภาพ:", err.message);
+      api.sendMessage("❌ ไม่สามารถดาวน์โหลดภาพได้", threadID, messageID);
     }
   },
 };
