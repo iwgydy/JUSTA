@@ -5,7 +5,7 @@ const path = require("path");
 module.exports = {
     config: {
         name: "gpt4o",
-        description: "คุยกับ GPT-4O และสร้างภาพจากข้อความพร้อมตอบกลับอย่างเท่",
+        description: "คุยกับ GPT-4O และสร้างภาพจากข้อความพร้อมตอบกลับ",
     },
     run: async ({ api, event, args }) => {
         const query = args.join(" ");
@@ -48,7 +48,7 @@ module.exports = {
 
                     writer.on("finish", () => {
                         api.sendMessage({
-                            body: `${rightAlignedTime}\n\n✨ GPT-4O ตอบกลับ:\n${data.response.split("\n\n")[0]}`,
+                            body: `${rightAlignedTime}\n\n✨ GPT-4O ตอบกลับ:\nภาพที่สร้างขึ้นจากข้อความของคุณ`,
                             attachment: fs.createReadStream(imagePath),
                         }, event.threadID, () => {
                             fs.unlinkSync(imagePath); // ลบไฟล์หลังส่ง
