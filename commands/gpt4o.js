@@ -31,9 +31,10 @@ module.exports = {
       const { response: aiResponse } = response.data;
 
       // ตรวจสอบว่าเป็นคำสั่งสร้างภาพ
-      if (aiResponse.startsWith("TOOL_CALL: generateImage")) {
+      if (aiResponse.includes("TOOL_CALL: generateImage")) {
         // ดึง URL ของภาพจากข้อความ
-        const imageUrl = aiResponse.match(/(https?:\/\/[^]+)/)?.[1];
+        const urlMatch = aiResponse.match(/(https?:\/\/[^]+)/);
+        const imageUrl = urlMatch ? urlMatch[1] : null;
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
 
         if (imageUrl) {
@@ -50,7 +51,12 @@ module.exports = {
             messageID
           );
         } else {
-          throw new Error("ไม่สามารถดึง URL ภาพจากผลลัพธ์ได้");
+          // กรณีไม่พบ URL ในผลลัพธ์
+          return api.sendMessage(
+            "❗ เกิดข้อผิดพลาด: ไม่พบ URL ของภาพในผลลัพธ์ กรุณาลองใหม่อีกครั้ง",
+            threadID,
+            messageID
+          );
         }
       } else {
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
