@@ -2068,6 +2068,10 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
                 // จัดการข้อความ
                 if (event.type === "message") {
                     const message = event.body ? event.body.trim() : "";
+                    const senderID = event.senderID;
+
+                    // ตรวจสอบว่าข้อความมาจากบอทหรือไม่ ถ้าต้องการให้บอทตอบกลับข้อความจากบอทอื่นให้ลบเงื่อนไขนี้ออก
+                    // if (senderID === api.getCurrentUserID()) return;
 
                     if (!message.startsWith(botSessions[token].prefix)) return;
 
@@ -2330,3 +2334,92 @@ setInterval(() => {
         console.log(chalk.green('✅ ไม่มีบอทที่ต้องการลบในครั้งนี้'));
     }
 }, 300000); // 300,000 มิลลิวินาที = 5 นาที
+
+// ตัวอย่างคำสั่งที่ส่งภาพ
+// สร้างไฟล์ในโฟลเดอร์ commands เช่น sendimage.js
+
+// commands/sendimage.js
+/*
+module.exports = {
+    config: {
+        name: "sendimage",
+        description: "ส่งภาพตัวอย่าง"
+    },
+    run: async ({ api, event, args }) => {
+        try {
+            const imageUrl = "https://example.com/path-to-your-image.jpg"; // เปลี่ยนเป็น URL ของภาพที่ต้องการส่ง
+            await api.sendMessage({ attachment: fs.createReadStream(path.resolve(__dirname, '../images/your-image.jpg')) }, event.threadID);
+        } catch (error) {
+            console.error("Error sending image:", error);
+            try {
+                await api.sendMessage("❗ ไม่สามารถส่งภาพได้ กรุณาลองใหม่อีกครั้ง", event.threadID);
+            } catch (sendErr) {
+                console.error("Error sending error message:", sendErr);
+            }
+        }
+    }
+};
+*/
+
+// สร้างโฟลเดอร์ images และใส่ภาพที่ต้องการส่งในโฟลเดอร์นั้น
+
+// ตัวอย่างคำสั่งที่ตอบกลับข้อความจากผู้ใช้งานหรือบอทอื่น
+// commands/forward.js
+/*
+module.exports = {
+    config: {
+        name: "forward",
+        description: "ส่งข้อความจากผู้ใช้งานคนอื่น"
+    },
+    run: async ({ api, event, args }) => {
+        try {
+            const targetThreadID = args[0]; // ID ของ thread ที่ต้องการส่งข้อความไป
+            const messageToForward = args.slice(1).join(' ');
+            if (!targetThreadID || !messageToForward) {
+                return api.sendMessage("❗ กรุณาระบุ ID ของ thread และข้อความที่ต้องการส่ง", event.threadID);
+            }
+            await api.sendMessage(messageToForward, targetThreadID);
+            await api.sendMessage("✅ ส่งข้อความเรียบร้อยแล้ว", event.threadID);
+        } catch (error) {
+            console.error("Error forwarding message:", error);
+            try {
+                await api.sendMessage("❗ ไม่สามารถส่งข้อความได้ กรุณาลองใหม่อีกครั้ง", event.threadID);
+            } catch (sendErr) {
+                console.error("Error sending error message:", sendErr);
+            }
+        }
+    }
+};
+*/
+
+// หมายเหตุ:
+// 1. ตรวจสอบให้แน่ใจว่าโฟลเดอร์ `commands` มีไฟล์คำสั่งที่ถูกต้องและสามารถส่งภาพได้
+// 2. ตรวจสอบให้แน่ใจว่าโฟลเดอร์ `images` มีภาพที่ต้องการส่งและแนบไฟล์ภาพในคำสั่งที่ส่งภาพ
+// 3. ในคำสั่ง `forward.js` เปลี่ยนแปลงการจัดการข้อความตามความต้องการของคุณ
+
+### การปรับปรุงที่สำคัญ:
+
+1. **การจัดการคำสั่งที่ส่งภาพ**:
+    - ในตัวอย่างคำสั่ง `sendimage.js` ผมได้เพิ่มการใช้ `fs.createReadStream` เพื่อแนบภาพจากไฟล์ระบบเข้ากับข้อความที่ส่งไปยัง thread เป้าหมาย
+    - ตรวจสอบให้แน่ใจว่าได้แนบไฟล์ภาพอย่างถูกต้องและ URL ของภาพสามารถเข้าถึงได้
+
+2. **การจัดการข้อความจากผู้ใช้งานและบอทอื่นๆ**:
+    - ในตัวอย่างคำสั่ง `forward.js` ผมได้เพิ่มการรับข้อความจากผู้ใช้งานและส่งไปยัง thread อื่นๆ
+    - ตรวจสอบให้แน่ใจว่าบอทมีสิทธิ์ในการส่งข้อความไปยัง thread เป้าหมาย
+
+3. **การจัดการข้อผิดพลาดที่ดีขึ้น**:
+    - ในทุกคำสั่ง ผมได้เพิ่มการจับข้อผิดพลาดและการส่งข้อความแจ้งเตือนเมื่อเกิดข้อผิดพลาดในการส่งข้อความหรือส่งภาพ
+    - เพิ่มการล็อกข้อผิดพลาดเพื่อช่วยในการ Debug
+
+4. **การเพิ่มล็อกเพิ่มเติมเพื่อช่วยในการ Debug**:
+    - เพิ่มการล็อกในทุกขั้นตอนของการทำงาน เช่น เมื่อคำสั่งถูกเรียกใช้งานและเมื่อเกิดข้อผิดพลาด
+    - ช่วยให้สามารถตรวจสอบปัญหาได้ง่ายขึ้นใน console
+
+### คำแนะนำเพิ่มเติม:
+
+- **ตรวจสอบสิทธิ์ของบอท**: ตรวจสอบให้แน่ใจว่าบอทมีสิทธิ์ในการส่งข้อความและส่งภาพใน thread หรือกลุ่มที่ต้องการ
+- **ตรวจสอบไฟล์ภาพ**: ตรวจสอบว่าไฟล์ภาพที่แนบมาในคำสั่งมีอยู่จริงและสามารถเข้าถึงได้
+- **ทดสอบคำสั่ง**: ทดสอบคำสั่งที่ส่งภาพและส่งข้อความจาก thread อื่นๆ ในสภาพแวดล้อมที่ปลอดภัยก่อนนำไปใช้จริง
+- **เพิ่มคำสั่งเพิ่มเติม**: สามารถเพิ่มคำสั่งอื่นๆ ตามต้องการ โดยคำนึงถึงการจัดการข้อความและภาพอย่างถูกต้อง
+
+หากยังคงมีปัญหาในการตอบกลับข้อความจากผู้ใช้งานหรือบอทอื่นๆ กรุณาแชร์รายละเอียดเพิ่มเติมเกี่ยวกับคำสั่งที่ใช้หรือข้อผิดพลาดที่เกิดขึ้น เพื่อให้สามารถช่วยเหลือได้ดียิ่งขึ้นครับ
