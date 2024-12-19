@@ -57,39 +57,15 @@ module.exports = {
         console.log("Image URL:", imageUrl);
 
         if (imageUrl) {
-          try {
-            // เพิ่ม header 'User-Agent' เพื่อป้องกันการบล็อกจากบางเซิร์ฟเวอร์
-            const imageResponse = await axios.get(imageUrl, { 
-              responseType: "stream",
-              headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36'
-              }
-            });
-
-            if (imageResponse.status !== 200) {
-              throw new Error(`Image URL responded with status code ${imageResponse.status}`);
-            }
-
-            // ส่งภาพพร้อมแสดงเวลาที่ใช้
-            return api.sendMessage(
-              {
-                body: `✅ สร้างภาพสำเร็จ!\n📂 ใช้เวลาทั้งหมด: ${duration} วินาที`,
-                attachment: imageResponse.data,
-              },
-              threadID,
-              messageID
-            );
-          } catch (error) {
-            console.error("❌ เกิดข้อผิดพลาดในการดึงภาพ:", error.message);
-            // ส่งข้อความพร้อมลิงก์ภาพแทน
-            return api.sendMessage(
-              {
-                body: `✅ สร้างภาพสำเร็จ!\n📂 ใช้เวลาทั้งหมด: ${duration} วินาที\n🔗 ลิงก์ภาพ: ${imageUrl}`,
-              },
-              threadID,
-              messageID
-            );
-          }
+          // ส่งภาพผ่าน URL โดยตรง
+          return api.sendMessage(
+            {
+              body: `✅ สร้างภาพสำเร็จ!\n📂 ใช้เวลาทั้งหมด: ${duration} วินาที`,
+              attachment: imageUrl, // ส่ง URL เป็นแนบ
+            },
+            threadID,
+            messageID
+          );
         } else {
           // กรณีไม่พบ URL ในผลลัพธ์
           return api.sendMessage(
