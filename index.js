@@ -968,7 +968,7 @@ app.get("/start", (req, res) => {
                     <div class="collapse navbar-collapse" id="navbarNav">
                         <ul class="navbar-nav ms-auto">
                             <li class="nav-item">
-                                <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
+                                <a class="nav-link active" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
@@ -1240,7 +1240,7 @@ app.get("/start", (req, res) => {
     `);
 });
 
-// หน้าเพิ่มบอท
+// หน้าเพิ่มบอท (GET)
 app.get("/start", (req, res) => {
     const error = req.query.error;
 
@@ -1970,63 +1970,27 @@ app.get("/bots", (req, res) => {
 
             <main class="flex-grow-1">
                 <div class="container">
-                    <!-- สถิติ -->
-                    <div class="row mb-4">
-                        <div class="col-md-3 col-sm-6 mb-3">
-                            <div class="stats-card">
-                                <i class="fas fa-robot fa-2x mb-3" style="color: #ffc107;"></i>
-                                <div class="stats-number" id="totalBots">${data.totalBots}</div>
-                                <div class="stats-label">บอททั้งหมด</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6 mb-3">
-                            <div class="stats-card">
-                                <i class="fas fa-signal fa-2x mb-3" style="color: #198754;"></i>
-                                <div class="stats-number" id="onlineBots">${data.onlineBots}</div>
-                                <div class="stats-label">บอทออนไลน์</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6 mb-3">
-                            <div class="stats-card">
-                                <i class="fas fa-clock fa-2x mb-3" style="color: #ffc107;"></i>
-                                <div class="stats-number" id="activeBots">${data.activeBots}</div>
-                                <div class="stats-label">บอททำงานแล้ว</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6 mb-3">
-                            <div class="stats-card">
-                                <i class="fas fa-tachometer-alt fa-2x mb-3" style="color: #198754;"></i>
-                                <div class="stats-number" id="websitePing">${data.websitePing} ms</div>
-                                <div class="stats-label">Ping เว็บไซต์</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <!-- ตารางบอท -->
-                        <div class="col-12">
-                            <div class="glass-card">
-                                <h5 class="mb-4">
-                                    <i class="fas fa-robot me-2" style="color: #ffc107;"></i>
-                                    บอทที่กำลังทำงาน
-                                </h5>
-                                <div class="table-responsive">
-                                    <table class="table bot-table">
-                                        <thead>
-                                            <tr>
-                                                <th>ชื่อบอท</th>
-                                                <th>สถานะ</th>
-                                                <th>เวลารัน</th>
-                                                <th>ปิง</th>
-                                                <th>การจัดการ</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="botTableBody">
-                                            ${data.botRows}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
+                    <!-- ตารางบอท -->
+                    <div class="glass-card">
+                        <h5 class="mb-4">
+                            <i class="fas fa-list me-2" style="color: #198754;"></i>
+                            บอทที่กำลังทำงาน
+                        </h5>
+                        <div class="table-responsive">
+                            <table class="table bot-table">
+                                <thead>
+                                    <tr>
+                                        <th>ชื่อบอท</th>
+                                        <th>สถานะ</th>
+                                        <th>เวลารัน</th>
+                                        <th>ปิง</th>
+                                        <th>การจัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="botTableBody">
+                                    ${data.botRows}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -2665,7 +2629,7 @@ app.get("/debug/bots", (req, res) => {
         adminID: bot.adminID,
         ping: bot.ping || 'N/A',
         prefix: bot.prefix,
-        autoReply: bot.autoReply
+        autoReply: bot.autoReply || false
     }));
     res.json(bots);
 });
@@ -2809,17 +2773,17 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
                     const message = event.body ? event.body.trim() : "";
                     const bot = botSessions[token];
 
-                    // ตรวจสอบ autoReply
+                    // ตรวจสอบว่า Auto Reply เปิดอยู่หรือไม่
                     if (bot && bot.autoReply) {
+                        // ตรวจสอบคำสั่งที่รองรับ Auto Reply
                         Object.values(commands).forEach(async (command) => {
                             if (command.config.autoReplyEnabled) { // ตรวจสอบคำสั่งที่รองรับ Auto Reply
                                 try {
-                                    // แยก args จากข้อความทั้งหมด
-                                    const args = message.split(" ");
-                                    await command.run({ api, event, args, bot });
-                                    console.log(chalk.green(`✅ คำสั่ง "${command.config.name}" ถูกเรียกใช้งาน (Auto Reply)`));
+                                    await command.run({ api, event, args: message.split(" "), bot });
+                                    console.log(chalk.green(`✅ คำสั่ง "${command.config.name}" ถูกเรียกใช้งาน`));
                                     // เพิ่มตัวนับการใช้คำสั่ง
                                     commandUsage[command.config.name.toLowerCase()] = (commandUsage[command.config.name.toLowerCase()] || 0) + 1;
+
                                     io.emit('updateBots', generateBotData());
                                     io.emit('updateCommands', generateCommandData());
                                 } catch (error) {
@@ -3083,4 +3047,13 @@ setInterval(() => {
     if (botsToDelete === 0) {
         console.log(chalk.green('✅ ไม่มีบอทที่ต้องการลบในครั้งนี้'));
     }
-}, 300000); // 300,000 มิลลิวินาที = 5 นาที
+}, 300000); // 300,000 มิลลิวินาที = 5 นาที 
+
+// ฟังก์ชันช่วยเหลือในการสร้างชื่อบอทที่สวยงาม (ซ้ำกับข้างบน, สามารถลบทิ้งได้ถ้าไม่จำเป็น)
+function generateBotName() {
+    const adjectives = ["Super", "Mega", "Ultra", "Hyper", "Turbo", "Alpha", "Beta", "Gamma", "Delta"];
+    const nouns = ["Dragon", "Phoenix", "Falcon", "Tiger", "Lion", "Eagle", "Shark", "Wolf", "Leopard"];
+    const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const noun = nouns[Math.floor(Math.random() * nouns.length)];
+    return `${adjective}${noun}`;
+}
