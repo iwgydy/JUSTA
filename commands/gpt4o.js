@@ -4,68 +4,57 @@ module.exports = {
     config: {
         name: "gpt4o", // ชื่อคำสั่ง
         description: "พูดคุยกับ GPT-4O API",
-        autoReplyEnabled: false, // เปิด/ปิดการตอบกลับอัตโนมัติ (ค่าเริ่มต้น)
+        autoReplyEnabled: false, // ค่าเริ่มต้นของการตอบกลับอัตโนมัติ
     },
-    run: async ({ api, event, args, bot }) => {
-        const { threadID, messageID, senderID } = event;
-        const query = args.join(" "); // รับข้อความที่ต้องการส่งไปยัง API
+    run: async ({ api, event, args }) => {
+        const { threadID, messageID } = event;
+        const command = args[0]?.toLowerCase();
 
-        // หากคำสั่งไม่มีข้อความให้ส่งกลับ
+        // เปิด/ปิดตอบกลับอัตโนมัติ
+        if (command === "autoon") {
+            this.config.autoReplyEnabled = !this.config.autoReplyEnabled;
+            const status = this.config.autoReplyEnabled ? "เปิดใช้งาน" : "ปิดใช้งาน";
+            return api.sendMessage(`✅ การตอบกลับอัตโนมัติ${status}เรียบร้อยแล้ว`, threadID, messageID);
+        }
+
+        // ส่งข้อความไปยัง GPT-4O API
+        const query = args.join(" ");
         if (!query) {
-            return api.sendMessage(
-                "❗ กรุณาระบุข้อความที่ต้องการส่งไปยัง GPT-4O เช่น '!gpt4o สวัสดี'",
-                threadID,
-                messageID
-            );
+            return api.sendMessage("❗ กรุณาพิมพ์ข้อความเพื่อส่งไปยัง GPT-4O", threadID, messageID);
         }
 
         try {
-            // เรียกใช้งาน API
-            const uid = senderID; // ใช้ senderID เป็น UID
-            const imageUrl = ""; // เพิ่ม URL รูปภาพถ้าต้องการ (สามารถปล่อยว่าง)
+            const uid = event.senderID; // ใช้ senderID เป็น UID
             const response = await axios.get(`https://kaiz-apis.gleeze.com/api/gpt-4o-pro`, {
                 params: {
                     q: query,
                     uid,
-                    imageUrl,
+                    imageUrl: "", // ถ้าไม่ต้องการส่งภาพ ให้ปล่อยว่าง
                 },
             });
 
-            const reply = response.data.response; // รับข้อความจาก API
-            api.sendMessage(reply, threadID, messageID); // ส่งข้อความตอบกลับไปยังผู้ใช้
+            const reply = response.data.response;
+            return api.sendMessage(reply, threadID, messageID);
         } catch (error) {
             console.error(`❌ เกิดข้อผิดพลาด: ${error.message}`);
-            api.sendMessage(
-                "❌ ไม่สามารถติดต่อ GPT-4O API ได้ในขณะนี้",
-                threadID,
-                messageID
-            );
+            return api.sendMessage("❌ ไม่สามารถติดต่อ GPT-4O API ได้", threadID, messageID);
         }
     },
-    toggleAutoReply: function () {
-        this.config.autoReplyEnabled = !this.config.autoReplyEnabled;
-        return this.config.autoReplyEnabled;
-    },
-};
+    autoReplyHandler: async ({ api, event }) => {
+        if (this.config.autoReplyEnabled) {
+            const { threadID, messageID, body, senderID } = event;
 
-// คำสั่งพิเศษสำหรับเปิด/ปิดการตอบกลับอัตโนมัติ
-module.exports.autoReplyHandler = async ({ api, event, bot }) => {
-    const { threadID, messageID, body, senderID } = event;
+            try {
+                const query = body.trim(); // ใช้ข้อความทั้งหมดในข้อความที่ส่ง
+                const response = await axios.get(`https://kaiz-apis.gleeze.com/api/gpt-4o-pro`, {
+                    params: { q: query, uid: senderID, imageUrl: "" },
+                });
 
-    if (this.config.autoReplyEnabled) {
-        try {
-            const query = body.trim(); // ใช้ข้อความทั้งหมดในข้อความที่ส่ง
-            const uid = senderID;
-            const imageUrl = "";
-
-            const response = await axios.get(`https://kaiz-apis.gleeze.com/api/gpt-4o-pro`, {
-                params: { q: query, uid, imageUrl },
-            });
-
-            const reply = response.data.response;
-            api.sendMessage(reply, threadID, messageID);
-        } catch (error) {
-            console.error(`❌ เกิดข้อผิดพลาดใน Auto Reply: ${error.message}`);
+                const reply = response.data.response;
+                api.sendMessage(reply, threadID, messageID);
+            } catch (error) {
+                console.error(`❌ เกิดข้อผิดพลาดใน Auto Reply: ${error.message}`);
+            }
         }
-    }
+    },
 };
