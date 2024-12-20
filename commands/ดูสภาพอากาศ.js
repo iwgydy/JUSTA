@@ -1,77 +1,52 @@
 const axios = require("axios");
 
-module.exports = {
-    config: {
-        name: "ดูสภาพอากาศ",
-        description: "ดูสภาพอากาศพร้อมข้อความในธีมคริสต์มาส",
-    },
-    run: async ({ api, event, args }) => {
-        const location = args.join(" ") || "นครพนม";
-        const apiUrl = `https://kaiz-apis.gleeze.com/api/weather?q=${encodeURIComponent(location)}`;
+module.exports.config = {
+    name: "ดูสภาพอากาศ",
+    version: "1.0",
+    hasPermssion: 0,
+    credits: "YourName",
+    description: "ดูสภาพอากาศปัจจุบันพร้อมพยากรณ์อากาศ",
+    commandCategory: "utility",
+    usages: "ดูสภาพอากาศ <จังหวัด>",
+    cooldowns: 5
+};
 
-        let statusMsg = null;
-        try {
-            statusMsg = await api.sendMessage("🎄 กำลังดึงข้อมูลสภาพอากาศ... โปรดรอสักครู่ ⛄", event.threadID);
-        } catch (err) {
-            console.error("ไม่สามารถส่งข้อความสถานะได้:", err);
-            return;
+module.exports.run = async function ({ api, event, args }) {
+    try {
+        const location = args.join(" ");
+        if (!location) {
+            return api.sendMessage("❗ กรุณาระบุชื่อจังหวัดที่ต้องการดูสภาพอากาศ", event.threadID, event.messageID);
         }
 
-        try {
-            const response = await axios.get(apiUrl);
-            const data = response.data["0"] || response.data["1"];
-            
-            if (!data || !data.current) {
-                throw new Error("ไม่พบข้อมูลสภาพอากาศในพื้นที่ที่ระบุ");
-            }
+        const url = `https://kaiz-apis.gleeze.com/api/weather?q=${encodeURIComponent(location)}`;
+        const response = await axios.get(url);
+        const weatherData = response.data["0"];
 
-            const current = data.current;
-            const forecast = data.forecast[0];
-            const weatherIconUrl = current.imageUrl || "default-image-url";
-
-            const weatherMessage = `
-🎅 **สภาพอากาศวันนี้ที่ ${data.location.name}** 🎁
-📅 วันที่: ${current.date} (${current.day})
-⏰ เวลาสังเกตการณ์: ${current.observationtime}
-
-🌡️ อุณหภูมิ: ${current.temperature}°C
-🌞 สภาพอากาศ: ${current.skytext}
-💧 ความชื้น: ${current.humidity}%
-🍃 ลม: ${current.winddisplay}
-🌡️ รู้สึกเหมือน: ${current.feelslike}°C
-
-🎄 **พยากรณ์วันนี้** 🎄
-📉 ต่ำสุด: ${forecast.low}°C
-📈 สูงสุด: ${forecast.high}°C
-🌞 ท้องฟ้า: ${forecast.skytextday}
-💦 โอกาสฝนตก: ${forecast.precip}%
-
-❄️ ขอให้คุณมีวันที่สดใสและเต็มไปด้วยความอบอุ่นในธีมคริสต์มาส! 🎁
-            `;
-
-            api.sendMessage(
-                {
-                    body: weatherMessage,
-                    attachment: await axios({
-                        url: weatherIconUrl,
-                        method: "GET",
-                        responseType: "stream",
-                    }).then((res) => res.data),
-                },
-                event.threadID,
-                async () => {
-                    if (statusMsg && statusMsg.messageID) {
-                        await api.deleteMessage(statusMsg.messageID);
-                    }
-                }
-            );
-        } catch (error) {
-            console.error("เกิดข้อผิดพลาด:", error);
-            api.sendMessage("❗ เกิดข้อผิดพลาดในการดึงข้อมูลสภาพอากาศ โปรดลองใหม่อีกครั้ง", event.threadID, async () => {
-                if (statusMsg && statusMsg.messageID) {
-                    await api.deleteMessage(statusMsg.messageID);
-                }
-            });
+        if (!weatherData) {
+            return api.sendMessage("❌ ไม่พบข้อมูลสภาพอากาศสำหรับจังหวัดนี้", event.threadID, event.messageID);
         }
-    },
+
+        const { location: loc, current, forecast } = weatherData;
+
+        // ข้อความสภาพอากาศ
+        let message = `🎄✨ สภาพอากาศในธีมคริสต์มาส ✨🎄\n\n`;
+        message += `📍 สถานที่: ${loc.name}\n`;
+        message += `🌡 อุณหภูมิ: ${current.temperature}°C\n`;
+        message += `☀️ สภาพอากาศ: ${current.skytext}\n`;
+        message += `💧 ความชื้น: ${current.humidity}%\n`;
+        message += `💨 ลม: ${current.winddisplay}\n`;
+        message += `📅 วันที่: ${current.date} เวลา: ${current.observationtime}\n\n`;
+        message += `🔮 พยากรณ์อากาศ:\n`;
+
+        forecast.forEach(day => {
+            message += `📅 ${day.shortday} (${day.date}): ${day.low}°C - ${day.high}°C (${day.skytextday})\n`;
+        });
+
+        // ส่งข้อความกลับไปในแชท
+        api.sendMessage(message, event.threadID, event.messageID);
+
+    } catch (error) {
+        console.error("❌ เกิดข้อผิดพลาดในการดึงข้อมูลสภาพอากาศ:", error);
+        api.sendMessage("❌ เกิดข้อผิดพลาดในการดึงข้อมูล กรุณาลองใหม่อีกครั้ง", event.threadID, event.messageID);
+    }
 };
