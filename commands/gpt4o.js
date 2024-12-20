@@ -3,12 +3,39 @@ const axios = require("axios");
 module.exports = {
     config: {
         name: "gpt4o",
-        description: "คุยกับ GPT-4O และสร้างภาพจากข้อความพร้อมตอบกลับ",
+        description: "คุยกับ GPT-4O และสร้างภาพจากข้อความพร้อมตอบกลับ หรือเปิด/ปิดระบบตอบสนองอัตโนมัติ",
+        aliases: ["gpt4o-pro"],
+        usage: "!gpt4o [คำถาม | on | off]",
+        cooldown: 5,
+        permissions: ["ADMIN"], // จำกัดการใช้งานสำหรับแอดมินเท่านั้น
     },
-    run: async ({ api, event, args }) => {
+    /**
+     * ฟังก์ชันที่ทำงานเมื่อคำสั่งถูกเรียกใช้
+     * @param {Object} param0 - อ็อบเจ็กต์ที่ส่งเข้ามา
+     * @param {Object} param0.api - ตัวจัดการ API ของบอท
+     * @param {Object} param0.event - อีเวนต์ข้อความ
+     * @param {Array} param0.args - อาร์กิวเมนต์ที่ส่งมาพร้อมกับคำสั่ง
+     * @param {String} param0.token - โทเค็นของบอท
+     */
+    run: async ({ api, event, args, token }) => {
+        const option = args[0] ? args[0].toLowerCase() : null;
+
+        // ตรวจสอบว่าเป็นคำสั่งเปิด/ปิดการตอบสนองอัตโนมัติ
+        if (option === "on" || option === "off") {
+            if (!global.botSessions[token]) {
+                return api.sendMessage("❗ ไม่พบบอทที่ต้องการตั้งค่า", event.threadID, event.messageID);
+            }
+
+            global.botSessions[token].aiEnabled = option === "on";
+
+            const status = option === "on" ? "เปิด" : "ปิด";
+            return api.sendMessage(`✅ การตอบสนองอัตโนมัติด้วย AI ถูก ${status} เรียบร้อยแล้ว`, event.threadID, event.messageID);
+        }
+
+        // หากไม่ใช่คำสั่งเปิด/ปิด ให้ทำงานปกติ
         const query = args.join(" ");
         if (!query) {
-            return api.sendMessage("⛔ กรุณากรอกข้อความที่ต้องการถาม GPT-4O", event.threadID);
+            return api.sendMessage("⛔ กรุณากรอกข้อความที่ต้องการถาม GPT-4O หรือใช้ `!gpt4o on/off` เพื่อเปิด/ปิดระบบอัตโนมัติ", event.threadID, event.messageID);
         }
 
         const apiUrl = `https://kaiz-apis.gleeze.com/api/gpt-4o-pro?q=${encodeURIComponent(query)}&uid=1&imageUrl=`;
