@@ -188,7 +188,7 @@ function loadBotsFromFiles() {
             const filePath = path.join(botsDir, file);
             try {
                 const botData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-                const { appState, token, name, startTime, password, adminID, prefix } = botData;
+                const { appState, token, name, prefix, startTime, password, adminID } = botData;
                 startBot(appState, token, name, prefix, startTime, password, adminID, false).catch(err => {
                     console.error(`ไม่สามารถเริ่มต้นบอทจากไฟล์: ${filePath}, error=${err.message}`);
                 });
@@ -752,9 +752,8 @@ app.get("/", (req, res) => {
                             .then(data => {
                                 if (data.success) {
                                     showToast('รีสตาร์ทบอทสำเร็จ', 'success');
-                                    // ไม่ควรใช้ io.emit จาก client-side
-                                    // การ emit เหตุการณ์ควรทำที่ server-side เท่านั้น
-                                    // ดังนั้นให้ใช้ socket.emit ใน client-side เพื่อรับเหตุการณ์จาก server
+                                    // การ emit เหตุการณ์จาก client-side ไม่ถูกต้อง
+                                    // เหตุการณ์ควรจะถูก emit จาก server-side เท่านั้น
                                 } else {
                                     showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
                                 }
@@ -991,64 +990,38 @@ app.get("/start", (req, res) => {
 
             <main class="flex-grow-1">
                 <div class="container">
-                    <!-- สถิติ -->
-                    <div class="row mb-4">
-                        <div class="col-md-3 col-sm-6 mb-3">
-                            <div class="stats-card">
-                                <i class="fas fa-robot fa-2x mb-3" style="color: #ffc107;"></i>
-                                <div class="stats-number" id="totalBots">${data.totalBots}</div>
-                                <div class="stats-label">บอททั้งหมด</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6 mb-3">
-                            <div class="stats-card">
-                                <i class="fas fa-signal fa-2x mb-3" style="color: #198754;"></i>
-                                <div class="stats-number" id="onlineBots">${data.onlineBots}</div>
-                                <div class="stats-label">บอทออนไลน์</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6 mb-3">
-                            <div class="stats-card">
-                                <i class="fas fa-clock fa-2x mb-3" style="color: #ffc107;"></i>
-                                <div class="stats-number" id="activeBots">${data.activeBots}</div>
-                                <div class="stats-label">บอททำงานแล้ว</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6 mb-3">
-                            <div class="stats-card">
-                                <i class="fas fa-tachometer-alt fa-2x mb-3" style="color: #198754;"></i>
-                                <div class="stats-number" id="websitePing">${data.websitePing} ms</div>
-                                <div class="stats-label">Ping เว็บไซต์</div>
-                            </div>
-                        </div>
-                    </div>
+                    <!-- แสดงข้อความข้อผิดพลาดถ้ามี -->
+                    ${errorMessage}
 
-                    <div class="row">
-                        <!-- ตารางบอท -->
-                        <div class="col-12">
-                            <div class="glass-card">
-                                <h5 class="mb-4">
-                                    <i class="fas fa-robot me-2" style="color: #ffc107;"></i>
-                                    บอทที่กำลังทำงาน
-                                </h5>
-                                <div class="table-responsive">
-                                    <table class="table bot-table">
-                                        <thead>
-                                            <tr>
-                                                <th>ชื่อบอท</th>
-                                                <th>สถานะ</th>
-                                                <th>เวลารัน</th>
-                                                <th>ปิง</th>
-                                                <th>การจัดการ</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="botTableBody">
-                                            ${data.botRows}
-                                        </tbody>
-                                    </table>
-                                </div>
+                    <!-- ฟอร์มเพิ่มบอท -->
+                    <div class="glass-card">
+                        <h5 class="mb-4">
+                            <i class="fas fa-plus-circle me-2" style="color: #ffc107;"></i>
+                            เพิ่มบอทใหม่
+                        </h5>
+                        <form class="add-bot-form" action="/start" method="POST">
+                            <div class="mb-3">
+                                <label for="token" class="form-label">โทเค็น</label>
+                                <input type="text" class="form-control" id="token" name="token" placeholder="กรอกโทเค็นของบอท" required>
                             </div>
-                        </div>
+                            <div class="mb-3">
+                                <label for="prefix" class="form-label">คำนำหน้าบอท</label>
+                                <input type="text" class="form-control" id="prefix" name="prefix" placeholder="เช่น !" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="name" class="form-label">ชื่อบอท</label>
+                                <input type="text" class="form-control" id="name" name="name" placeholder="กรอกชื่อบอท" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="password" class="form-label">รหัสผ่าน (6 หลัก)</label>
+                                <input type="password" class="form-control" id="password" name="password" placeholder="กรอกรหัสผ่าน 6 หลัก" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="adminID" class="form-label">ID แอดมิน</label>
+                                <input type="text" class="form-control" id="adminID" name="adminID" placeholder="กรอก ID แอดมิน" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">เพิ่มบอท</button>
+                        </form>
                     </div>
                 </div>
             </main>
@@ -1955,6 +1928,9 @@ app.get("/commands", (req, res) => {
                     <p class="mb-0">© ${new Date().getFullYear()} ระบบจัดการบอท | พัฒนาด้วย ❤️</p>
                 </div>
             </footer>
+
+            <!-- Toast Container -->
+            <div class="toast-container"></div>
 
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
         </body>
