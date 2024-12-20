@@ -14,38 +14,33 @@ module.exports = {
         }
 
         const apiUrl = `https://kaiz-apis.gleeze.com/api/gpt-4o-pro?q=${encodeURIComponent(query)}&uid=1&imageUrl=`;
-        const startTime = Date.now(); // เริ่มจับเวลาการประมวลผล
+        const startTime = Date.now();
 
-        // แจ้งสถานะเริ่มต้น
-        let statusMsg;
+        // ส่งข้อความสถานะ
+        let statusMsg = null;
         try {
             statusMsg = await api.sendMessage("⚙️ กำลังดำเนินการ... โปรดรอสักครู่ ⏳", event.threadID);
-            console.log("Status Message Sent:", statusMsg);
+            console.log("สถานะข้อความถูกส่ง:", statusMsg);
         } catch (err) {
-            console.error("Error sending status message:", err);
-            return api.sendMessage("❗ เกิดข้อผิดพลาดในการส่งข้อความสถานะ", event.threadID);
+            console.error("ไม่สามารถส่งข้อความสถานะได้:", err);
+            return;
         }
 
         try {
+            // เรียก API
             const response = await axios.get(apiUrl);
             const data = response.data;
 
-            // สำหรับการดีบัก: ตรวจสอบการตอบกลับ
-            console.log("API Response:", data);
-
-            const endTime = Date.now(); // จับเวลาหลังการประมวลผลเสร็จสิ้น
-            const processingTime = ((endTime - startTime) / 1000).toFixed(2); // คำนวณเวลาเป็นวินาที
+            const endTime = Date.now();
+            const processingTime = ((endTime - startTime) / 1000).toFixed(2);
             const rightAlignedTime = `🕒 ${processingTime}`;
 
             if (data && data.response) {
-                // ปรับปรุง regex หรือวิธีการดึง URL ของภาพให้ตรงกับรูปแบบการตอบกลับจริง
                 let imageUrl = null;
 
-                // สมมุติว่า API ส่ง URL ของภาพใน data.imageUrl
                 if (data.imageUrl) {
                     imageUrl = data.imageUrl;
                 } else {
-                    // ถ้าไม่มี data.imageUrl ลองใช้ regex เพื่อดึง URL จาก data.response
                     const imageRegex = /!.*?(https?:\/\/.*?)/;
                     const match = imageRegex.exec(data.response);
                     if (match && match[1]) {
@@ -54,10 +49,8 @@ module.exports = {
                 }
 
                 if (imageUrl) {
-                    // กำหนดเส้นทางสำหรับเก็บภาพชั่วคราว
                     const imagePath = path.join(__dirname, `../../temp/${Date.now()}.jpg`);
 
-                    // ดาวน์โหลดรูปภาพ
                     const writer = fs.createWriteStream(imagePath);
                     const imageResponse = await axios({
                         url: imageUrl,
@@ -66,106 +59,47 @@ module.exports = {
                     });
 
                     imageResponse.data.pipe(writer);
-
-                    // รอจนดาวน์โหลดเสร็จ
                     await new Promise((resolve, reject) => {
                         writer.on("finish", resolve);
                         writer.on("error", reject);
                     });
 
-                    // ส่งข้อความพร้อมแนบภาพ
-                    api.sendMessage({
-                        body: `${rightAlignedTime}\n\n✨ GPT-4O ตอบกลับ:`,
-                        attachment: fs.createReadStream(imagePath),
-                    }, event.threadID, async (err, info) => {
-                        if (err) {
-                            console.error("Error sending main message:", err);
-                        } else {
-                            try {
-                                // ลบไฟล์ภาพหลังจากส่งเสร็จสิ้น
-                                fs.unlinkSync(imagePath);
-                            } catch (unlinkErr) {
-                                console.error("Error deleting image file:", unlinkErr);
-                            }
+                    // ส่งภาพพร้อมข้อความ
+                    await api.sendMessage(
+                        {
+                            body: `${rightAlignedTime}\n\n✨ GPT-4O ตอบกลับ:`,
+                            attachment: fs.createReadStream(imagePath),
+                        },
+                        event.threadID
+                    );
 
-                            // ลบข้อความสถานะ
-                            if (statusMsg && statusMsg.messageID) {
-                                try {
-                                    await api.deleteMessage(statusMsg.messageID);
-                                    console.log("Status message deleted successfully.");
-                                } catch (deleteErr) {
-                                    console.error("Error deleting status message:", deleteErr);
-                                }
-                            } else {
-                                console.warn("statusMsg.messageID not found.");
-                            }
-                        }
-                    });
+                    fs.unlinkSync(imagePath);
                 } else {
-                    // ถ้าไม่มี URL ของภาพ ส่งข้อความตอบกลับแบบไม่มีภาพ
+                    // ส่งข้อความปกติ
                     const cleanedResponse = data.response.replace(/TOOL_CALL:.*?\n/g, "").trim();
-                    const messageBody = `${rightAlignedTime}\n\n✨ GPT-4O ตอบกลับ:\n${cleanedResponse}`;
-                    api.sendMessage(messageBody, event.threadID, async (err, info) => {
-                        if (err) {
-                            console.error("Error sending main message:", err);
-                        } else {
-                            // ลบข้อความสถานะ
-                            if (statusMsg && statusMsg.messageID) {
-                                try {
-                                    await api.deleteMessage(statusMsg.messageID);
-                                    console.log("Status message deleted successfully.");
-                                } catch (deleteErr) {
-                                    console.error("Error deleting status message:", deleteErr);
-                                }
-                            } else {
-                                console.warn("statusMsg.messageID not found.");
-                            }
-                        }
-                    });
+                    await api.sendMessage(`${rightAlignedTime}\n\n✨ GPT-4O ตอบกลับ:\n${cleanedResponse}`, event.threadID);
                 }
             } else {
-                const messageBody = `${rightAlignedTime}\n\n❗ ไม่สามารถรับการตอบกลับจาก GPT-4O ได้ในขณะนี้`;
-                api.sendMessage(messageBody, event.threadID, async (err, info) => {
-                    if (err) {
-                        console.error("Error sending error message:", err);
-                    } else {
-                        // ลบข้อความสถานะ
-                        if (statusMsg && statusMsg.messageID) {
-                            try {
-                                await api.deleteMessage(statusMsg.messageID);
-                                console.log("Status message deleted successfully.");
-                            } catch (deleteErr) {
-                                console.error("Error deleting status message:", deleteErr);
-                            }
-                        } else {
-                            console.warn("statusMsg.messageID not found.");
-                        }
-                    }
-                });
+                await api.sendMessage(`${rightAlignedTime}\n\n❗ ไม่สามารถรับการตอบกลับจาก GPT-4O ได้ในขณะนี้`, event.threadID);
             }
         } catch (error) {
-            const endTime = Date.now(); // จับเวลาหลังจากเกิดข้อผิดพลาด
-            const processingTime = ((endTime - startTime) / 1000).toFixed(2); // คำนวณเวลาเป็นวินาที
+            console.error("เกิดข้อผิดพลาดในการประมวลผล:", error);
+            const endTime = Date.now();
+            const processingTime = ((endTime - startTime) / 1000).toFixed(2);
             const rightAlignedTime = `🕒 ${processingTime}`;
-            console.error("เกิดข้อผิดพลาดในการเชื่อมต่อกับ API:", error);
-            const messageBody = `${rightAlignedTime}\n\n❗ ขออภัย, เกิดข้อผิดพลาดในการเชื่อมต่อกับ GPT-4O`;
-            api.sendMessage(messageBody, event.threadID, async (err, info) => {
-                if (err) {
-                    console.error("Error sending error message:", err);
-                } else {
-                    // ลบข้อความสถานะ
-                    if (statusMsg && statusMsg.messageID) {
-                        try {
-                            await api.deleteMessage(statusMsg.messageID);
-                            console.log("Status message deleted successfully.");
-                        } catch (deleteErr) {
-                            console.error("Error deleting status message:", deleteErr);
-                        }
-                    } else {
-                        console.warn("statusMsg.messageID not found.");
-                    }
+            await api.sendMessage(`${rightAlignedTime}\n\n❗ เกิดข้อผิดพลาดในการประมวลผล`, event.threadID);
+        } finally {
+            // ลบข้อความสถานะ
+            if (statusMsg && statusMsg.messageID) {
+                try {
+                    await api.deleteMessage(statusMsg.messageID);
+                    console.log("ข้อความสถานะถูกลบสำเร็จ");
+                } catch (err) {
+                    console.error("ไม่สามารถลบข้อความสถานะได้:", err);
                 }
-            });
+            } else {
+                console.warn("ไม่พบ messageID ของข้อความสถานะ");
+            }
         }
     },
 };
