@@ -278,33 +278,6 @@ app.get("/", (req, res) => {
                 }
 
                 /* ปรับแต่ง Cards */
-                .stats-card {
-                    background: rgba(255, 255, 255, 0.1);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    border-radius: 12px;
-                    padding: 20px;
-                    text-align: center;
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-                    transition: transform 0.3s ease, box-shadow 0.3s ease;
-                }
-
-                .stats-card:hover {
-                    transform: translateY(-5px);
-                    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
-                }
-
-                .stats-number {
-                    font-size: 2.5rem;
-                    font-weight: 700;
-                    margin: 10px 0;
-                    color: #ffc107;
-                }
-
-                .stats-label {
-                    font-size: 1rem;
-                    color: #ffffff;
-                }
-
                 .glass-card {
                     background: rgba(255, 255, 255, 0.1);
                     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -317,6 +290,24 @@ app.get("/", (req, res) => {
                 .glass-card:hover {
                     transform: translateY(-5px);
                     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
+                }
+
+                .stats-card {
+                    background: rgba(255, 255, 255, 0.2);
+                    border-radius: 12px;
+                    padding: 20px;
+                    text-align: center;
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                }
+
+                .stats-number {
+                    font-size: 2rem;
+                    font-weight: bold;
+                    margin-bottom: 5px;
+                }
+
+                .stats-label {
+                    font-size: 1rem;
                 }
 
                 .bot-table, .command-table {
@@ -407,29 +398,13 @@ app.get("/", (req, res) => {
                     color: #ffffff;
                 }
 
-                /* ปรับแต่งปุ่ม */
-                .btn-primary {
-                    background: #ffc107;
-                    border: none;
-                    padding: 10px 20px;
-                    font-size: 1rem;
-                    border-radius: 8px;
-                    transition: background 0.3s ease, transform 0.2s ease;
-                    color: #212529;
-                    font-weight: 600;
+                .animate-float {
+                    animation: float 3s ease-in-out infinite;
                 }
 
-                .btn-primary:hover {
-                    background: #e0a800;
-                    transform: translateY(-2px);
-                }
-
-                .btn-warning, .btn-danger, .btn-secondary {
-                    transition: transform 0.2s ease;
-                }
-
-                .btn-warning:hover, .btn-danger:hover, .btn-secondary:hover {
-                    transform: scale(1.05);
+                @keyframes float {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-10px); }
                 }
 
                 /* ปรับแต่ง Toast */
@@ -438,6 +413,17 @@ app.get("/", (req, res) => {
                     top: 20px;
                     right: 20px;
                     z-index: 1055;
+                }
+
+                /* Responsive */
+                @media (max-width: 768px) {
+                    .glass-card {
+                        margin-bottom: 20px;
+                    }
+                    .bot-table th, .bot-table td,
+                    .command-table th, .command-table td {
+                        padding: 8px 10px;
+                    }
                 }
 
                 /* ปรับแต่ง Text */
@@ -455,30 +441,6 @@ app.get("/", (req, res) => {
                 .ping {
                     font-weight: 500;
                     color: #198754;
-                }
-
-                /* Responsive */
-                @media (max-width: 768px) {
-                    .stats-card {
-                        margin-bottom: 20px;
-                    }
-                    .glass-card {
-                        margin-bottom: 20px;
-                    }
-                    .bot-table th, .bot-table td,
-                    .command-table th, .command-table td {
-                        padding: 8px 10px;
-                    }
-                }
-
-                /* เพิ่มแอนิเมชัน */
-                .animate-float {
-                    animation: float 3s ease-in-out infinite;
-                }
-
-                @keyframes float {
-                    0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-10px); }
                 }
             </style>
         </head>
@@ -582,478 +544,8 @@ app.get("/", (req, res) => {
                 </div>
             </footer>
 
-            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-            <script src="/socket.io/socket.io.js"></script>
-            <script>
-                const socket = io();
-
-                // ฟังก์ชันอัปเดตเวลารัน
-                function updateRuntime() {
-                    const runtimeElements = document.querySelectorAll('.runtime');
-                    const now = Date.now();
-
-                    runtimeElements.forEach(el => {
-                        const startTime = parseInt(el.getAttribute('data-start-time'));
-                        if (!startTime) return;
-
-                        const elapsed = now - startTime;
-                        const seconds = Math.floor((elapsed / 1000) % 60);
-                        const minutes = Math.floor((elapsed / (1000 * 60)) % 60);
-                        const hours = Math.floor((elapsed / (1000 * 60 * 60)) % 24);
-                        const days = Math.floor(elapsed / (1000 * 60 * 60 * 24));
-
-                        el.textContent = \`\${days} วัน \${hours} ชั่วโมง \${minutes} นาที \${seconds} วินาที\`;
-                    });
-                }
-
-                // ฟังก์ชันส่งปิงไปยังเซิร์ฟเวอร์
-                function sendPing() {
-                    const timestamp = Date.now();
-                    socket.emit('ping', timestamp);
-                }
-
-                // ส่งปิงทุกๆ 5 วินาที
-                setInterval(sendPing, 5000);
-                // ส่งปิงทันทีเมื่อโหลดหน้า
-                sendPing();
-
-                // ฟังก์ชันแสดง Toast
-                function showToast(message, type = 'info') {
-                    const toastContainer = document.querySelector('.toast-container');
-                    const toastEl = document.createElement('div');
-                    toastEl.className = \`toast align-items-center text-bg-\${type} border-0\`;
-                    toastEl.setAttribute('role', 'alert');
-                    toastEl.setAttribute('aria-live', 'assertive');
-                    toastEl.setAttribute('aria-atomic', 'true');
-                    toastEl.innerHTML = \`
-                        <div class="d-flex">
-                            <div class="toast-body">
-                                \${message}
-                            </div>
-                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                        </div>
-                    \`;
-                    toastContainer.appendChild(toastEl);
-                    const toast = new bootstrap.Toast(toastEl);
-                    toast.show();
-
-                    // ลบ Toast หลังจากปิด
-                    toastEl.addEventListener('hidden.bs.toast', () => {
-                        toastEl.remove();
-                    });
-                }
-
-                // รับข้อมูลอัปเดตจากเซิร์ฟเวอร์
-                socket.on('updateBots', (data) => {
-                    document.getElementById('totalBots').textContent = data.totalBots;
-                    document.getElementById('onlineBots').textContent = data.onlineBots;
-                    document.getElementById('activeBots').textContent = data.activeBots;
-                    document.getElementById('websitePing').textContent = data.websitePing + ' ms';
-
-                    const botTableBody = document.getElementById('botTableBody');
-                    if (botTableBody) {
-                        botTableBody.innerHTML = data.botRows;
-                    }
-
-                    updateRuntime();
-                });
-
-                // รับเหตุการณ์เฉพาะเมื่อบอทถูกลบ
-                socket.on('botDeleted', (botName) => {
-                    showToast(\`บอท "\${botName}" ถูกลบเรียบร้อยแล้ว\`, 'success');
-                });
-
-                // รับเหตุการณ์เฉพาะเมื่อบอทไปออฟไลน์
-                socket.on('botOffline', (botName) => {
-                    showToast(\`บอท "\${botName}" กำลังจะถูกลบภายใน 60 วินาที เนื่องจากออฟไลน์\`, 'warning');
-                });
-
-                // รับเหตุการณ์เฉพาะเมื่อบอทถูกรีสตาร์ท
-                socket.on('botRestarted', (botName) => {
-                    showToast(\`บอท "\${botName}" ถูกรีสตาร์ทเรียบร้อยแล้ว\`, 'success');
-                });
-
-                // อัปเดตเวลารันทุกวินาที
-                setInterval(updateRuntime, 1000);
-                document.addEventListener('DOMContentLoaded', updateRuntime);
-
-                // Event Delegation สำหรับปุ่มลบ, แก้ไข, และรีสตาร์ท
-                document.addEventListener('click', function(event) {
-                    if (event.target.closest('.delete-btn')) {
-                        const token = decodeURIComponent(event.target.closest('.delete-btn').getAttribute('data-token'));
-                        const deleteCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการลบบอท:');
-                        if (deleteCode) {
-                            fetch('/delete', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({ token, code: deleteCode })
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    showToast('ลบบอทสำเร็จ', 'success');
-                                } else {
-                                    showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
-                                }
-                            })
-                            .catch(err => {
-                                console.error(err);
-                                showToast('เกิดข้อผิดพลาดในการลบบอท', 'danger');
-                            });
-                        }
-                    }
-
-                    if (event.target.closest('.edit-btn')) {
-                        const token = decodeURIComponent(event.target.closest('.edit-btn').getAttribute('data-token'));
-                        const editCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการแก้ไขโทเค่น:');
-                        if (editCode) {
-                            const newToken = prompt('กรุณากรอกโทเค่นใหม่:');
-                            if (newToken) {
-                                fetch('/edit', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json'
-                                    },
-                                    body: JSON.stringify({ token, code: editCode, newToken })
-                                })
-                                .then(response => response.json())
-                                .then(data => {
-                                    if (data.success) {
-                                        showToast('แก้ไขโทเค่นสำเร็จ', 'success');
-                                    } else {
-                                        showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
-                                    }
-                                })
-                                .catch(err => {
-                                    console.error(err);
-                                    showToast('เกิดข้อผิดพลาดในการแก้ไขโทเค่น', 'danger');
-                                });
-                            }
-                        }
-                    }
-
-                    // การจัดการปุ่มรีสตาร์ท
-                    if (event.target.closest('.restart-btn')) {
-                        const token = decodeURIComponent(event.target.closest('.restart-btn').getAttribute('data-token'));
-                        const restartCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการรีสตาร์ทบอท:');
-                        if (restartCode) {
-                            fetch('/restart', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({ token, code: restartCode })
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    showToast('รีสตาร์ทบอทสำเร็จ', 'success');
-                                    io.emit('botRestarted', data.botName); // ส่งเหตุการณ์รีสตาร์ทบอท
-                                } else {
-                                    showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
-                                }
-                            })
-                            .catch(err => {
-                                console.error(err);
-                                showToast('เกิดข้อผิดพลาดในการรีสตาร์ทบอท', 'danger');
-                            });
-                        }
-                    }
-                });
-            </script>
-        </body>
-        </html>
-    `);
-});
-
-// หน้าเพิ่มบอท
-app.get("/start", (req, res) => {
-    const error = req.query.error;
-
-    let errorMessage = "";
-    if (error === 'already-running') {
-        errorMessage = `<div class="alert alert-warning" role="alert">
-                            บอทนี้กำลังทำงานอยู่แล้ว
-                        </div>`;
-    } else if (error === 'invalid-token') {
-        errorMessage = `<div class="alert alert-danger" role="alert">
-                            โทเค็นไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง
-                        </div>`;
-    } else if (error === 'missing-fields') {
-        errorMessage = `<div class="alert alert-danger" role="alert">
-                            กรุณากรอกทั้งโทเค็น, รหัสผ่าน, ID แอดมิน, ชื่อบอท และคำนำหน้าบอท
-                        </div>`;
-    } else if (error === 'invalid-password') {
-        errorMessage = `<div class="alert alert-danger" role="alert">
-                            รหัสผ่านไม่ถูกต้อง กรุณากรอกรหัสผ่าน 6 หลัก
-                        </div>`;
-    } else if (error === 'invalid-name') {
-        errorMessage = `<div class="alert alert-danger" role="alert">
-                            ชื่อบอทไม่ถูกต้อง กรุณากรอกชื่อบอทที่มีความยาว 3-20 ตัวอักษร และประกอบด้วย a-z, A-Z, 0-9, -, _
-                        </div>`;
-    }
-
-    res.send(`
-        <!DOCTYPE html>
-        <html lang="th">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>เพิ่มบอท | ระบบจัดการบอท</title>
-            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-            <style>
-                /* พื้นหลัง */
-                body {
-                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png') no-repeat center center fixed;
-                    background-size: cover;
-                    color: #ffffff;
-                    font-family: 'Roboto', sans-serif;
-                    position: relative;
-                    overflow-x: hidden;
-                }
-
-                /* เพิ่ม Flexbox Layout */
-                html, body {
-                    height: 100%;
-                    margin: 0;
-                    padding: 0;
-                }
-
-                body {
-                    display: flex;
-                    flex-direction: column;
-                    min-height: 100vh;
-                }
-
-                main.flex-grow-1 {
-                    flex: 1;
-                }
-
-                /* Overlay */
-                .overlay {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: rgba(0, 0, 0, 0.7);
-                    z-index: -1;
-                }
-
-                /* ปรับแต่ง Navbar */
-                .navbar {
-                    background: rgba(13, 110, 253, 0.9) !important;
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                }
-
-                .navbar-brand {
-                    font-family: 'Kanit', sans-serif;
-                    font-weight: 600;
-                    color: #ffffff !important;
-                }
-
-                .navbar-nav .nav-link {
-                    color: #ffffff !important;
-                    transition: color 0.3s ease;
-                }
-
-                .navbar-nav .nav-link:hover {
-                    color: #ffc107 !important;
-                }
-
-                /* ปรับแต่ง Cards */
-                .glass-card {
-                    background: rgba(255, 255, 255, 0.1);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    border-radius: 16px;
-                    padding: 24px;
-                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-                    transition: transform 0.3s ease, box-shadow 0.3s ease;
-                }
-
-                .glass-card:hover {
-                    transform: translateY(-5px);
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
-                }
-
-                .add-bot-form .form-label {
-                    font-weight: 500;
-                    color: #ffffff;
-                }
-
-                .form-control {
-                    background: rgba(255, 255, 255, 0.2);
-                    border: 1px solid rgba(255, 255, 255, 0.3);
-                    border-radius: 8px;
-                    padding: 10px 12px;
-                    font-size: 1rem;
-                    transition: border-color 0.3s ease, background 0.3s ease;
-                    color: #ffffff;
-                }
-
-                .form-control::placeholder {
-                    color: #e0e0e0;
-                }
-
-                .form-control:focus {
-                    border-color: #ffc107;
-                    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
-                    background: rgba(255, 255, 255, 0.3);
-                    color: #ffffff;
-                }
-
-                .btn-primary {
-                    background: #ffc107;
-                    border: none;
-                    padding: 10px 20px;
-                    font-size: 1rem;
-                    border-radius: 8px;
-                    transition: background 0.3s ease, transform 0.2s ease;
-                    color: #212529;
-                    font-weight: 600;
-                }
-
-                .btn-primary:hover {
-                    background: #e0a800;
-                    transform: translateY(-2px);
-                }
-
-                .footer {
-                    background: rgba(13, 110, 253, 0.9);
-                    border-top: 2px solid rgba(255, 193, 7, 0.5);
-                    padding: 20px 0;
-                    font-size: 0.9rem;
-                    color: #ffffff;
-                }
-
-                .animate-float {
-                    animation: float 3s ease-in-out infinite;
-                }
-
-                @keyframes float {
-                    0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-10px); }
-                }
-
-                /* ปรับแต่ง Toast */
-                .toast-container {
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    z-index: 1055;
-                }
-
-                /* Responsive */
-                @media (max-width: 768px) {
-                    .glass-card {
-                        margin-bottom: 20px;
-                    }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="overlay"></div>
-            <nav class="navbar navbar-expand-lg navbar-dark mb-4">
-                <div class="container">
-                    <a class="navbar-brand d-flex align-items-center" href="/">
-                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: #ffffff;"></i>
-                        ระบบจัดการบอท
-                    </a>
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                        <span class="navbar-toggler-icon"></span>
-                    </button>
-                    <div class="collapse navbar-collapse" id="navbarNav">
-                        <ul class="navbar-nav ms-auto">
-                            <li class="nav-item">
-                                <a class="nav-link active" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/how-to-make-bot"><i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง</a>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </nav>
-
-            <main class="flex-grow-1">
-                <div class="container">
-                    <!-- สถิติ -->
-                    <div class="row mb-4">
-                        <div class="col-md-3 col-sm-6 mb-3">
-                            <div class="stats-card">
-                                <i class="fas fa-robot fa-2x mb-3" style="color: #ffc107;"></i>
-                                <div class="stats-number" id="totalBots">${data.totalBots}</div>
-                                <div class="stats-label">บอททั้งหมด</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6 mb-3">
-                            <div class="stats-card">
-                                <i class="fas fa-signal fa-2x mb-3" style="color: #198754;"></i>
-                                <div class="stats-number" id="onlineBots">${data.onlineBots}</div>
-                                <div class="stats-label">บอทออนไลน์</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6 mb-3">
-                            <div class="stats-card">
-                                <i class="fas fa-clock fa-2x mb-3" style="color: #ffc107;"></i>
-                                <div class="stats-number" id="activeBots">${data.activeBots}</div>
-                                <div class="stats-label">บอททำงานแล้ว</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6 mb-3">
-                            <div class="stats-card">
-                                <i class="fas fa-tachometer-alt fa-2x mb-3" style="color: #198754;"></i>
-                                <div class="stats-number" id="websitePing">${data.websitePing} ms</div>
-                                <div class="stats-label">Ping เว็บไซต์</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <!-- ตารางบอท -->
-                        <div class="col-12">
-                            <div class="glass-card">
-                                <h5 class="mb-4">
-                                    <i class="fas fa-robot me-2" style="color: #ffc107;"></i>
-                                    บอทที่กำลังทำงาน
-                                </h5>
-                                <div class="table-responsive">
-                                    <table class="table bot-table">
-                                        <thead>
-                                            <tr>
-                                                <th>ชื่อบอท</th>
-                                                <th>สถานะ</th>
-                                                <th>เวลารัน</th>
-                                                <th>ปิง</th>
-                                                <th>การจัดการ</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="botTableBody">
-                                            ${data.botRows}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </main>
-
-            <footer class="footer text-center">
-                <div class="container">
-                    <p class="mb-0">© ${new Date().getFullYear()} ระบบจัดการบอท | พัฒนาด้วย ❤️</p>
-                </div>
-            </footer>
+            <!-- Toast Container -->
+            <div class="toast-container"></div>
 
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
             <script src="/socket.io/socket.io.js"></script>
@@ -1527,6 +1019,9 @@ app.get("/start", (req, res) => {
                     <p class="mb-0">© ${new Date().getFullYear()} ระบบจัดการบอท | พัฒนาด้วย ❤️</p>
                 </div>
             </footer>
+
+            <!-- Toast Container -->
+            <div class="toast-container"></div>
 
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
             <script src="/socket.io/socket.io.js"></script>
@@ -1953,10 +1448,10 @@ app.get("/bots", (req, res) => {
                     <div class="collapse navbar-collapse" id="navbarNav">
                         <ul class="navbar-nav ms-auto">
                             <li class="nav-item">
-                                <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
+                                <a class="nav-link active" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link active" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
+                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
@@ -2038,6 +1533,9 @@ app.get("/bots", (req, res) => {
                     <p class="mb-0">© ${new Date().getFullYear()} ระบบจัดการบอท | พัฒนาด้วย ❤️</p>
                 </div>
             </footer>
+
+            <!-- Toast Container -->
+            <div class="toast-container"></div>
 
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
             <script src="/socket.io/socket.io.js"></script>
@@ -3046,9 +2544,12 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
                 fs.writeFileSync(botFilePath, JSON.stringify(botData, null, 4));
             }
 
-            io.emit('updateBots', generateBotData();
+            io.emit('updateBots', generateBotData());
             resolve();
         });
+    }
+}
+
 // ฟังก์ชันสำหรับลบบอท
 function deleteBot(token, emitDeleted = true) {
     const bot = botSessions[token];
