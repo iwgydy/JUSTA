@@ -29,18 +29,20 @@ module.exports.run = async function({ api, event, args }) {
         // จำกัดจำนวนรูปที่ส่ง (ตัวอย่าง: ส่ง 5 รูปแรก)
         const imageUrls = data.slice(0, 5);
 
-        // ส่งรูปพร้อมข้อความธีมคริสต์มาส 2025
-        let message = `
+        // ส่งข้อความแรก
+        api.sendMessage(`
 ❄️🎅━━━━━━━━━━━━━━━━━━━━━━━━━🎅❄️
          🎁 **𝑪𝒉𝒓𝒊𝒔𝒕𝒎𝒂𝒔 2025 𝑰𝒎𝒂𝒈𝒆 𝑺𝒆𝒂𝒓𝒄𝒉** 🎁
      🌟 **ผลลัพธ์การค้นหา: "${searchQuery}"** 🌟
 ❄️🎅━━━━━━━━━━━━━━━━━━━━━━━━━🎅❄️
 🎀 **เพลิดเพลินกับรูปภาพด้านล่าง!** 🎀
-`;
-
-        api.sendMessage(message, event.threadID, event.messageID, async () => {
+        `, event.threadID, async () => {
             for (const url of imageUrls) {
-                await api.sendMessage({ body: "", attachment: await axios({ url, responseType: 'stream' }).then(res => res.data) }, event.threadID);
+                const imageStream = await axios({
+                    url,
+                    responseType: "stream"
+                });
+                api.sendMessage({ attachment: imageStream.data }, event.threadID);
             }
         });
     } catch (error) {
