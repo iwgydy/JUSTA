@@ -1,10 +1,12 @@
 const axios = require('axios');
 
+// ตัวแปร module-level เพื่อเก็บสถานะ autoReply
+let autoReplyEnabled = false;
+
 module.exports = {
     config: {
-        name: "gpt4o", // ชื่อคำสั่ง
+        name: "gpt4o",
         description: "พูดคุยกับ GPT-4O API",
-        autoReplyEnabled: false, // ค่าเริ่มต้นของการตอบกลับอัตโนมัติ
     },
     run: async ({ api, event, args }) => {
         const { threadID, messageID } = event;
@@ -12,8 +14,8 @@ module.exports = {
 
         // เปิด/ปิดตอบกลับอัตโนมัติ
         if (command === "autoon") {
-            this.config.autoReplyEnabled = !this.config.autoReplyEnabled;
-            const status = this.config.autoReplyEnabled ? "เปิดใช้งาน" : "ปิดใช้งาน";
+            autoReplyEnabled = !autoReplyEnabled;
+            const status = autoReplyEnabled ? "เปิดใช้งาน" : "ปิดใช้งาน";
             return api.sendMessage(`✅ การตอบกลับอัตโนมัติ${status}เรียบร้อยแล้ว`, threadID, messageID);
         }
 
@@ -41,7 +43,8 @@ module.exports = {
         }
     },
     autoReplyHandler: async ({ api, event }) => {
-        if (this.config.autoReplyEnabled) {
+        // ตรวจสอบว่า autoReplyEnabled เปิดอยู่หรือไม่
+        if (autoReplyEnabled) {
             const { threadID, messageID, body, senderID } = event;
 
             try {
