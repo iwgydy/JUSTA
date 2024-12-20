@@ -3,7 +3,7 @@ const axios = require("axios");
 module.exports = {
     config: {
         name: "แท็กด่า",
-        version: "1.2.0",
+        version: "1.3.0",
         description: "แท็กด่าสมาชิกในกลุ่มด้วยคำด่าแบบรัวๆ (เฉพาะแอดมิน)",
         commandCategory: "fun",
         usages: "<@mention> <จำนวนคำด่า>",
@@ -45,7 +45,10 @@ module.exports = {
 
         // ดึง ID ของคนที่ถูกแท็ก
         const mentionIDs = Object.keys(mentions);
-        const mentionTags = mentionIDs.map(uid => `@${mentions[uid]}`);
+        const mentionTags = mentionIDs.map(uid => ({
+            id: uid,
+            tag: `@${mentions[uid]}`
+        }));
 
         // ดึงคำด่าจาก API
         const getInsult = async () => {
@@ -56,9 +59,14 @@ module.exports = {
         // ส่งข้อความด่าแบบรัวๆ
         for (let i = 0; i < count; i++) {
             const insult = await getInsult(); // ดึงคำด่าใหม่
-            const tagMessage = mentionTags.join(" "); // สร้างข้อความแท็ก
 
-            api.sendMessage(`🔥 ${insult}\n\n${tagMessage}`, threadID);
+            api.sendMessage(
+                {
+                    body: `🔥 ${insult}`,
+                    mentions: mentionTags
+                },
+                threadID
+            );
         }
     }
 };
