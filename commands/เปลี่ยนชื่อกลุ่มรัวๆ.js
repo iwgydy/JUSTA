@@ -3,8 +3,8 @@ const axios = require("axios");
 module.exports = {
     config: {
         name: "เปลี่ยนชื่อกลุ่มรั่ว",
-        version: "1.2.0",
-        description: "เปลี่ยนชื่อกลุ่มแบบรั่วๆ ทุก 5 วินาที (เฉพาะแอดมินบอท)",
+        version: "1.3.0",
+        description: "เปลี่ยนชื่อกลุ่มแบบรั่วๆ ทุก 3 วินาที (เฉพาะแอดมินบอท)",
         commandCategory: "utility",
         usages: "/เปลี่ยนชื่อกลุ่มรั่ว <จำนวนครั้ง>",
         cooldowns: 5
@@ -48,9 +48,9 @@ module.exports = {
                 // เปลี่ยนชื่อกลุ่ม
                 await api.setTitle(newName, threadID);
 
-                // หน่วงเวลา 5 วินาที
+                // หน่วงเวลา 3 วินาที
                 if (i < count - 1) {
-                    await new Promise(resolve => setTimeout(resolve, 5000));
+                    await new Promise(resolve => setTimeout(resolve, 3000));
                 }
             } catch (error) {
                 console.error("❌ เกิดข้อผิดพลาดในการเปลี่ยนชื่อกลุ่ม:", error);
