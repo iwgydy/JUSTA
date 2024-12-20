@@ -33,17 +33,20 @@ module.exports = {
             const replyTime = `🕒 ${processingTime}`;
             const replyText = data.response || "ไม่มีข้อมูลจาก GPT-4O";
 
-            // ส่งข้อความตอบกลับหลัก
-            await api.sendMessage(`${replyTime}\n\n✨ GPT-4O ตอบกลับ:\n${replyText}`, event.threadID, () => {
-                // ลบข้อความสถานะทันทีหลังจากข้อความหลักถูกส่ง
-                if (statusMsg && statusMsg.messageID) {
-                    api.deleteMessage(statusMsg.messageID, (err) => {
-                        if (err) {
-                            console.error("ไม่สามารถลบข้อความสถานะได้:", err);
-                        } else {
+            // ส่งข้อความตอบกลับ
+            api.sendMessage(`${replyTime}\n\n✨ GPT-4O ตอบกลับ:\n${replyText}`, event.threadID, async (err, info) => {
+                if (err) {
+                    console.error("ไม่สามารถส่งข้อความหลักได้:", err);
+                } else {
+                    // ลบข้อความสถานะหลังจากข้อความตอบกลับถูกส่ง
+                    if (statusMsg && statusMsg.messageID) {
+                        try {
+                            await api.deleteMessage(statusMsg.messageID);
                             console.log("ข้อความสถานะถูกลบสำเร็จ");
+                        } catch (deleteErr) {
+                            console.error("ไม่สามารถลบข้อความสถานะได้:", deleteErr);
                         }
-                    });
+                    }
                 }
             });
         } catch (error) {
@@ -53,16 +56,19 @@ module.exports = {
             const replyTime = `🕒 ${processingTime}`;
 
             // ส่งข้อความข้อผิดพลาด
-            await api.sendMessage(`${replyTime}\n\n❗ เกิดข้อผิดพลาดในการประมวลผล`, event.threadID, () => {
-                // ลบข้อความสถานะ
-                if (statusMsg && statusMsg.messageID) {
-                    api.deleteMessage(statusMsg.messageID, (err) => {
-                        if (err) {
-                            console.error("ไม่สามารถลบข้อความสถานะได้:", err);
-                        } else {
+            api.sendMessage(`${replyTime}\n\n❗ เกิดข้อผิดพลาดในการประมวลผล`, event.threadID, async (err, info) => {
+                if (err) {
+                    console.error("ไม่สามารถส่งข้อความข้อผิดพลาดได้:", err);
+                } else {
+                    // ลบข้อความสถานะหลังจากข้อความข้อผิดพลาดถูกส่ง
+                    if (statusMsg && statusMsg.messageID) {
+                        try {
+                            await api.deleteMessage(statusMsg.messageID);
                             console.log("ข้อความสถานะถูกลบสำเร็จ");
+                        } catch (deleteErr) {
+                            console.error("ไม่สามารถลบข้อความสถานะได้:", deleteErr);
                         }
-                    });
+                    }
                 }
             });
         }
