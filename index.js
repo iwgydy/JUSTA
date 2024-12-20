@@ -581,6 +581,9 @@ app.get("/", (req, res) => {
                 </div>
             </footer>
 
+            <!-- Toast Container -->
+            <div class="toast-container"></div>
+
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
             <script src="/socket.io/socket.io.js"></script>
             <script>
@@ -749,7 +752,9 @@ app.get("/", (req, res) => {
                             .then(data => {
                                 if (data.success) {
                                     showToast('รีสตาร์ทบอทสำเร็จ', 'success');
-                                    io.emit('botRestarted', data.botName); // ส่งเหตุการณ์รีสตาร์ทบอท
+                                    // ไม่ควรใช้ io.emit จาก client-side
+                                    // การ emit เหตุการณ์ควรทำที่ server-side เท่านั้น
+                                    // ดังนั้นให้ใช้ socket.emit ใน client-side เพื่อรับเหตุการณ์จาก server
                                 } else {
                                     showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
                                 }
@@ -1054,6 +1059,9 @@ app.get("/start", (req, res) => {
                 </div>
             </footer>
 
+            <!-- Toast Container -->
+            <div class="toast-container"></div>
+
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
             <script src="/socket.io/socket.io.js"></script>
             <script>
@@ -1222,7 +1230,8 @@ app.get("/start", (req, res) => {
                             .then(data => {
                                 if (data.success) {
                                     showToast('รีสตาร์ทบอทสำเร็จ', 'success');
-                                    io.emit('botRestarted', data.botName); // ส่งเหตุการณ์รีสตาร์ทบอท
+                                    // การ emit เหตุการณ์จาก client-side ไม่ถูกต้อง
+                                    // เหตุการณ์ควรจะถูก emit จาก server-side เท่านั้น
                                 } else {
                                     showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
                                 }
@@ -1700,7 +1709,8 @@ app.get("/bots", (req, res) => {
                             .then(data => {
                                 if (data.success) {
                                     showToast('รีสตาร์ทบอทสำเร็จ', 'success');
-                                    io.emit('botRestarted', data.botName); // ส่งเหตุการณ์รีสตาร์ทบอท
+                                    // การ emit เหตุการณ์จาก client-side ไม่ถูกต้อง
+                                    // เหตุการณ์ควรจะถูก emit จาก server-side เท่านั้น
                                 } else {
                                     showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
                                 }
@@ -1718,7 +1728,447 @@ app.get("/bots", (req, res) => {
     `);
 });
 
-// หน้าเพิ่มบอท (POST)
+// หน้าแสดงคำสั่งที่ใช้
+app.get("/commands", (req, res) => {
+    const commandsData = generateCommandData();
+
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="th">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>คำสั่งที่ใช้ | ระบบจัดการบอท</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <style>
+                /* พื้นหลัง */
+                body {
+                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png') no-repeat center center fixed;
+                    background-size: cover;
+                    color: #ffffff;
+                    font-family: 'Roboto', sans-serif;
+                    position: relative;
+                    overflow-x: hidden;
+                }
+
+                /* เพิ่ม Flexbox Layout */
+                html, body {
+                    height: 100%;
+                    margin: 0;
+                    padding: 0;
+                }
+
+                body {
+                    display: flex;
+                    flex-direction: column;
+                    min-height: 100vh;
+                }
+
+                main.flex-grow-1 {
+                    flex: 1;
+                }
+
+                /* Overlay */
+                .overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.7);
+                    z-index: -1;
+                }
+
+                /* ปรับแต่ง Navbar */
+                .navbar {
+                    background: rgba(13, 110, 253, 0.9) !important;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                }
+
+                .navbar-brand {
+                    font-family: 'Kanit', sans-serif;
+                    font-weight: 600;
+                    color: #ffffff !important;
+                }
+
+                .navbar-nav .nav-link {
+                    color: #ffffff !important;
+                    transition: color 0.3s ease;
+                }
+
+                .navbar-nav .nav-link:hover {
+                    color: #ffc107 !important;
+                }
+
+                /* ปรับแต่ง Cards */
+                .glass-card {
+                    background: rgba(255, 255, 255, 0.1);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 16px;
+                    padding: 24px;
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                }
+
+                .glass-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
+                }
+
+                .command-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 20px;
+                }
+
+                .command-table th, .command-table td {
+                    padding: 12px 15px;
+                    text-align: left;
+                }
+
+                .command-table th {
+                    background-color: rgba(13, 110, 253, 0.9);
+                    color: #fff;
+                    font-weight: 600;
+                }
+
+                .command-table tr:nth-child(even) {
+                    background-color: rgba(255, 255, 255, 0.1);
+                }
+
+                /* ปรับแต่ง Footer */
+                .footer {
+                    background: rgba(13, 110, 253, 0.9);
+                    border-top: 2px solid rgba(255, 193, 7, 0.5);
+                    padding: 20px 0;
+                    font-size: 0.9rem;
+                    color: #ffffff;
+                }
+
+                /* ปรับแต่งปุ่ม */
+                .btn-warning, .btn-danger, .btn-secondary {
+                    transition: transform 0.2s ease;
+                }
+
+                .btn-warning:hover, .btn-danger:hover, .btn-secondary:hover {
+                    transform: scale(1.05);
+                }
+
+                /* ปรับแต่ง Text */
+                .bot-name {
+                    font-family: 'Press Start 2P', cursive;
+                    color: #ff5722;
+                    font-size: 1.1rem;
+                }
+
+                .runtime {
+                    font-weight: 500;
+                    color: #ffc107;
+                }
+
+                .ping {
+                    font-weight: 500;
+                    color: #198754;
+                }
+
+                /* Responsive */
+                @media (max-width: 768px) {
+                    .glass-card {
+                        margin-bottom: 20px;
+                    }
+                    .command-table th, .command-table td {
+                        padding: 8px 10px;
+                    }
+                }
+
+                /* เพิ่มแอนิเมชัน */
+                .animate-float {
+                    animation: float 3s ease-in-out infinite;
+                }
+
+                @keyframes float {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-10px); }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="overlay"></div>
+            <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+                <div class="container">
+                    <a class="navbar-brand d-flex align-items-center" href="/">
+                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: #ffffff;"></i>
+                        ระบบจัดการบอท
+                    </a>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav ms-auto">
+                            <li class="nav-item">
+                                <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link active" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/how-to-make-bot"><i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <main class="flex-grow-1">
+                <div class="container">
+                    <!-- ตารางคำสั่งที่ใช้ -->
+                    <div class="glass-card">
+                        <h5 class="mb-4">
+                            <i class="fas fa-terminal me-2" style="color: #198754;"></i>
+                            คำสั่งที่ใช้
+                        </h5>
+                        <div class="table-responsive">
+                            <table class="table command-table">
+                                <thead>
+                                    <tr>
+                                        <th>ชื่อคำสั่ง</th>
+                                        <th>จำนวนที่ใช้</th>
+                                        <th>คำอธิบาย</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="commandTableBody">
+                                    ${commandsData}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <footer class="footer text-center">
+                <div class="container">
+                    <p class="mb-0">© ${new Date().getFullYear()} ระบบจัดการบอท | พัฒนาด้วย ❤️</p>
+                </div>
+            </footer>
+
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        </body>
+        </html>
+    `);
+});
+
+// หน้า "วิธีทำบอทของคุณเอง"
+app.get("/how-to-make-bot", (req, res) => {
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="th">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>วิธีทำบอทของคุณเอง | ระบบจัดการบอท</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <style>
+                /* พื้นหลัง */
+                body {
+                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png') no-repeat center center fixed;
+                    background-size: cover;
+                    color: #ffffff;
+                    font-family: 'Roboto', sans-serif;
+                    position: relative;
+                    overflow-x: hidden;
+                }
+
+                /* เพิ่ม Flexbox Layout */
+                html, body {
+                    height: 100%;
+                    margin: 0;
+                    padding: 0;
+                }
+
+                body {
+                    display: flex;
+                    flex-direction: column;
+                    min-height: 100vh;
+                }
+
+                main.flex-grow-1 {
+                    flex: 1;
+                }
+
+                /* Overlay */
+                .overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.7);
+                    z-index: -1;
+                }
+
+                /* ปรับแต่ง Navbar */
+                .navbar {
+                    background: rgba(13, 110, 253, 0.9) !important;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                }
+
+                .navbar-brand {
+                    font-family: 'Kanit', sans-serif;
+                    font-weight: 600;
+                    color: #ffffff !important;
+                }
+
+                .navbar-nav .nav-link {
+                    color: #ffffff !important;
+                    transition: color 0.3s ease;
+                }
+
+                .navbar-nav .nav-link:hover {
+                    color: #ffc107 !important;
+                }
+
+                /* ปรับแต่ง Cards */
+                .glass-card {
+                    background: rgba(255, 255, 255, 0.1);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 16px;
+                    padding: 24px;
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                }
+
+                .glass-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
+                }
+
+                .footer {
+                    background: rgba(13, 110, 253, 0.9);
+                    border-top: 2px solid rgba(255, 193, 7, 0.5);
+                    padding: 20px 0;
+                    font-size: 0.9rem;
+                    color: #ffffff;
+                }
+
+                .animate-float {
+                    animation: float 3s ease-in-out infinite;
+                }
+
+                @keyframes float {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-10px); }
+                }
+
+                /* ปรับแต่ง Toast */
+                .toast-container {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 1055;
+                }
+
+                /* Responsive */
+                @media (max-width: 768px) {
+                    .glass-card {
+                        margin-bottom: 20px;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="overlay"></div>
+            <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+                <div class="container">
+                    <a class="navbar-brand d-flex align-items-center" href="/">
+                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: #ffffff;"></i>
+                        ระบบจัดการบอท
+                    </a>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav ms-auto">
+                            <li class="nav-item">
+                                <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link active" href="/how-to-make-bot"><i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <main class="flex-grow-1">
+                <div class="container">
+                    <!-- เนื้อหาของหน้า "วิธีทำบอทของคุณเอง" -->
+                    <div class="glass-card">
+                        <h5 class="mb-4">
+                            <i class="fas fa-video me-2" style="color: #ffc107;"></i>
+                            วิธีทำบอทของคุณเอง
+                        </h5>
+                        <p>ขอแนะนำวิธีการทำบอทของคุณเองโดยดูจากคลิปวิดีโอต่อไปนี้:</p>
+                        <div class="ratio ratio-16x9">
+                            <iframe src="https://firebasestorage.googleapis.com/v0/b/goak-71ac8.appspot.com/o/XRecorder_18122024_114720.mp4?alt=media&token=1f243d3d-91ed-448f-83c7-3ee01d0407e4" allowfullscreen></iframe>
+                        </div>
+                        <hr>
+                        <h6>ขั้นตอนเบื้องต้น:</h6>
+                        <ol>
+                            <li>ดาวน์โหลดซอฟต์แวร์ที่จำเป็นจาก <a href="https://github.com/c3cbot/c3c-ufc-utility/archive/refs/tags/1.5.zip" target="_blank" class="text-decoration-none text-warning">GitHub</a>.</li>
+                            <li>แตกไฟล์ ZIP ที่ดาวน์โหลดมาและเปิดโปรเจกต์ในโปรแกรมแก้ไขโค้ดของคุณ.</li>
+                            <li>ตั้งค่าการเชื่อมต่อกับ API และปรับแต่งการตั้งค่าตามความต้องการของคุณ.</li>
+                            <li>รันเซิร์ฟเวอร์และตรวจสอบบอทของคุณผ่านหน้าแดชบอร์ด.</li>
+                            <li>ปรับแต่งคำสั่งและอีเวนต์เพิ่มเติมเพื่อเพิ่มความสามารถให้กับบอทของคุณ.</li>
+                        </ol>
+                        <p>สำหรับรายละเอียดเพิ่มเติม โปรดดูวิดีโอที่แนบมาด้านบน.</p>
+                    </div>
+                </div>
+            </main>
+
+            <footer class="footer text-center">
+                <div class="container">
+                    <p class="mb-0">© ${new Date().getFullYear()} ระบบจัดการบอท | พัฒนาด้วย ❤️</p>
+                </div>
+            </footer>
+
+            <!-- Toast Container -->
+            <div class="toast-container"></div>
+
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        </body>
+        </html>
+    `);
+});
+
+// Route ชั่วคราวสำหรับตรวจสอบบอททั้งหมดและโทเค็น (เพื่อช่วยในการ Debug)
+app.get("/debug/bots", (req, res) => {
+    const bots = Object.entries(botSessions).map(([token, bot]) => ({
+        token,
+        name: bot.name,
+        status: bot.status,
+        password: bot.password,
+        adminID: bot.adminID,
+        ping: bot.ping || 'N/A',
+        prefix: bot.prefix,
+        autoReply: bot.autoReply || false
+    }));
+    res.json(bots);
+});
+
+// POST /start เพื่อเริ่มต้นบอท
 app.post('/start', async (req, res) => {
     const { token, prefix, name, password, adminID } = req.body;
 
