@@ -1,55 +1,50 @@
+const axios = require("axios");
+
 module.exports.config = {
-  name: "สร้างภาพวาด",
-  version: "1.0.0",
-  description: "สร้างภาพวาดจากข้อความที่ป้อน",
-  commandCategory: "image",
-  usages: "[คำอธิบายภาพ]",
-  cooldowns: 10,
+    name: "ค้นหารูป",
+    version: "1.1.0",
+    hasPermssion: 0,
+    credits: "ต้นสุดหล่อ",
+    description: "ค้นหารูปภาพในธีมหิมะคริสต์มาส 2025 พร้อมแสดงภาพ",
+    commandCategory: "ค้นหา",
+    usages: "[คำค้นหา]",
+    cooldowns: 5
 };
 
-module.exports.run = async ({ api, event, args }) => {
-  const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
-  const fs = require("fs-extra");
-  const path = require("path");
-
-  const startTime = Date.now();
-  const textInput = args.join(" ");
-  
-  if (!textInput) {
-    return api.sendMessage("❌ กรุณาใส่คำอธิบายภาพที่ต้องการสร้าง!", event.threadID, event.messageID);
-  }
-
-  try {
-    api.sendMessage(`⏳ กำลังสร้างภาพวาดจากข้อความ: "${textInput}"\nโปรดรอสักครู่...`, event.threadID, event.messageID);
-
-    const response = await fetch("https://api-inference.huggingface.co/models/Datou1111/shou_xin", {
-      method: "POST",
-      headers: {
-        Authorization: "Bearer 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",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ inputs: textInput }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP Error: ${response.status}`);
+module.exports.run = async function({ api, event, args }) {
+    const searchQuery = args.join(" ");
+    if (!searchQuery) {
+        return api.sendMessage("❄️ กรุณาระบุคำค้นหา เช่น: /ค้นหารูป 8k ❄️", event.threadID, event.messageID);
     }
 
-    const buffer = await response.arrayBuffer();
-    const filePath = path.join(__dirname, "cache", `art_${Date.now()}.png`);
-    fs.writeFileSync(filePath, Buffer.from(buffer));
+    try {
+        // เรียก API เพื่อค้นหารูป
+        const response = await axios.get(`https://api.sumiproject.net/pinterest?search=${encodeURIComponent(searchQuery)}`);
+        const { data } = response.data;
 
-    const endTime = Date.now();
-    const timeTaken = ((endTime - startTime) / 1000).toFixed(2);
+        if (!data || data.length === 0) {
+            return api.sendMessage(`🎄 ไม่พบรูปภาพสำหรับ "${searchQuery}" 🎄`, event.threadID, event.messageID);
+        }
 
-    const message = {
-      body: `🎨 ภาพวาดของคุณถูกสร้างขึ้นเรียบร้อยแล้ว!\n🕒 ใช้เวลา: ${timeTaken} วินาที\n\n🌟 คำอธิบาย: "${textInput}"`,
-      attachment: fs.createReadStream(filePath),
-    };
+        // จำกัดจำนวนรูปที่ส่ง (ตัวอย่าง: ส่ง 5 รูปแรก)
+        const imageUrls = data.slice(0, 5);
 
-    api.sendMessage(message, event.threadID, () => fs.unlinkSync(filePath), event.messageID);
-  } catch (error) {
-    console.error("❌ เกิดข้อผิดพลาด:", error);
-    api.sendMessage("❌ ไม่สามารถสร้างภาพวาดได้ในขณะนี้ โปรดลองอีกครั้งภายหลัง!", event.threadID, event.messageID);
-  }
+        // ส่งรูปพร้อมข้อความธีมคริสต์มาส 2025
+        let message = `
+❄️🎅━━━━━━━━━━━━━━━━━━━━━━━━━🎅❄️
+         🎁 **𝑪𝒉𝒓𝒊𝒔𝒕𝒎𝒂𝒔 2025 𝑰𝒎𝒂𝒈𝒆 𝑺𝒆𝒂𝒓𝒄𝒉** 🎁
+     🌟 **ผลลัพธ์การค้นหา: "${searchQuery}"** 🌟
+❄️🎅━━━━━━━━━━━━━━━━━━━━━━━━━🎅❄️
+🎀 **เพลิดเพลินกับรูปภาพด้านล่าง!** 🎀
+`;
+
+        api.sendMessage(message, event.threadID, event.messageID, async () => {
+            for (const url of imageUrls) {
+                await api.sendMessage({ body: "", attachment: await axios({ url, responseType: 'stream' }).then(res => res.data) }, event.threadID);
+            }
+        });
+    } catch (error) {
+        console.error("เกิดข้อผิดพลาด:", error);
+        api.sendMessage("❌ เกิดข้อผิดพลาดในการค้นหารูปภาพ กรุณาลองใหม่อีกครั้ง ❌", event.threadID, event.messageID);
+    }
 };
