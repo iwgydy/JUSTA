@@ -20,19 +20,18 @@ module.exports = {
         }
 
         // ส่งข้อความไปยัง GPT-4O API
-        const query = args.slice(1).join(" "); // ข้อความหลังคำสั่ง
+        const query = args.join(" ");
         if (!query) {
             return api.sendMessage("❗ กรุณาพิมพ์ข้อความเพื่อส่งไปยัง GPT-4O เช่น `/gpt4o สวัสดี`", threadID, messageID);
         }
 
         try {
             const uid = event.senderID; // ใช้ senderID เป็น UID
-            const imageUrl = ""; // สามารถเพิ่ม URL รูปภาพถ้าต้องการ
             const response = await axios.get(`https://kaiz-apis.gleeze.com/api/gpt-4o-pro`, {
                 params: {
                     q: query,
                     uid,
-                    imageUrl,
+                    imageUrl: "", // ถ้าไม่ต้องการส่งภาพ ให้ปล่อยว่าง
                 },
             });
 
