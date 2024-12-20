@@ -3046,7 +3046,7 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
                 fs.writeFileSync(botFilePath, JSON.stringify(botData, null, 4));
             }
 
-            io.emit('updateBots', generateBotData());
+            io.emit('updateBots', generateBotData();
             resolve();
         });
     }
