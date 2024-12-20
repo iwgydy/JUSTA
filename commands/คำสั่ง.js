@@ -2,7 +2,7 @@ const fs = require("fs");
 
 module.exports.config = {
     name: "ดูคำสั่ง",
-    version: "1.0.0",
+    version: "3.0.0",
     hasPermssion: 0,
     credits: "ต้นสุดหล่อ",
     description: "แสดงรายการคำสั่งทั้งหมด",
@@ -21,7 +21,6 @@ module.exports.run = async function({ api, event }) {
             const command = require(`./${file}`);
             return {
                 name: command.config.name,
-                description: command.config.description,
                 category: command.config.commandCategory || "อื่นๆ"
             };
         });
@@ -30,45 +29,39 @@ module.exports.run = async function({ api, event }) {
         const groupedCommands = commands.reduce((groups, command) => {
             const category = command.category || "อื่นๆ";
             if (!groups[category]) groups[category] = [];
-            groups[category].push(command);
+            groups[category].push(command.name);
             return groups;
         }, {});
 
-        // สร้างข้อความแสดงผล
+        // สร้างข้อความแสดงผลในธีมคริสต์มาส
         let message = `
-✨━━━━━━━━━━━━━━━✨
-        🎉 𝐒𝐓𝐄𝐋𝐋𝐘 𝐂𝐇𝐀𝐓 𝐁𝐎𝐓 🎉
-✨━━━━━━━━━━━━━━━✨
+🎅🎄❄️━━━━━━━━━━━━━━━━━━━━━━━❄️🎄🎅
+        🎁 **𝐌𝐄𝐑𝐑𝐘 𝐂𝐇𝐑𝐈𝐒𝐓𝐌𝐀𝐒** 🎁
+🎄 **𝐒𝐓𝐄𝐋𝐋𝐘 𝐂𝐇𝐀𝐓 𝐁𝐎𝐓** 🎄
+🎅🎄❄️━━━━━━━━━━━━━━━━━━━━━━━❄️🎄🎅
 
-📚 **รายการคำสั่งทั้งหมด** 📚
-
+🎀 **คำสั่งทั้งหมดพร้อมให้ใช้งาน** 🎀
 `;
 
         for (const [category, cmds] of Object.entries(groupedCommands)) {
             message += `
-📂 **หมวดหมู่: ${category}** 📂
------------------------------------
+✨🎄 **${category.toUpperCase()}** 🎄✨
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${cmds.map(cmd => `🎁 /${cmd}`).join("\n")}
 `;
-            cmds.forEach(cmd => {
-                message += `🔹 **/${cmd.name}**\n   ➜ ${cmd.description}\n\n`;
-            });
         }
 
         message += `
-ℹ️ **วิธีใช้งาน:**
-พิมพ์ **/ชื่อคำสั่ง** เพื่อใช้งานคำสั่งที่ต้องการ
-
-💡 **ตัวอย่าง:**
-- **/ดูคำสั่ง** : แสดงรายการคำสั่งทั้งหมด
-- **/ลงทะเบียน** : ลงทะเบียนผู้ใช้ใหม่
-
-✨━━━━━━━━━━━━━━━✨
+🎁❄️━━━━━━━━━━━━━━━━━━━━━━━━━━━❄️🎁
+        🌟 **สุขสันต์วันคริสต์มาส!** 🌟
+🎅 **𝐒𝐓𝐄𝐋𝐋𝐘 𝐂𝐇𝐀𝐓 𝐁𝐎𝐓 ขอบคุณที่ใช้บริการ** 🎅
+🎁❄️━━━━━━━━━━━━━━━━━━━━━━━━━━━❄️🎁
 `;
 
         // ส่งข้อความกลับไป
         api.sendMessage(message, event.threadID, event.messageID);
     } catch (error) {
         console.error("เกิดข้อผิดพลาดในการดึงข้อมูลคำสั่ง:", error);
-        api.sendMessage("❌ ไม่สามารถแสดงรายการคำสั่งได้ กรุณาลองใหม่อีกครั้ง", event.threadID, event.messageID);
+        api.sendMessage("❌ เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง", event.threadID, event.messageID);
     }
 };
