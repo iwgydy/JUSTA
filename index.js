@@ -3049,9 +3049,6 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
             io.emit('updateBots', generateBotData();
             resolve();
         });
-    }
-}
-
 // ฟังก์ชันสำหรับลบบอท
 function deleteBot(token, emitDeleted = true) {
     const bot = botSessions[token];
