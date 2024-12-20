@@ -1,6 +1,4 @@
 const axios = require("axios");
-const fs = require("fs");
-const path = require("path");
 
 module.exports = {
     config: {
@@ -25,55 +23,39 @@ module.exports = {
 
             const endTime = Date.now(); // จับเวลาหลังการประมวลผลเสร็จสิ้น
             const processingTime = ((endTime - startTime) / 1000).toFixed(2); // คำนวณเวลาเป็นวินาที
+            const rightAlignedTime = `🕒 ${processingTime}`;
 
             if (data && data.response) {
-                const imageRegex = /!.*?(.*?)/;
+                const imageRegex = /\!.*?(.*?)/;
                 const match = imageRegex.exec(data.response);
 
                 if (match && match[1]) {
                     const imageUrl = match[1];
-                    const imagePath = path.join(__dirname, `../../temp/${Date.now()}.jpg`);
+                    const cleanedResponse = data.response.replace(imageRegex, "").trim();
 
-                    // ดาวน์โหลดรูปภาพ
-                    const writer = fs.createWriteStream(imagePath);
-                    const imageResponse = await axios({
-                        url: imageUrl,
-                        method: "GET",
-                        responseType: "stream",
-                    });
+                    const messageBody = `${rightAlignedTime}\n\n✨ GPT-4O ตอบกลับ:\n![Generated Image](${imageUrl})`;
 
-                    imageResponse.data.pipe(writer);
-
-                    writer.on("finish", () => {
-                        api.sendMessage({
-                            body: `🕒 ${processingTime} วินาที`,
-                            attachment: fs.createReadStream(imagePath),
-                        }, event.threadID, () => {
-                            fs.unlinkSync(imagePath); // ลบไฟล์หลังส่ง
-                        });
-
-                        api.deleteMessage(statusMsg.messageID); // ลบข้อความสถานะ
-                    });
-
-                    writer.on("error", (error) => {
-                        console.error("เกิดข้อผิดพลาดในการดาวน์โหลดรูปภาพ:", error);
-                        api.sendMessage(`🕒 ${processingTime} วินาที\n\n❗ ไม่สามารถดาวน์โหลดรูปภาพได้`, event.threadID);
+                    api.sendMessage(messageBody, event.threadID, () => {
                         api.deleteMessage(statusMsg.messageID); // ลบข้อความสถานะ
                     });
                 } else {
                     const cleanedResponse = data.response.replace(/TOOL_CALL:.*?\n/g, "").trim();
-                    api.sendMessage(`🕒 ${processingTime} วินาที\n\n✨ GPT-4O ตอบกลับ:\n${cleanedResponse}`, event.threadID);
+                    const messageBody = `${rightAlignedTime}\n\n✨ GPT-4O ตอบกลับ:\n${cleanedResponse}`;
+                    api.sendMessage(messageBody, event.threadID);
                     api.deleteMessage(statusMsg.messageID); // ลบข้อความสถานะ
                 }
             } else {
-                api.sendMessage(`🕒 ${processingTime} วินาที\n\n❗ ไม่สามารถรับการตอบกลับจาก GPT-4O ได้ในขณะนี้`, event.threadID);
+                const messageBody = `${rightAlignedTime}\n\n❗ ไม่สามารถรับการตอบกลับจาก GPT-4O ได้ในขณะนี้`;
+                api.sendMessage(messageBody, event.threadID);
                 api.deleteMessage(statusMsg.messageID); // ลบข้อความสถานะ
             }
         } catch (error) {
             const endTime = Date.now(); // จับเวลาหลังจากเกิดข้อผิดพลาด
             const processingTime = ((endTime - startTime) / 1000).toFixed(2); // คำนวณเวลาเป็นวินาที
+            const rightAlignedTime = `🕒 ${processingTime}`;
             console.error("เกิดข้อผิดพลาดในการเชื่อมต่อกับ API:", error);
-            api.sendMessage(`🕒 ${processingTime} วินาที\n\n❗ ขออภัย, เกิดข้อผิดพลาดในการเชื่อมต่อกับ GPT-4O`, event.threadID);
+            const messageBody = `${rightAlignedTime}\n\n❗ ขออภัย, เกิดข้อผิดพลาดในการเชื่อมต่อกับ GPT-4O`;
+            api.sendMessage(messageBody, event.threadID);
             api.deleteMessage(statusMsg.messageID); // ลบข้อความสถานะ
         }
     },
