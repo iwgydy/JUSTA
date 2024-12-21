@@ -18,7 +18,7 @@ const io = new Server(server, {
 const PORT = 3005;
 
 // เพิ่มตัวแปรสำหรับจำกัดการใช้งานคำสั่ง
-const MAX_COMMAND_USAGE = 100; // จำนวนสูงสุดที่อนุญาตให้แต่ละคำสั่งถูกใช้งาน
+const MAX_COMMAND_USAGE = 2; // จำนวนสูงสุดที่อนุญาตให้แต่ละคำสั่งถูกใช้งาน
 
 let botCount = 0;
 global.botSessions = {}; // เปลี่ยนจาก let เป็น global เพื่อให้สามารถเข้าถึงได้ในคำสั่ง
