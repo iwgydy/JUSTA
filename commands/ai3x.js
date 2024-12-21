@@ -1,119 +1,95 @@
-const axios = require('axios');
-const stringSimilarity = require('string-similarity');
+const axios = require("axios");
+const fs = require("fs");
+const path = require("path");
 
 module.exports = {
     config: {
-        name: 'เจอไนท์',
-        description: 'คุยกับเจอไนท์ในธีมคริสต์มาส 2025 🎄',
-        usage: 'เจอไนท์ [ข้อความ] หรือ เจอไนท์ สอน [คำถาม1] = [คำตอบ1] | [คำถาม2] = [คำตอบ2]',
+        name: "เจอไนท์",
+        description: "ตอบข้อความพร้อมเสียงในธีมคริสต์มาส 2025 🎄",
+        usage: "เจอไนท์ [ข้อความ]",
     },
     run: async ({ api, event, args }) => {
-        const start = Date.now();
-
         if (args.length === 0) {
-            return api.sendMessage("🎅 กรุณาพิมพ์คำถามหรือคำสั่งสำหรับเจอไนท์ 🎄", event.threadID);
+            return api.sendMessage("🎅 กรุณาพิมพ์คำถามหรือข้อความสำหรับเจอไนท์ 🎄", event.threadID);
         }
 
-        const command = args.join(' ').trim();
+        const userInput = args.join(" ").trim();
         const firebaseURL = "https://goak-71ac8-default-rtdb.firebaseio.com/responses.json";
 
-        // ตรวจสอบว่าผู้ใช้ต้องการ "สอน" หรือไม่
-        if (command.startsWith('สอน')) {
-            const input = command.replace('สอน', '').trim();
-            if (!input.includes('=')) {
-                return api.sendMessage(
-                    `🎁 กรุณาพิมพ์ในรูปแบบ:\nเจอไนท์ สอน [คำถาม1] = [คำตอบ1] | [คำถาม2] = [คำตอบ2] 🎀`,
-                    event.threadID
-                );
-            }
-
-            // แยกคำถาม-คำตอบหลายคู่ด้วย "|"
-            const pairs = input.split('|').map(pair => pair.trim());
-            const dataToSave = {};
-
-            pairs.forEach(pair => {
-                const [question, answer] = pair.split('=').map(str => str.trim());
-                if (question && answer) {
-                    dataToSave[question] = answer;
-                }
-            });
-
-            try {
-                // ดึงข้อมูลเดิมจาก Firebase
-                const response = await axios.get(firebaseURL);
-                const data = response.data || {};
-
-                // รวมข้อมูลเก่าและข้อมูลใหม่
-                Object.keys(dataToSave).forEach(question => {
-                    if (!data[question]) {
-                        data[question] = [];
-                    }
-
-                    if (!Array.isArray(data[question])) {
-                        data[question] = [data[question]];
-                    }
-
-                    data[question].push(dataToSave[question]);
-                });
-
-                // บันทึกข้อมูลใหม่ลง Firebase
-                await axios.put(firebaseURL, data);
-
-                const successMessage = Object.keys(dataToSave)
-                    .map(q => `🎀 "${q}" = "${dataToSave[q]}" 🎁`)
-                    .join('\n');
-
-                return api.sendMessage(
-                    `✅ สอนเจอไนท์สำเร็จ! 🎄\n\nคำถามและคำตอบที่เพิ่ม:\n${successMessage}`,
-                    event.threadID
-                );
-            } catch (error) {
-                console.error("❌ เกิดข้อผิดพลาด:", error.message || error);
-                return api.sendMessage(
-                    `❌ ไม่สามารถบันทึกข้อมูลได้ 🎅`,
-                    event.threadID
-                );
-            }
-        }
-
-        // หากไม่ใช่คำสั่ง "สอน" ให้ตรวจสอบคำถาม
         try {
+            // ดึงข้อมูลคำตอบจาก Firebase
             const response = await axios.get(firebaseURL);
             const data = response.data;
 
             if (data) {
-                const questions = Object.keys(data);
-                const bestMatch = stringSimilarity.findBestMatch(command, questions);
+                const matchedResponse = data[userInput] || "ผมไม่เข้าใจคำนี้ 🎁";
 
-                if (bestMatch.bestMatch.rating > 0.6) {
-                    const matchedQuestion = bestMatch.bestMatch.target;
-                    const answers = data[matchedQuestion];
+                // แปลงข้อความเป็นเสียง
+                const audioPayload = {
+                    text: matchedResponse,
+                    speaker: "28",
+                    volume: 2,
+                    speed: 1,
+                    type_media: "m4a",
+                    save_file: "true",
+                    language: "th",
+                };
 
-                    const botResponse = Array.isArray(answers)
-                        ? answers[Math.floor(Math.random() * answers.length)]
-                        : answers;
+                const audioHeaders = {
+                    "Bot-Token": "VTdiZmFiYzMyYTg3M2VkY2QzNmU4N2FmMzIwOGUxNmI4NTYxODk0",
+                    "Content-Type": "application/json",
+                };
 
-                    const end = Date.now();
-                    const elapsedTime = ((end - start) / 1000).toFixed(2);
+                const audioResponse = await axios.post(
+                    "https://api.botnoi.ai/openapi/v1/generate_audio",
+                    audioPayload,
+                    { headers: audioHeaders }
+                );
 
+                if (audioResponse.data && audioResponse.data.data && audioResponse.data.data.url) {
+                    const audioUrl = audioResponse.data.data.url;
+
+                    // ดาวน์โหลดไฟล์เสียง
+                    const filePath = path.resolve(__dirname, `${Date.now()}-response.m4a`);
+                    const writer = fs.createWriteStream(filePath);
+                    const downloadResponse = await axios({
+                        url: audioUrl,
+                        method: "GET",
+                        responseType: "stream",
+                    });
+
+                    downloadResponse.data.pipe(writer);
+
+                    writer.on("finish", () => {
+                        // ส่งข้อความพร้อมไฟล์เสียง
+                        api.sendMessage(
+                            {
+                                body: `🎄 *Merry Christmas 2025!*\n🎅 เจอไนท์: ${matchedResponse}`,
+                                attachment: fs.createReadStream(filePath),
+                            },
+                            event.threadID,
+                            () => {
+                                // ลบไฟล์เสียงหลังส่งสำเร็จ
+                                fs.unlinkSync(filePath);
+                            }
+                        );
+                    });
+
+                    writer.on("error", (err) => {
+                        console.error("❌ เกิดข้อผิดพลาดในการดาวน์โหลดไฟล์เสียง:", err);
+                        api.sendMessage("❌ ไม่สามารถส่งไฟล์เสียงได้ 🎄", event.threadID);
+                    });
+                } else {
                     return api.sendMessage(
-                        `⏰ ${elapsedTime}\n\n🎄 *Merry Christmas 2025!*\n🎅 เจอไนท์: ${botResponse}`,
+                        "❌ ไม่สามารถแปลงข้อความเป็นเสียงได้ กรุณาลองใหม่ 🎄",
                         event.threadID
                     );
                 }
             }
-
-            const end = Date.now();
-            const elapsedTime = ((end - start) / 1000).toFixed(2);
-
-            return api.sendMessage(
-                `⏰ ${elapsedTime}\n\n🎄 *Merry Christmas 2025!*\n🎅 เจอไนท์: ผมไม่เข้าใจคำนี้ 🎁\n🎀 คุณสามารถสอนผมได้โดยใช้คำสั่ง: "เจอไนท์ สอน [คำถาม] = [คำตอบ]"`,
-                event.threadID
-            );
         } catch (error) {
-            console.error("❌ เกิดข้อผิดพลาด:", error.message || error);
+            console.error("❌ เกิดข้อผิดพลาด:", error.message);
             return api.sendMessage(
-                `❌ ไม่สามารถติดต่อฐานข้อมูลได้ โปรดลองอีกครั้ง 🎄`,
+                "❌ ไม่สามารถประมวลผลข้อความหรือแปลงเสียงได้ กรุณาลองใหม่ 🎄",
                 event.threadID
             );
         }
