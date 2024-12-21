@@ -17,15 +17,14 @@ const io = new Server(server, {
 });
 const PORT = 3005;
 
-// ตัวแปรสำหรับเก็บบอท
+let botCount = 0;
 global.botSessions = {}; // เปลี่ยนจาก let เป็น global เพื่อให้สามารถเข้าถึงได้ในคำสั่ง
 const commands = {};
 const commandDescriptions = [];
-const commandUsage = {}; // ติดตามการใช้งานคำสั่ง
+let commandUsage = {}; // ติดตามการใช้งานคำสั่ง
 
 const botsDir = path.join(__dirname, 'bots');
-const dataDir = path.join(__dirname, 'data');
-const commandsUsageFile = path.join(dataDir, 'commandUsage.json');
+const dataDir = path.join(__dirname, 'data'); // โฟลเดอร์สำหรับเก็บข้อมูล
 
 // สร้างโฟลเดอร์ bots และ data ถ้ายังไม่มี
 if (!fs.existsSync(botsDir)) {
@@ -33,6 +32,35 @@ if (!fs.existsSync(botsDir)) {
 }
 if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir);
+}
+
+// เส้นทางของไฟล์ commandUsage.json
+const commandUsageFile = path.join(dataDir, 'commandUsage.json');
+
+// ฟังก์ชันช่วยเหลือในการโหลด commandUsage จากไฟล์
+function loadCommandUsage() {
+    if (fs.existsSync(commandUsageFile)) {
+        try {
+            const data = fs.readFileSync(commandUsageFile, 'utf-8');
+            commandUsage = JSON.parse(data);
+            console.log(chalk.green('✅ โหลด commandUsage สำเร็จ'));
+        } catch (err) {
+            console.error(chalk.red(`❌ ไม่สามารถโหลด commandUsage จากไฟล์ได้: ${err.message}`));
+            commandUsage = {};
+        }
+    } else {
+        commandUsage = {};
+    }
+}
+
+// ฟังก์ชันช่วยเหลือในการบันทึก commandUsage ลงไฟล์
+function saveCommandUsage() {
+    try {
+        fs.writeFileSync(commandUsageFile, JSON.stringify(commandUsage, null, 4), 'utf-8');
+        console.log(chalk.green('✅ บันทึก commandUsage สำเร็จ'));
+    } catch (err) {
+        console.error(chalk.red(`❌ ไม่สามารถบันทึก commandUsage ลงไฟล์ได้: ${err.message}`));
+    }
 }
 
 // โหลดคำสั่งจากโฟลเดอร์ commands
@@ -47,12 +75,15 @@ if (fs.existsSync(commandsPath)) {
                     name: command.config.name,
                     description: command.config.description || "ไม่มีคำอธิบาย",
                 });
-                commandUsage[command.config.name.toLowerCase()] = 0; // เริ่มต้นตัวนับคำสั่ง
+                commandUsage[command.config.name.toLowerCase()] = commandUsage[command.config.name.toLowerCase()] || 0; // เริ่มต้นตัวนับคำสั่ง
                 console.log(`📦 โหลดคำสั่ง: ${command.config.name}`);
             }
         }
     });
 }
+
+// โหลด commandUsage จากไฟล์เมื่อเริ่มต้นเซิร์ฟเวอร์
+loadCommandUsage();
 
 // โหลดอีเวนต์จากโฟลเดอร์ events
 const events = {};
@@ -170,12 +201,10 @@ function getStatusClass(status) {
 function generateCommandData() {
     const commandsData = Object.entries(commandUsage).map(([name, count]) => {
         const description = commandDescriptions.find(cmd => cmd.name.toLowerCase() === name)?.description || "ไม่มีคำอธิบาย";
-        // จำกัดจำนวนการแสดงผลที่ 9999+
-        const displayCount = count > 9999 ? '9999+' : count;
         return `
             <tr>
                 <td>${name}</td>
-                <td>${displayCount}</td>
+                <td>${count}</td>
                 <td>${description}</td>
             </tr>
         `;
@@ -188,27 +217,6 @@ function generateCommandData() {
     return commandsData;
 }
 
-// โหลดคำสั่งที่ใช้จากไฟล์เมื่อตอนเริ่มต้นเซิร์ฟเวอร์
-function loadCommandUsage() {
-    if (fs.existsSync(commandsUsageFile)) {
-        try {
-            const data = JSON.parse(fs.readFileSync(commandsUsageFile, 'utf-8'));
-            Object.assign(commandUsage, data);
-            console.log(chalk.green('✅ โหลดข้อมูลการใช้คำสั่งสำเร็จ'));
-        } catch (err) {
-            console.error(chalk.red('❌ ไม่สามารถอ่านไฟล์ commandUsage.json ได้:', err.message));
-        }
-    }
-}
-
-// บันทึกข้อมูลคำสั่งที่ใช้ลงไฟล์
-function saveCommandUsage() {
-    fs.writeFileSync(commandsUsageFile, JSON.stringify(commandUsage, null, 4));
-}
-
-// โหลดข้อมูลคำสั่งที่ใช้เมื่อตอนเริ่มต้น
-loadCommandUsage();
-
 // โหลดบอทจากไฟล์ที่เก็บไว้เมื่อตอนเริ่มต้นเซิร์ฟเวอร์
 function loadBotsFromFiles() {
     fs.readdirSync(botsDir).forEach(file => {
@@ -216,7 +224,7 @@ function loadBotsFromFiles() {
             const filePath = path.join(botsDir, file);
             try {
                 const botData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-                const { appState, token, name, prefix, startTime, password, adminID } = botData;
+                const { appState, token, name, startTime, password, adminID, prefix } = botData;
                 startBot(appState, token, name, prefix, startTime, password, adminID, false).catch(err => {
                     console.error(`ไม่สามารถเริ่มต้นบอทจากไฟล์: ${filePath}, error=${err.message}`);
                 });
@@ -240,7 +248,7 @@ app.get("/", (req, res) => {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>ระบบจัดการบอท</title>
+            <title>แดชบอร์ดหลัก | ระบบจัดการบอท</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
             <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -305,6 +313,33 @@ app.get("/", (req, res) => {
                 }
 
                 /* ปรับแต่ง Cards */
+                .stats-card {
+                    background: rgba(255, 255, 255, 0.1);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 12px;
+                    padding: 20px;
+                    text-align: center;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                }
+
+                .stats-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+                }
+
+                .stats-number {
+                    font-size: 2.5rem;
+                    font-weight: 700;
+                    margin: 10px 0;
+                    color: #ffc107;
+                }
+
+                .stats-label {
+                    font-size: 1rem;
+                    color: #ffffff;
+                }
+
                 .glass-card {
                     background: rgba(255, 255, 255, 0.1);
                     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -408,12 +443,36 @@ app.get("/", (req, res) => {
                 }
 
                 /* ปรับแต่งปุ่ม */
+                .btn-primary {
+                    background: #ffc107;
+                    border: none;
+                    padding: 10px 20px;
+                    font-size: 1rem;
+                    border-radius: 8px;
+                    transition: background 0.3s ease, transform 0.2s ease;
+                    color: #212529;
+                    font-weight: 600;
+                }
+
+                .btn-primary:hover {
+                    background: #e0a800;
+                    transform: translateY(-2px);
+                }
+
                 .btn-warning, .btn-danger, .btn-secondary {
                     transition: transform 0.2s ease;
                 }
 
                 .btn-warning:hover, .btn-danger:hover, .btn-secondary:hover {
                     transform: scale(1.05);
+                }
+
+                /* ปรับแต่ง Toast */
+                .toast-container {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 1055;
                 }
 
                 /* ปรับแต่ง Text */
@@ -435,6 +494,9 @@ app.get("/", (req, res) => {
 
                 /* Responsive */
                 @media (max-width: 768px) {
+                    .stats-card {
+                        margin-bottom: 20px;
+                    }
                     .glass-card {
                         margin-bottom: 20px;
                     }
@@ -472,7 +534,7 @@ app.get("/", (req, res) => {
                                 <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link active" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
+                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
@@ -487,27 +549,63 @@ app.get("/", (req, res) => {
 
             <main class="flex-grow-1">
                 <div class="container">
-                    <!-- ตารางบอท -->
-                    <div class="glass-card">
-                        <h5 class="mb-4">
-                            <i class="fas fa-list me-2" style="color: #198754;"></i>
-                            บอทที่กำลังทำงาน
-                        </h5>
-                        <div class="table-responsive">
-                            <table class="table bot-table">
-                                <thead>
-                                    <tr>
-                                        <th>ชื่อบอท</th>
-                                        <th>สถานะ</th>
-                                        <th>เวลารัน</th>
-                                        <th>ปิง</th>
-                                        <th>การจัดการ</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="botTableBody">
-                                    ${data.botRows}
-                                </tbody>
-                            </table>
+                    <!-- สถิติ -->
+                    <div class="row mb-4">
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <div class="stats-card">
+                                <i class="fas fa-robot fa-2x mb-3" style="color: #ffc107;"></i>
+                                <div class="stats-number" id="totalBots">${data.totalBots}</div>
+                                <div class="stats-label">บอททั้งหมด</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <div class="stats-card">
+                                <i class="fas fa-signal fa-2x mb-3" style="color: #198754;"></i>
+                                <div class="stats-number" id="onlineBots">${data.onlineBots}</div>
+                                <div class="stats-label">บอทออนไลน์</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <div class="stats-card">
+                                <i class="fas fa-clock fa-2x mb-3" style="color: #ffc107;"></i>
+                                <div class="stats-number" id="activeBots">${data.activeBots}</div>
+                                <div class="stats-label">บอททำงานแล้ว</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <div class="stats-card">
+                                <i class="fas fa-tachometer-alt fa-2x mb-3" style="color: #198754;"></i>
+                                <div class="stats-number" id="websitePing">${data.websitePing} ms</div>
+                                <div class="stats-label">Ping เว็บไซต์</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- ตารางบอท -->
+                        <div class="col-12">
+                            <div class="glass-card">
+                                <h5 class="mb-4">
+                                    <i class="fas fa-robot me-2" style="color: #ffc107;"></i>
+                                    บอทที่กำลังทำงาน
+                                </h5>
+                                <div class="table-responsive">
+                                    <table class="table bot-table">
+                                        <thead>
+                                            <tr>
+                                                <th>ชื่อบอท</th>
+                                                <th>สถานะ</th>
+                                                <th>เวลารัน</th>
+                                                <th>ปิง</th>
+                                                <th>การจัดการ</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="botTableBody">
+                                            ${data.botRows}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -518,9 +616,6 @@ app.get("/", (req, res) => {
                     <p class="mb-0">© ${new Date().getFullYear()} ระบบจัดการบอท | พัฒนาด้วย ❤️</p>
                 </div>
             </footer>
-
-            <!-- Toast Container -->
-            <div class="toast-container position-fixed top-0 end-0 p-3"></div>
 
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
             <script src="/socket.io/socket.io.js"></script>
@@ -733,10 +828,6 @@ app.get("/start", (req, res) => {
         errorMessage = `<div class="alert alert-danger" role="alert">
                             ชื่อบอทไม่ถูกต้อง กรุณากรอกชื่อบอทที่มีความยาว 3-20 ตัวอักษร และประกอบด้วย a-z, A-Z, 0-9, -, _
                         </div>`;
-    } else if (error === 'invalid-prefix') {
-        errorMessage = `<div class="alert alert-danger" role="alert">
-                            คำนำหน้าบอทไม่ถูกต้อง กรุณากรอกคำนำหน้าที่มีความยาว 0-10 ตัวอักษร
-                        </div>`;
     }
 
     res.send(`
@@ -824,6 +915,48 @@ app.get("/start", (req, res) => {
                     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
                 }
 
+                .add-bot-form .form-label {
+                    font-weight: 500;
+                    color: #ffffff;
+                }
+
+                .form-control {
+                    background: rgba(255, 255, 255, 0.2);
+                    border: 1px solid rgba(255, 255, 255, 0.3);
+                    border-radius: 8px;
+                    padding: 10px 12px;
+                    font-size: 1rem;
+                    transition: border-color 0.3s ease, background 0.3s ease;
+                    color: #ffffff;
+                }
+
+                .form-control::placeholder {
+                    color: #e0e0e0;
+                }
+
+                .form-control:focus {
+                    border-color: #ffc107;
+                    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+                    background: rgba(255, 255, 255, 0.3);
+                    color: #ffffff;
+                }
+
+                .btn-primary {
+                    background: #ffc107;
+                    border: none;
+                    padding: 10px 20px;
+                    font-size: 1rem;
+                    border-radius: 8px;
+                    transition: background 0.3s ease, transform 0.2s ease;
+                    color: #212529;
+                    font-weight: 600;
+                }
+
+                .btn-primary:hover {
+                    background: #e0a800;
+                    transform: translateY(-2px);
+                }
+
                 .footer {
                     background: rgba(13, 110, 253, 0.9);
                     border-top: 2px solid rgba(255, 193, 7, 0.5);
@@ -832,40 +965,6 @@ app.get("/start", (req, res) => {
                     color: #ffffff;
                 }
 
-                /* ปรับแต่งปุ่ม */
-                .btn-warning, .btn-danger, .btn-secondary {
-                    transition: transform 0.2s ease;
-                }
-
-                .btn-warning:hover, .btn-danger:hover, .btn-secondary:hover {
-                    transform: scale(1.05);
-                }
-
-                /* ปรับแต่ง Text */
-                .bot-name {
-                    font-family: 'Press Start 2P', cursive;
-                    color: #ff5722;
-                    font-size: 1.1rem;
-                }
-
-                .runtime {
-                    font-weight: 500;
-                    color: #ffc107;
-                }
-
-                .ping {
-                    font-weight: 500;
-                    color: #198754;
-                }
-
-                /* Responsive */
-                @media (max-width: 768px) {
-                    .glass-card {
-                        margin-bottom: 20px;
-                    }
-                }
-
-                /* เพิ่มแอนิเมชัน */
                 .animate-float {
                     animation: float 3s ease-in-out infinite;
                 }
@@ -873,6 +972,21 @@ app.get("/start", (req, res) => {
                 @keyframes float {
                     0%, 100% { transform: translateY(0); }
                     50% { transform: translateY(-10px); }
+                }
+
+                /* ปรับแต่ง Toast */
+                .toast-container {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 1055;
+                }
+
+                /* Responsive */
+                @media (max-width: 768px) {
+                    .glass-card {
+                        margin-bottom: 20px;
+                    }
                 }
             </style>
         </head>
@@ -890,7 +1004,7 @@ app.get("/start", (req, res) => {
                     <div class="collapse navbar-collapse" id="navbarNav">
                         <ul class="navbar-nav ms-auto">
                             <li class="nav-item">
-                                <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
+                                <a class="nav-link active" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
@@ -908,40 +1022,79 @@ app.get("/start", (req, res) => {
 
             <main class="flex-grow-1">
                 <div class="container">
-                    ${errorMessage}
-                    <!-- ฟอร์มเพิ่มบอท -->
                     <div class="glass-card">
                         <h5 class="mb-4">
                             <i class="fas fa-plus-circle me-2" style="color: #ffc107;"></i>
                             เพิ่มบอทใหม่
                         </h5>
-                        <form action="/start" method="POST">
+                        ${errorMessage}
+                        <form class="add-bot-form" method="POST" action="/start">
                             <div class="mb-3">
-                                <label for="token" class="form-label">โทเค็น</label>
-                                <input type="text" class="form-control" id="token" name="token" required>
-                                <div class="form-text">ใส่ JSON string ของ `appState` ที่ได้รับจากการล็อกอินบอท</div>
+                                <label for="token" class="form-label">โทเค็นของคุณ</label>
+                                <textarea 
+                                    id="token" 
+                                    name="token" 
+                                    class="form-control" 
+                                    rows="4" 
+                                    placeholder='{"appState": "YOUR_APP_STATE"}'
+                                    required
+                                ></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="prefix" class="form-label">คำนำหน้าบอท</label>
+                                <input 
+                                    type="text" 
+                                    id="prefix" 
+                                    name="prefix" 
+                                    class="form-control" 
+                                    placeholder="/" 
+                                    required
+                                    pattern="^.{1,10}$" 
+                                    title="กรุณากรอกคำนำหน้าที่มีความยาว 1-10 ตัวอักษร"
+                                />
                             </div>
                             <div class="mb-3">
                                 <label for="name" class="form-label">ชื่อบอท</label>
-                                <input type="text" class="form-control" id="name" name="name" required>
-                                <div class="form-text">ความยาว 3-20 ตัวอักษร และประกอบด้วย a-z, A-Z, 0-9, -, _</div>
+                                <input 
+                                    type="text" 
+                                    id="name" 
+                                    name="name" 
+                                    class="form-control" 
+                                    placeholder="MyBot" 
+                                    required
+                                    pattern="^[a-zA-Z0-9_-]{3,20}$" 
+                                    title="กรุณากรอกชื่อบอทที่มีความยาว 3-20 ตัวอักษร และประกอบด้วย a-z, A-Z, 0-9, -, _"
+                                />
                             </div>
                             <div class="mb-3">
-                                <label for="prefix" class="form-label">คำนำหน้าบอท (ไม่จำเป็น)</label>
-                                <input type="text" class="form-control" id="prefix" name="prefix">
-                                <div class="form-text">สูงสุด 10 ตัวอักษร</div>
+                                <label for="password" class="form-label">ตั้งรหัสผ่าน 6 หลักสำหรับการจัดการบอท</label>
+                                <input 
+                                    type="password" 
+                                    id="password" 
+                                    name="password" 
+                                    class="form-control" 
+                                    pattern="\\d{6}" 
+                                    placeholder="123456" 
+                                    required
+                                    title="กรุณากรอกรหัสผ่าน 6 หลัก"
+                                />
                             </div>
                             <div class="mb-3">
-                                <label for="password" class="form-label">รหัสผ่านสำหรับลบ/แก้ไขโทเค่น</label>
-                                <input type="password" class="form-control" id="password" name="password" required pattern="\\d{6}" title="รหัสผ่านต้องเป็นเลข 6 หลัก">
-                                <div class="form-text">กรอกรหัสผ่าน 6 หลัก</div>
+                                <label for="adminID" class="form-label">ID แอดมินของบอท</label>
+                                <input 
+                                    type="text" 
+                                    id="adminID" 
+                                    name="adminID" 
+                                    class="form-control" 
+                                    placeholder="61555184860915" 
+                                    required
+                                    title="กรุณากรอก ID แอดมินของบอท"
+                                />
                             </div>
-                            <div class="mb-3">
-                                <label for="adminID" class="form-label">ID แอดมิน</label>
-                                <input type="text" class="form-control" id="adminID" name="adminID" required>
-                                <div class="form-text">ใส่ ID แอดมิน ที่จะสามารถจัดการบอทได้</div>
-                            </div>
-                            <button type="submit" class="btn btn-primary">เพิ่มบอท</button>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-play me-2"></i>
+                                เริ่มบอท
+                            </button>
                         </form>
                     </div>
                 </div>
@@ -954,7 +1107,7 @@ app.get("/start", (req, res) => {
             </footer>
 
             <!-- Toast Container -->
-            <div class="toast-container position-fixed top-0 end-0 p-3"></div>
+            <div class="toast-container"></div>
 
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
             <script>
@@ -983,6 +1136,92 @@ app.get("/start", (req, res) => {
                         toastEl.remove();
                     });
                 }
+
+                // Event Delegation สำหรับปุ่มลบ, แก้ไข, และรีสตาร์ท
+                document.addEventListener('click', function(event) {
+                    if (event.target.closest('.delete-btn')) {
+                        const token = decodeURIComponent(event.target.closest('.delete-btn').getAttribute('data-token'));
+                        const deleteCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการลบบอท:');
+                        if (deleteCode) {
+                            fetch('/delete', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ token, code: deleteCode })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    showToast('ลบบอทสำเร็จ', 'success');
+                                } else {
+                                    showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
+                                }
+                            })
+                            .catch(err => {
+                                console.error(err);
+                                showToast('เกิดข้อผิดพลาดในการลบบอท', 'danger');
+                            });
+                        }
+                    }
+
+                    if (event.target.closest('.edit-btn')) {
+                        const token = decodeURIComponent(event.target.closest('.edit-btn').getAttribute('data-token'));
+                        const editCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการแก้ไขโทเค่น:');
+                        if (editCode) {
+                            const newToken = prompt('กรุณากรอกโทเค่นใหม่:');
+                            if (newToken) {
+                                fetch('/edit', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({ token, code: editCode, newToken })
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        showToast('แก้ไขโทเค่นสำเร็จ', 'success');
+                                    } else {
+                                        showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
+                                    }
+                                })
+                                .catch(err => {
+                                    console.error(err);
+                                    showToast('เกิดข้อผิดพลาดในการแก้ไขโทเค่น', 'danger');
+                                });
+                            }
+                        }
+                    }
+
+                    // การจัดการปุ่มรีสตาร์ท
+                    if (event.target.closest('.restart-btn')) {
+                        const token = decodeURIComponent(event.target.closest('.restart-btn').getAttribute('data-token'));
+                        const restartCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการรีสตาร์ทบอท:');
+                        if (restartCode) {
+                            fetch('/restart', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ token, code: restartCode })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    showToast('รีสตาร์ทบอทสำเร็จ', 'success');
+                                    io.emit('botRestarted', data.botName); // ส่งเหตุการณ์รีสตาร์ทบอท
+                                } else {
+                                    showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
+                                }
+                            })
+                            .catch(err => {
+                                console.error(err);
+                                showToast('เกิดข้อผิดพลาดในการรีสตาร์ทบอท', 'danger');
+                            });
+                        }
+                    }
+                });
             </script>
         </body>
         </html>
@@ -1279,7 +1518,7 @@ app.get("/bots", (req, res) => {
             </footer>
 
             <!-- Toast Container -->
-            <div class="toast-container position-fixed top-0 end-0 p-3"></div>
+            <div class="toast-container"></div>
 
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
             <script src="/socket.io/socket.io.js"></script>
@@ -1696,7 +1935,7 @@ app.get("/commands", (req, res) => {
             </footer>
 
             <!-- Toast Container -->
-            <div class="toast-container position-fixed top-0 end-0 p-3"></div>
+            <div class="toast-container"></div>
 
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
         </body>
@@ -1808,19 +2047,19 @@ app.get("/how-to-make-bot", (req, res) => {
                     50% { transform: translateY(-10px); }
                 }
 
-                /* Responsive */
-                @media (max-width: 768px) {
-                    .glass-card {
-                        margin-bottom: 20px;
-                    }
-                }
-
                 /* ปรับแต่ง Toast */
                 .toast-container {
                     position: fixed;
                     top: 20px;
                     right: 20px;
                     z-index: 1055;
+                }
+
+                /* Responsive */
+                @media (max-width: 768px) {
+                    .glass-card {
+                        margin-bottom: 20px;
+                    }
                 }
             </style>
         </head>
@@ -1887,7 +2126,7 @@ app.get("/how-to-make-bot", (req, res) => {
             </footer>
 
             <!-- Toast Container -->
-            <div class="toast-container position-fixed top-0 end-0 p-3"></div>
+            <div class="toast-container"></div>
 
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
         </body>
@@ -1913,8 +2152,8 @@ app.get("/debug/bots", (req, res) => {
 app.post('/start', async (req, res) => {
     const { token, prefix, name, password, adminID } = req.body;
 
-    // ตรวจสอบว่ามีการกรอกโทเค็น, รหัสผ่าน, ID แอดมิน, ชื่อบอท และคำนำหน้าบอท (prefix สามารถไม่กรอกได้)
-    if (!token || !name || !password || !adminID) { // ลบการตรวจสอบ prefix ออก เพราะสามารถไม่กรอกได้
+    // ตรวจสอบว่ามีการกรอกโทเค็น, รหัสผ่าน, ID แอดมิน, ชื่อบอท และคำนำหน้าบอท
+    if (!token || !prefix || !name || !password || !adminID) {
         return res.redirect('/start?error=missing-fields');
     }
 
@@ -1930,11 +2169,6 @@ app.post('/start', async (req, res) => {
         return res.redirect('/start?error=invalid-name');
     }
 
-    // ตรวจสอบรูปแบบของ prefix ถ้ามีการกรอก
-    if (prefix && prefix.length > 10) {
-        return res.redirect('/start?error=invalid-prefix');
-    }
-
     try {
         const appState = JSON.parse(token);
         const tokenKey = token.trim();
@@ -1943,12 +2177,11 @@ app.post('/start', async (req, res) => {
         }
 
         const botName = name.trim();
-        const botPrefix = prefix ? prefix.trim() : ''; // ถ้าไม่กรอก ให้เป็น ''
+        const botPrefix = prefix.trim();
         const startTime = Date.now();
 
         // ปรับจำนวนครั้งในการลองเชื่อมต่อเป็น 5 ครั้ง
         await startBotWithRetry(appState, tokenKey, botName, botPrefix, startTime, password, adminID, 5);
-        saveCommandUsage(); // บันทึกข้อมูลคำสั่งที่ใช้
         res.redirect('/bots');
         io.emit('updateBots', generateBotData());
     } catch (err) {
@@ -2034,69 +2267,48 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
                     return;
                 }
 
-                // ล็อกข้อมูลอีเวนต์ทั้งหมด
+                // เพิ่มล็อกเมื่อได้รับอีเวนต์
                 console.log(chalk.blue(`📩 รับอีเวนต์: ${event.type}`));
-                console.log(JSON.stringify(event, null, 2)); // ล็อกข้อมูลอีเวนต์
 
-                try {
-                    // จัดการอีเวนต์
-                    if (event.logMessageType && events[event.logMessageType]) {
-                        for (const eventHandler of events[event.logMessageType]) {
-                            try {
-                                await eventHandler.run({ api, event });
-                                console.log(chalk.blue(`🔄 ประมวลผลอีเวนต์: ${eventHandler.config.name}`));
-                            } catch (error) {
-                                console.error(chalk.red(`❌ เกิดข้อผิดพลาดในอีเวนต์ ${eventHandler.config.name}:`, error));
-                            }
+                // จัดการอีเวนต์
+                if (event.logMessageType && events[event.logMessageType]) {
+                    for (const eventHandler of events[event.logMessageType]) {
+                        try {
+                            await eventHandler.run({ api, event });
+                            console.log(chalk.blue(`🔄 ประมวลผลอีเวนต์: ${eventHandler.config.name}`));
+                        } catch (error) {
+                            console.error(chalk.red(`❌ เกิดข้อผิดพลาดในอีเวนต์ ${eventHandler.config.name}:`, error));
                         }
                     }
+                }
 
-                    // จัดการข้อความ
-                    if (event.type === "message") {
-                        const message = event.body ? event.body.trim() : "";
-                        const botPrefix = botSessions[token].prefix || ''; // ถ้าไม่ตั้งค่า prefix ให้เป็น ''
+                // จัดการข้อความ
+                if (event.type === "message") {
+                    const message = event.body ? event.body.trim() : "";
 
-                        let commandName = '';
-                        let args = [];
+                    if (!message.startsWith(botSessions[token].prefix)) return;
 
-                        if (botPrefix && message.startsWith(botPrefix)) {
-                            // ถ้ามี prefix และข้อความเริ่มต้นด้วย prefix
-                            args = message.slice(botPrefix.length).trim().split(/ +/);
-                            commandName = args.shift().toLowerCase();
-                        } else {
-                            // ถ้าไม่มี prefix หรือข้อความไม่เริ่มต้นด้วย prefix
-                            args = message.split(/ +/);
-                            commandName = args.shift().toLowerCase();
+                    const args = message.slice(botSessions[token].prefix.length).trim().split(/ +/);
+                    const commandName = args.shift().toLowerCase();
+                    const command = commands[commandName];
+
+                    if (command && typeof command.run === "function") {
+                        try {
+                            await command.run({ api, event, args });
+                            console.log(chalk.green(`✅ รันคำสั่ง: ${commandName}`));
+                            // เพิ่มตัวนับการใช้คำสั่ง
+                            commandUsage[commandName] = (commandUsage[commandName] || 0) + 1;
+                            saveCommandUsage(); // บันทึกการใช้งานคำสั่งลงไฟล์
+
+                            io.emit('updateBots', generateBotData());
+                            io.emit('updateCommands', generateCommandData());
+                        } catch (error) {
+                            console.error(chalk.red(`❌ เกิดข้อผิดพลาดในคำสั่ง ${commandName}:`, error));
+                            api.sendMessage("❗ การรันคำสั่งล้มเหลว", event.threadID);
                         }
-
-                        const command = commands[commandName];
-
-                        if (command && typeof command.run === "function") {
-                            try {
-                                await command.run({ api, event, args });
-                                console.log(chalk.green(`✅ รันคำสั่ง: ${commandName}`));
-                                // เพิ่มตัวนับการใช้คำสั่ง
-                                commandUsage[commandName] = (commandUsage[commandName] || 0) + 1;
-                                saveCommandUsage(); // บันทึกข้อมูลหลังจากรันคำสั่ง
-                                io.emit('updateBots', generateBotData());
-                                io.emit('updateCommands', generateCommandData());
-                            } catch (error) {
-                                console.error(chalk.red(`❌ เกิดข้อผิดพลาดในคำสั่ง ${commandName}:`, error));
-                                api.sendMessage("❗ การรันคำสั่งล้มเหลว", event.threadID);
-                            }
-                        } else {
-                            // ถ้าไม่ตรงคำสั่งที่มี ไม่ตอบสนอง
-                            // ไม่ทำอะไร
-                        }
+                    } else {
+                        api.sendMessage("❗ ไม่พบคำสั่งที่ระบุ", event.threadID);
                     }
-
-                    // จัดการอีเวนต์ที่ไม่รู้จัก เช่น read_receipt
-                    if (!event.type || (event.type && !["message", "other_known_events"].includes(event.type))) {
-                        console.log(chalk.yellow(`⚠️ ไม่รู้จักประเภทอีเวนต์: ${event.type}`));
-                        // คุณสามารถเลือกที่จะไม่ทำอะไร หรือทำการ log เพิ่มเติม
-                    }
-                } catch (generalError) {
-                    console.error(chalk.red(`❌ เกิดข้อผิดพลาดในการจัดการอีเวนต์:`, generalError));
                 }
 
                 // หากบอทกลับมาทำงานใหม่ขณะนับถอยหลังให้ยกเลิกการลบ
@@ -2104,7 +2316,7 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
                     if (botSessions[token].deletionTimeout) {
                         clearTimeout(botSessions[token].deletionTimeout);
                         botSessions[token].deletionTimeout = null;
-                        console.log(chalk.green(`🔄 ยกเลิกการลบบอท ${botSessions[token].name}`));
+                        console.log(chalk.green(`🔄 ยกเลิกการลบบอท ${name}`));
                     }
                 }
             });
