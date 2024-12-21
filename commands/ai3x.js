@@ -17,7 +17,6 @@ module.exports = {
         const command = args.join(' ').trim();
         const firebaseURL = "https://goak-71ac8-default-rtdb.firebaseio.com/responses.json";
 
-        // เช็คคำสั่ง "สอน"
         if (command.startsWith('สอน')) {
             const [_, input] = command.split('สอน').map(str => str.trim());
             if (!input.includes('=')) {
@@ -30,11 +29,9 @@ module.exports = {
             }
 
             try {
-                // ดึงคำตอบเก่า
                 const response = await axios.get(firebaseURL);
                 const data = response.data || {};
 
-                // เพิ่มคำตอบใหม่
                 if (!data[question]) {
                     data[question] = [];
                 }
@@ -45,7 +42,6 @@ module.exports = {
 
                 data[question].push(answer);
 
-                // อัปเดตฐานข้อมูล
                 await axios.put(firebaseURL, data);
 
                 return api.sendMessage(`✅ สอนเจอไนท์สำเร็จ! คำว่า "${question}" จะตอบแบบสุ่ม 🎄`, event.threadID);
@@ -55,7 +51,6 @@ module.exports = {
             }
         }
 
-        // หากไม่ใช่คำสั่งสอน ให้ตอบคำถาม
         try {
             const response = await axios.get(firebaseURL);
             const data = response.data;
@@ -86,7 +81,7 @@ module.exports = {
             const elapsedTime = ((end - start) / 1000).toFixed(2);
 
             return api.sendMessage(
-                `⏰ ${elapsedTime}\n\n🎄 *Merry Christmas 2025!*\n🎅 เจอไนท์: ผมไม่เข้าใจคำสั่งนี้ 🎁\n🎀 คุณสามารถสอนผมได้โดยใช้คำสั่ง: "เจอไนท์ สอน [คำถาม] = [คำตอบ]"`,
+                `⏰ ${elapsedTime}\n\n🎄 *Merry Christmas 2025!*\n🎅 เจอไนท์: ผมไม่เข้าใจคำนี้ 🎁\n🎀 คุณสามารถสอนผมได้โดยใช้คำสั่ง: "เจอไนท์ สอน [คำถาม] = [คำตอบ]"`,
                 event.threadID
             );
         } catch (error) {
