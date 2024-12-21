@@ -785,7 +785,7 @@ app.get("/", (req, res) => {
                             .then(data => {
                                 if (data.success) {
                                     showToast('รีสตาร์ทบอทสำเร็จ', 'success');
-                                    io.emit('botRestarted', data.botName); // ส่งเหตุการณ์รีสตาร์ทบอท
+                                    socket.emit('botRestarted', data.botName); // ส่งเหตุการณ์รีสตาร์ทบอท
                                 } else {
                                     showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
                                 }
@@ -1210,7 +1210,7 @@ app.get("/start", (req, res) => {
                             .then(data => {
                                 if (data.success) {
                                     showToast('รีสตาร์ทบอทสำเร็จ', 'success');
-                                    io.emit('botRestarted', data.botName); // ส่งเหตุการณ์รีสตาร์ทบอท
+                                    socket.emit('botRestarted', data.botName); // ส่งเหตุการณ์รีสตาร์ทบอท
                                 } else {
                                     showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
                                 }
@@ -1517,9 +1517,6 @@ app.get("/bots", (req, res) => {
                 </div>
             </footer>
 
-            <!-- Toast Container -->
-            <div class="toast-container"></div>
-
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
             <script src="/socket.io/socket.io.js"></script>
             <script>
@@ -1688,7 +1685,7 @@ app.get("/bots", (req, res) => {
                             .then(data => {
                                 if (data.success) {
                                     showToast('รีสตาร์ทบอทสำเร็จ', 'success');
-                                    io.emit('botRestarted', data.botName); // ส่งเหตุการณ์รีสตาร์ทบอท
+                                    socket.emit('botRestarted', data.botName); // ส่งเหตุการณ์รีสตาร์ทบอท
                                 } else {
                                     showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
                                 }
@@ -2248,6 +2245,7 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
 
             api.setOptions({ listenEvents: true });
 
+            // Capture the token in the callback to ensure it's correctly mapped
             api.listenMqtt(async (err, event) => {
                 if (err) {
                     console.error(chalk.red(`❌ เกิดข้อผิดพลาด: ${err}`));
