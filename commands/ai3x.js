@@ -1,13 +1,11 @@
 const axios = require('axios');
-const fs = require('fs');
-const https = require('https');
-const googleTTS = require('google-tts-api'); // ไลบรารีสำหรับสร้างเสียง
+const stringSimilarity = require('string-similarity');
 
 module.exports = {
     config: {
         name: 'เจอไนท์',
-        description: 'คุยกับเจอไนท์ในธีมคริสต์มาส 2025 🎄 พร้อมส่งเสียง',
-        usage: 'เจอไนท์ [ข้อความ]',
+        description: 'คุยกับเจอไนท์ในธีมคริสต์มาส 2025 🎄',
+        usage: 'เจอไนท์ [ข้อความ] หรือ เจอไนท์ สอน [คำถาม1] = [คำตอบ1] | [คำถาม2] = [คำตอบ2]',
     },
     run: async ({ api, event, args }) => {
         const start = Date.now();
@@ -19,45 +17,99 @@ module.exports = {
         const command = args.join(' ').trim();
         const firebaseURL = "https://goak-71ac8-default-rtdb.firebaseio.com/responses.json";
 
+        // ตรวจสอบว่าผู้ใช้ต้องการ "สอน" หรือไม่
+        if (command.startsWith('สอน')) {
+            const input = command.replace('สอน', '').trim();
+            if (!input.includes('=')) {
+                return api.sendMessage(
+                    `🎁 กรุณาพิมพ์ในรูปแบบ:\nเจอไนท์ สอน [คำถาม1] = [คำตอบ1] | [คำถาม2] = [คำตอบ2] 🎀`,
+                    event.threadID
+                );
+            }
+
+            // แยกคำถาม-คำตอบหลายคู่ด้วย "|"
+            const pairs = input.split('|').map(pair => pair.trim());
+            const dataToSave = {};
+
+            pairs.forEach(pair => {
+                const [question, answer] = pair.split('=').map(str => str.trim());
+                if (question && answer) {
+                    dataToSave[question] = answer;
+                }
+            });
+
+            try {
+                // ดึงข้อมูลเดิมจาก Firebase
+                const response = await axios.get(firebaseURL);
+                const data = response.data || {};
+
+                // รวมข้อมูลเก่าและข้อมูลใหม่
+                Object.keys(dataToSave).forEach(question => {
+                    if (!data[question]) {
+                        data[question] = [];
+                    }
+
+                    if (!Array.isArray(data[question])) {
+                        data[question] = [data[question]];
+                    }
+
+                    data[question].push(dataToSave[question]);
+                });
+
+                // บันทึกข้อมูลใหม่ลง Firebase
+                await axios.put(firebaseURL, data);
+
+                const successMessage = Object.keys(dataToSave)
+                    .map(q => `🎀 "${q}" = "${dataToSave[q]}" 🎁`)
+                    .join('\n');
+
+                return api.sendMessage(
+                    `✅ สอนเจอไนท์สำเร็จ! 🎄\n\nคำถามและคำตอบที่เพิ่ม:\n${successMessage}`,
+                    event.threadID
+                );
+            } catch (error) {
+                console.error("❌ เกิดข้อผิดพลาด:", error.message || error);
+                return api.sendMessage(
+                    `❌ ไม่สามารถบันทึกข้อมูลได้ 🎅`,
+                    event.threadID
+                );
+            }
+        }
+
+        // หากไม่ใช่คำสั่ง "สอน" ให้ตรวจสอบคำถาม
         try {
             const response = await axios.get(firebaseURL);
             const data = response.data;
 
             if (data) {
                 const questions = Object.keys(data);
-                const matchedQuestion = questions.find(q => q === command);
-                const botResponse = matchedQuestion ? data[matchedQuestion] : "ผมไม่เข้าใจคำนี้ 🎁";
+                const bestMatch = stringSimilarity.findBestMatch(command, questions);
 
-                const end = Date.now();
-                const elapsedTime = ((end - start) / 1000).toFixed(2);
+                if (bestMatch.bestMatch.rating > 0.6) {
+                    const matchedQuestion = bestMatch.bestMatch.target;
+                    const answers = data[matchedQuestion];
 
-                // ส่งข้อความก่อน
-                const messageText = `⏰ ${elapsedTime}\n\n🎄 *Merry Christmas 2025!*\n🎅 เจอไนท์: ${botResponse}`;
-                api.sendMessage(messageText, event.threadID, async () => {
-                    // สร้าง URL สำหรับไฟล์เสียง
-                    const url = googleTTS.getAudioUrl(botResponse, {
-                        lang: 'th',
-                        slow: false,
-                        host: 'https://translate.google.com',
-                    });
+                    const botResponse = Array.isArray(answers)
+                        ? answers[Math.floor(Math.random() * answers.length)]
+                        : answers;
 
-                    // ดาวน์โหลดไฟล์เสียง
-                    const filePath = './response.mp3';
-                    const file = fs.createWriteStream(filePath);
-                    https.get(url, (res) => {
-                        res.pipe(file);
-                        file.on('finish', () => {
-                            file.close();
-                            console.log('✅ สร้างเสียงสำเร็จ!');
-                            // ส่งไฟล์เสียง
-                            const voiceMessage = {
-                                attachment: fs.createReadStream(filePath),
-                            };
-                            api.sendMessage(voiceMessage, event.threadID);
-                        });
-                    });
-                });
+                    const end = Date.now();
+                    const elapsedTime = ((end - start) / 1000).toFixed(2);
+
+                    return api.sendMessage(
+                        `⏰ ${elapsedTime}\n\n🎄 *Merry Christmas 2025!*\n🎅 เจอไนท์: ${botResponse}`,
+                        event.threadID
+                    );
+                }
             }
+
+            const end = Date.now();
+            const elapsedTime = ((end - start) / 1000).toFixed(2);
+
+            return api.sendMessage(
+                `⏰ ${elapsedTime}\n\n🎄 *Merry Christmas 2025!*\n🎅 เจอไนท์: ผมไม่เข้าใจคำนี้ 🎁\n🎀 คุณสามารถสอนผมได้โดยใช้คำสั่ง: "เจอไนท์ สอน [คำถาม] = [คำตอบ]"`,
+                event.threadID
+            );
         } catch (error) {
             console.error("❌ เกิดข้อผิดพลาด:", error.message || error);
             return api.sendMessage(
