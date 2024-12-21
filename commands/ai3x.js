@@ -101,11 +101,13 @@ module.exports = {
                         ? answers[Math.floor(Math.random() * answers.length)]
                         : answers;
 
+                    const totalAnswers = Array.isArray(answers) ? answers.length : 1;
+
                     const end = Date.now();
                     const elapsedTime = ((end - start) / 1000).toFixed(2);
 
                     return api.sendMessage(
-                        `⏰ ${elapsedTime}\n\n🎄 *Merry Christmas 2025!*\n🎅 เจอไนท์: ${botResponse}`,
+                        `⏰ ${elapsedTime}\n💬 ${totalAnswers}\n\n🎄 *Merry Christmas 2025!*\n🎅 เจอไนท์: ${botResponse}`,
                         event.threadID
                     );
                 }
@@ -115,7 +117,7 @@ module.exports = {
             const elapsedTime = ((end - start) / 1000).toFixed(2);
 
             return api.sendMessage(
-                `⏰ ${elapsedTime}\n\n🎄 *Merry Christmas 2025!*\n🎅 เจอไนท์: ผมไม่เข้าใจคำนี้ 🎁\n🎀 คุณสามารถสอนผมได้โดยใช้คำสั่ง: "เจอไนท์ สอน [คำถาม] = [คำตอบ]"`,
+                `⏰ ${elapsedTime}\n💬 0\n\n🎄 *Merry Christmas 2025!*\n🎅 เจอไนท์: ผมไม่เข้าใจคำนี้ 🎁\n🎀 คุณสามารถสอนผมได้โดยใช้คำสั่ง: "เจอไนท์ สอน [คำถาม] = [คำตอบ]"`,
                 event.threadID
             );
         } catch (error) {
