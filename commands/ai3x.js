@@ -5,7 +5,7 @@ module.exports = {
     config: {
         name: 'เจอไนท์',
         description: 'คุยกับเจอไนท์ในธีมคริสต์มาส 2025 🎄',
-        usage: 'เจอไนท์ [ข้อความ]',
+        usage: 'เจอไนท์ [ข้อความ] หรือ เจอไนท์ สอน [คำถาม1] = [คำตอบ1] | [คำถาม2] = [คำตอบ2]',
     },
     run: async ({ api, event, args }) => {
         const start = Date.now();
@@ -17,40 +17,66 @@ module.exports = {
         const command = args.join(' ').trim();
         const firebaseURL = "https://goak-71ac8-default-rtdb.firebaseio.com/responses.json";
 
+        // ตรวจสอบว่าผู้ใช้ต้องการ "สอน" หรือไม่
         if (command.startsWith('สอน')) {
-            const [_, input] = command.split('สอน').map(str => str.trim());
+            const input = command.replace('สอน', '').trim();
             if (!input.includes('=')) {
-                return api.sendMessage("🎁 กรุณาพิมพ์ในรูปแบบ: เจอไนท์ สอน [คำถาม] = [คำตอบ] 🎀", event.threadID);
+                return api.sendMessage(
+                    `🎁 กรุณาพิมพ์ในรูปแบบ:\nเจอไนท์ สอน [คำถาม1] = [คำตอบ1] | [คำถาม2] = [คำตอบ2] 🎀`,
+                    event.threadID
+                );
             }
 
-            const [question, answer] = input.split('=').map(str => str.trim());
-            if (!question || !answer) {
-                return api.sendMessage("❌ คำถามหรือคำตอบไม่ครบถ้วน โปรดลองใหม่ 🎅", event.threadID);
-            }
+            // แยกคำถาม-คำตอบหลายคู่ด้วย "|"
+            const pairs = input.split('|').map(pair => pair.trim());
+            const dataToSave = {};
+
+            pairs.forEach(pair => {
+                const [question, answer] = pair.split('=').map(str => str.trim());
+                if (question && answer) {
+                    dataToSave[question] = answer;
+                }
+            });
 
             try {
+                // ดึงข้อมูลเดิมจาก Firebase
                 const response = await axios.get(firebaseURL);
                 const data = response.data || {};
 
-                if (!data[question]) {
-                    data[question] = [];
-                }
+                // รวมข้อมูลเก่าและข้อมูลใหม่
+                Object.keys(dataToSave).forEach(question => {
+                    if (!data[question]) {
+                        data[question] = [];
+                    }
 
-                if (!Array.isArray(data[question])) {
-                    data[question] = [data[question]];
-                }
+                    if (!Array.isArray(data[question])) {
+                        data[question] = [data[question]];
+                    }
 
-                data[question].push(answer);
+                    data[question].push(dataToSave[question]);
+                });
 
+                // บันทึกข้อมูลใหม่ลง Firebase
                 await axios.put(firebaseURL, data);
 
-                return api.sendMessage(`✅ สอนเจอไนท์สำเร็จ! คำว่า "${question}" จะตอบแบบสุ่ม 🎄`, event.threadID);
+                const successMessage = Object.keys(dataToSave)
+                    .map(q => `🎀 "${q}" = "${dataToSave[q]}" 🎁`)
+                    .join('\n');
+
+                return api.sendMessage(
+                    `✅ สอนเจอไนท์สำเร็จ! 🎄\n\nคำถามและคำตอบที่เพิ่ม:\n${successMessage}`,
+                    event.threadID
+                );
             } catch (error) {
                 console.error("❌ เกิดข้อผิดพลาด:", error.message || error);
-                return api.sendMessage("❌ ไม่สามารถบันทึกข้อมูลได้ 🎅", event.threadID);
+                return api.sendMessage(
+                    `❌ ไม่สามารถบันทึกข้อมูลได้ 🎅`,
+                    event.threadID
+                );
             }
         }
 
+        // หากไม่ใช่คำสั่ง "สอน" ให้ตรวจสอบคำถาม
         try {
             const response = await axios.get(firebaseURL);
             const data = response.data;
