@@ -5,7 +5,7 @@ module.exports = {
     config: {
         name: 'เจอไนท์',
         description: 'คุยกับเจอไนท์ในธีมคริสต์มาส 2025 🎄',
-        usage: 'เจอไนท์ [ข้อความ] หรือ เจอไนท์ สอน [คำถาม1] = [คำตอบ1] | [คำถาม2] = [คำตอบ2]',
+        usage: 'เจอไนท์ [ข้อความ] หรือ เจอไนท์ สอน [คำถาม1] = [คำตอบ1] | [คำถาม2] = [คำตอบ2] | ...',
     },
     run: async ({ api, event, args }) => {
         const start = Date.now();
@@ -34,33 +34,41 @@ module.exports = {
             pairs.forEach(pair => {
                 const [question, answer] = pair.split('=').map(str => str.trim());
                 if (question && answer) {
-                    dataToSave[question] = answer;
+                    if (!dataToSave[question]) {
+                        dataToSave[question] = [];
+                    }
+                    dataToSave[question].push(answer);
                 }
             });
 
             try {
                 // ดึงข้อมูลเดิมจาก Firebase
                 const response = await axios.get(firebaseURL);
-                const data = response.data || {};
+                const existingData = response.data || {};
 
                 // รวมข้อมูลเก่าและข้อมูลใหม่
                 Object.keys(dataToSave).forEach(question => {
-                    if (!data[question]) {
-                        data[question] = [];
+                    if (!existingData[question]) {
+                        existingData[question] = [];
                     }
 
-                    if (!Array.isArray(data[question])) {
-                        data[question] = [data[question]];
+                    if (!Array.isArray(existingData[question])) {
+                        existingData[question] = [existingData[question]];
                     }
 
-                    data[question].push(dataToSave[question]);
+                    // รวมคำตอบใหม่เข้าไป
+                    dataToSave[question].forEach(newAnswer => {
+                        if (!existingData[question].includes(newAnswer)) {
+                            existingData[question].push(newAnswer);
+                        }
+                    });
                 });
 
                 // บันทึกข้อมูลใหม่ลง Firebase
-                await axios.put(firebaseURL, data);
+                await axios.put(firebaseURL, existingData);
 
                 const successMessage = Object.keys(dataToSave)
-                    .map(q => `🎀 "${q}" = "${dataToSave[q]}" 🎁`)
+                    .map(q => `🎀 "${q}" = "${dataToSave[q].join(', ')}" 🎁`)
                     .join('\n');
 
                 return api.sendMessage(
