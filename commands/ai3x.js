@@ -9,13 +9,54 @@ module.exports = {
     config: {
         name: 'เจอไนท์',
         description: 'คุยกับเจอไนท์, ขอเพลง และขอรูปภาพ',
-        usage: 'เจอไนท์ [ข้อความ] หรือ เจอไนท์ เพลง [ชื่อเพลง] หรือ เจอไนท์ ขอรูปหี',
+        usage: 'เจอไนท์ [ข้อความ] หรือ เจอไนท์ เพลง [ชื่อเพลง] หรือ เจอไนท์ ขอรูป18+',
     },
     run: async ({ api, event, args }) => {
         const command = args.join(' ').trim();
-        const firebaseURL = "https://goak-71ac8-default-rtdb.firebaseio.com/responses.json";
 
-        // ตรวจสอบคำสั่ง "ขอรูป"
+        // คำสั่ง "ขอรูป18+"
+        if (command.startsWith('ขอรูป18+')) {
+            try {
+                const response = await axios.get('https://api.sumiproject.net/images/lon');
+                if (response.data && response.data.url) {
+                    const imageUrl = response.data.url;
+
+                    // ดาวน์โหลดรูปภาพ
+                    const imagePath = path.join(__dirname, 'cache', `image-${Date.now()}.jpg`);
+                    const writer = fs.createWriteStream(imagePath);
+                    const downloadResponse = await axios({
+                        url: imageUrl,
+                        method: 'GET',
+                        responseType: 'stream',
+                    });
+                    downloadResponse.data.pipe(writer);
+
+                    // รอให้ดาวน์โหลดเสร็จ
+                    await new Promise((resolve, reject) => {
+                        writer.on('finish', resolve);
+                        writer.on('error', reject);
+                    });
+
+                    // ส่งรูปภาพ
+                    const message = {
+                        body: `🔞 เจอไนท์ได้เตรียมรูปภาพ 18+ สำหรับคุณแล้ว!`,
+                        attachment: fs.createReadStream(imagePath),
+                    };
+
+                    api.sendMessage(message, event.threadID, () => {
+                        fs.unlinkSync(imagePath); // ลบไฟล์หลังส่งสำเร็จ
+                    });
+                } else {
+                    return api.sendMessage("❗ ไม่พบข้อมูลรูปภาพในขณะนี้", event.threadID);
+                }
+            } catch (error) {
+                console.error("❌ เกิดข้อผิดพลาดในการดึงรูปภาพ:", error.message || error);
+                return api.sendMessage("❌ ไม่สามารถดึงข้อมูลรูปภาพได้ โปรดลองอีกครั้ง", event.threadID);
+            }
+            return;
+        }
+
+        // คำสั่ง "ขอรูปหี"
         if (command.startsWith('ขอรูปหี') || command.startsWith('รูปสาว')) {
             try {
                 const response = await axios.get('https://api.sumiproject.net/images/lon');
@@ -57,7 +98,7 @@ module.exports = {
             return;
         }
 
-        // ตรวจสอบคำสั่ง "เพลง"
+        // คำสั่ง "เพลง"
         if (command.startsWith('เพลง') || command.startsWith('ขอเพลง') || command.startsWith('เปิดเพลง')) {
             const songName = command.replace(/^(เพลง|ขอเพลง|เปิดเพลง)/, '').trim();
 
@@ -116,40 +157,6 @@ module.exports = {
             return;
         }
 
-        // ตรวจสอบคำถามในฐานข้อมูล
-        try {
-            const response = await axios.get(firebaseURL);
-            const data = response.data;
-
-            if (data) {
-                const questions = Object.keys(data);
-                const bestMatch = stringSimilarity.findBestMatch(command, questions);
-
-                if (bestMatch.bestMatch.rating > 0.6) {
-                    const matchedQuestion = bestMatch.bestMatch.target;
-                    const answers = data[matchedQuestion];
-
-                    const botResponse = Array.isArray(answers)
-                        ? answers[Math.floor(Math.random() * answers.length)]
-                        : answers;
-
-                    return api.sendMessage(
-                        `🎄 เจอไนท์: ${botResponse}`,
-                        event.threadID
-                    );
-                }
-            }
-
-            return api.sendMessage(
-                `🎅 เจอไนท์: ผมไม่เข้าใจคำนี้ 🎁\n🎀 คุณสามารถสอนผมได้โดยใช้คำสั่ง: "เจอไนท์ สอน [คำถาม] = [คำตอบ]"`,
-                event.threadID
-            );
-        } catch (error) {
-            console.error("❌ เกิดข้อผิดพลาด:", error.message || error);
-            return api.sendMessage(
-                `❌ ไม่สามารถติดต่อฐานข้อมูลได้ โปรดลองอีกครั้ง 🎄`,
-                event.threadID
-            );
-        }
+        // ส่วนอื่น ๆ ของคำสั่ง (เช่น ถามตอบ) สามารถเพิ่มได้ตามต้องการ
     },
 };
