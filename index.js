@@ -17,9 +17,6 @@ const io = new Server(server, {
 });
 const PORT = 3005;
 
-// เพิ่มตัวแปรสำหรับจำกัดการใช้งานคำสั่ง
-const MAX_COMMAND_USAGE = 2; // จำนวนสูงสุดที่อนุญาตให้แต่ละคำสั่งถูกใช้งาน
-
 let botCount = 0;
 global.botSessions = {}; // เปลี่ยนจาก let เป็น global เพื่อให้สามารถเข้าถึงได้ในคำสั่ง
 const commands = {};
@@ -27,10 +24,15 @@ const commandDescriptions = [];
 const commandUsage = {}; // ติดตามการใช้งานคำสั่ง
 
 const botsDir = path.join(__dirname, 'bots');
+const dataDir = path.join(__dirname, 'data');
+const commandsUsageFile = path.join(dataDir, 'commandUsage.json');
 
-// สร้างโฟลเดอร์ bots ถ้ายังไม่มี
+// สร้างโฟลเดอร์ bots และ data ถ้ายังไม่มี
 if (!fs.existsSync(botsDir)) {
     fs.mkdirSync(botsDir);
+}
+if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir);
 }
 
 // โหลดคำสั่งจากโฟลเดอร์ commands
@@ -168,10 +170,12 @@ function getStatusClass(status) {
 function generateCommandData() {
     const commandsData = Object.entries(commandUsage).map(([name, count]) => {
         const description = commandDescriptions.find(cmd => cmd.name.toLowerCase() === name)?.description || "ไม่มีคำอธิบาย";
+        // จำกัดจำนวนการแสดงผลที่ 9999+
+        const displayCount = count > 9999 ? '9999+' : count;
         return `
             <tr>
                 <td>${name}</td>
-                <td>${count >= MAX_COMMAND_USAGE ? 'สูงสุดแล้ว' : count}</td>
+                <td>${displayCount}</td>
                 <td>${description}</td>
             </tr>
         `;
@@ -183,6 +187,27 @@ function generateCommandData() {
 
     return commandsData;
 }
+
+// โหลดคำสั่งที่ใช้จากไฟล์เมื่อตอนเริ่มต้นเซิร์ฟเวอร์
+function loadCommandUsage() {
+    if (fs.existsSync(commandsUsageFile)) {
+        try {
+            const data = JSON.parse(fs.readFileSync(commandsUsageFile, 'utf-8'));
+            Object.assign(commandUsage, data);
+            console.log(chalk.green('✅ โหลดข้อมูลการใช้คำสั่งสำเร็จ'));
+        } catch (err) {
+            console.error(chalk.red('❌ ไม่สามารถอ่านไฟล์ commandUsage.json ได้:', err.message));
+        }
+    }
+}
+
+// บันทึกข้อมูลคำสั่งที่ใช้ลงไฟล์
+function saveCommandUsage() {
+    fs.writeFileSync(commandsUsageFile, JSON.stringify(commandUsage, null, 4));
+}
+
+// โหลดข้อมูลคำสั่งที่ใช้เมื่อตอนเริ่มต้น
+loadCommandUsage();
 
 // โหลดบอทจากไฟล์ที่เก็บไว้เมื่อตอนเริ่มต้นเซิร์ฟเวอร์
 function loadBotsFromFiles() {
@@ -795,6 +820,10 @@ app.get("/start", (req, res) => {
         errorMessage = `<div class="alert alert-danger" role="alert">
                             ชื่อบอทไม่ถูกต้อง กรุณากรอกชื่อบอทที่มีความยาว 3-20 ตัวอักษร และประกอบด้วย a-z, A-Z, 0-9, -, _
                         </div>`;
+    } else if (error === 'invalid-prefix') {
+        errorMessage = `<div class="alert alert-danger" role="alert">
+                            คำนำหน้าบอทไม่ถูกต้อง กรุณากรอกคำนำหน้าที่มีความยาว 0-10 ตัวอักษร
+                        </div>`;
     }
 
     res.send(`
@@ -1008,16 +1037,15 @@ app.get("/start", (req, res) => {
                                 ></textarea>
                             </div>
                             <div class="mb-3">
-                                <label for="prefix" class="form-label">คำนำหน้าบอท</label>
+                                <label for="prefix" class="form-label">คำนำหน้าบอท (สามารถปล่อยว่างได้)</label>
                                 <input 
                                     type="text" 
                                     id="prefix" 
                                     name="prefix" 
                                     class="form-control" 
                                     placeholder="/" 
-                                    required
-                                    pattern="^.{1,10}$" 
-                                    title="กรุณากรอกคำนำหน้าที่มีความยาว 1-10 ตัวอักษร"
+                                    pattern="^.{0,10}$" 
+                                    title="กรุณากรอกคำนำหน้าที่มีความยาว 0-10 ตัวอักษร"
                                 />
                             </div>
                             <div class="mb-3">
@@ -2119,8 +2147,8 @@ app.get("/debug/bots", (req, res) => {
 app.post('/start', async (req, res) => {
     const { token, prefix, name, password, adminID } = req.body;
 
-    // ตรวจสอบว่ามีการกรอกโทเค็น, รหัสผ่าน, ID แอดมิน, ชื่อบอท และคำนำหน้าบอท
-    if (!token || !prefix || !name || !password || !adminID) {
+    // ตรวจสอบว่ามีการกรอกโทเค็น, รหัสผ่าน, ID แอดมิน, ชื่อบอท และคำนำหน้าบอท (prefix สามารถไม่กรอกได้)
+    if (!token || !name || !password || !adminID) { // ลบการตรวจสอบ prefix ออก เพราะสามารถไม่กรอกได้
         return res.redirect('/start?error=missing-fields');
     }
 
@@ -2136,6 +2164,11 @@ app.post('/start', async (req, res) => {
         return res.redirect('/start?error=invalid-name');
     }
 
+    // ตรวจสอบรูปแบบของ prefix ถ้ามีการกรอก
+    if (prefix && prefix.length > 10) {
+        return res.redirect('/start?error=invalid-prefix');
+    }
+
     try {
         const appState = JSON.parse(token);
         const tokenKey = token.trim();
@@ -2144,11 +2177,12 @@ app.post('/start', async (req, res) => {
         }
 
         const botName = name.trim();
-        const botPrefix = prefix.trim();
+        const botPrefix = prefix ? prefix.trim() : ''; // ถ้าไม่กรอก ให้เป็น ''
         const startTime = Date.now();
 
         // ปรับจำนวนครั้งในการลองเชื่อมต่อเป็น 5 ครั้ง
         await startBotWithRetry(appState, tokenKey, botName, botPrefix, startTime, password, adminID, 5);
+        saveCommandUsage(); // บันทึกข้อมูลคำสั่งที่ใช้
         res.redirect('/bots');
         io.emit('updateBots', generateBotData());
     } catch (err) {
@@ -2252,20 +2286,30 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
                 // จัดการข้อความ
                 if (event.type === "message") {
                     const message = event.body ? event.body.trim() : "";
+                    const prefix = botSessions[token].prefix || ''; // ถ้าไม่ตั้งค่า prefix ให้เป็น ''
 
-                    if (!message.startsWith(botSessions[token].prefix)) return;
+                    let commandName = '';
+                    let args = [];
 
-                    const args = message.slice(botSessions[token].prefix.length).trim().split(/ +/);
-                    const commandName = args.shift().toLowerCase();
+                    if (prefix && message.startsWith(prefix)) {
+                        // ถ้ามี prefix และข้อความเริ่มต้นด้วย prefix
+                        args = message.slice(prefix.length).trim().split(/ +/);
+                        commandName = args.shift().toLowerCase();
+                    } else {
+                        // ถ้าไม่มี prefix หรือข้อความไม่เริ่มต้นด้วย prefix
+                        args = message.split(/ +/);
+                        commandName = args.shift().toLowerCase();
+                    }
+
                     const command = commands[commandName];
 
                     if (command && typeof command.run === "function") {
                         try {
                             await command.run({ api, event, args });
                             console.log(chalk.green(`✅ รันคำสั่ง: ${commandName}`));
-                            // เพิ่มตัวนับการใช้คำสั่งโดยไม่เกิน MAX_COMMAND_USAGE
-                            commandUsage[commandName] = Math.min((commandUsage[commandName] || 0) + 1, MAX_COMMAND_USAGE);
-
+                            // เพิ่มตัวนับการใช้คำสั่ง
+                            commandUsage[commandName] = (commandUsage[commandName] || 0) + 1;
+                            saveCommandUsage(); // บันทึกข้อมูลหลังจากรันคำสั่ง
                             io.emit('updateBots', generateBotData());
                             io.emit('updateCommands', generateCommandData());
                         } catch (error) {
@@ -2273,7 +2317,8 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
                             api.sendMessage("❗ การรันคำสั่งล้มเหลว", event.threadID);
                         }
                     } else {
-                        api.sendMessage("❗ ไม่พบคำสั่งที่ระบุ", event.threadID);
+                        // ถ้าไม่ตรงคำสั่งที่มี ไม่ตอบสนอง
+                        // ไม่ทำอะไร
                     }
                 }
 
@@ -2505,16 +2550,4 @@ setInterval(() => {
     if (botsToDelete === 0) {
         console.log(chalk.green('✅ ไม่มีบอทที่ต้องการลบในครั้งนี้'));
     }
-}, 300000); // 300,000 มิลลิวินาที = 5 นาที 
-
-// ฟังก์ชันรีเซ็ตค่าตัวนับการใช้งานคำสั่ง
-function resetCommandUsage() {
-    Object.keys(commandUsage).forEach(command => {
-        commandUsage[command] = 0;
-    });
-    console.log(chalk.green('✅ รีเซ็ตค่าตัวนับการใช้งานคำสั่งเรียบร้อยแล้ว'));
-    io.emit('updateCommands', generateCommandData());
-}
-
-// รีเซ็ตค่าตัวนับทุกๆ วัน
-setInterval(resetCommandUsage, 86400000); // 86400000 มิลลิวินาที = 24 ชั่วโมง
+}, 300000); // 300,000 มิลลิวินาที = 5 นาที
