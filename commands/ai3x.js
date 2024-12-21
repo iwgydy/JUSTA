@@ -1,6 +1,7 @@
 const axios = require('axios');
 const fs = require('fs');
-const { exec } = require('child_process');
+const https = require('https');
+const googleTTS = require('google-tts-api'); // ไลบรารีสำหรับสร้างเสียง
 
 module.exports = {
     config: {
@@ -33,21 +34,27 @@ module.exports = {
                 // ส่งข้อความก่อน
                 const messageText = `⏰ ${elapsedTime}\n\n🎄 *Merry Christmas 2025!*\n🎅 เจอไนท์: ${botResponse}`;
                 api.sendMessage(messageText, event.threadID, async () => {
-                    // สร้างเสียง
-                    const ttsText = `เจอไนท์: ${botResponse}`;
-                    const ttsCommand = `gtts-cli "${ttsText}" --lang th --output response.mp3`;
+                    // สร้าง URL สำหรับไฟล์เสียง
+                    const url = googleTTS.getAudioUrl(botResponse, {
+                        lang: 'th',
+                        slow: false,
+                        host: 'https://translate.google.com',
+                    });
 
-                    exec(ttsCommand, (error) => {
-                        if (error) {
-                            console.error("❌ การสร้างเสียงล้มเหลว:", error.message);
-                            return;
-                        }
-
-                        // ส่งไฟล์เสียง
-                        const voiceMessage = {
-                            attachment: fs.createReadStream('response.mp3'),
-                        };
-                        api.sendMessage(voiceMessage, event.threadID);
+                    // ดาวน์โหลดไฟล์เสียง
+                    const filePath = './response.mp3';
+                    const file = fs.createWriteStream(filePath);
+                    https.get(url, (res) => {
+                        res.pipe(file);
+                        file.on('finish', () => {
+                            file.close();
+                            console.log('✅ สร้างเสียงสำเร็จ!');
+                            // ส่งไฟล์เสียง
+                            const voiceMessage = {
+                                attachment: fs.createReadStream(filePath),
+                            };
+                            api.sendMessage(voiceMessage, event.threadID);
+                        });
                     });
                 });
             }
