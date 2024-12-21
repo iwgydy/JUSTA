@@ -1,53 +1,102 @@
 const axios = require('axios');
+const stringSimilarity = require('string-similarity'); // ไลบรารีสำหรับวัดความคล้ายคลึงของข้อความ
 
 module.exports = {
     config: {
-        name: 'ai3x', // คำสั่งที่ใช้เรียก
-        description: 'คุยกับ AI 3X',
-        usage: 'ai3x [ข้อความ]',
+        name: 'เจอไนท์',
+        description: 'คุยกับเจอไนท์ในธีมคริสต์มาส 2025 🎄',
+        usage: 'เจอไนท์ [ข้อความ]',
     },
     run: async ({ api, event, args }) => {
-        const start = Date.now(); // เริ่มจับเวลาประมวลผล
+        const start = Date.now(); // เริ่มจับเวลา
 
-        // ตรวจสอบว่ามีการส่งข้อความมาหรือไม่
+        // ตรวจสอบว่ามีข้อความหรือไม่
         if (args.length === 0) {
-            return api.sendMessage("กรุณาส่งข้อความเพื่อถาม AI", event.threadID);
+            return api.sendMessage("🎅 กรุณาพิมพ์คำถามหรือคำสั่งสำหรับเจอไนท์ 🎄", event.threadID);
         }
 
-        const prompt = args.join(' '); // รวมข้อความทั้งหมด
-        const senderID = event.senderID; // ID ของผู้ส่ง
+        const userInput = args.join(' '); // รวมข้อความทั้งหมด
+        const firebaseURL = "https://goak-71ac8-default-rtdb.firebaseio.com/responses.json"; // URL ของ Firebase
 
         try {
-            // ส่งคำขอไปยัง API
-            const response = await axios.get(`https://kaiz-apis.gleeze.com/api/gpt-4o-pro`, {
-                params: {
-                    q: prompt,
-                    uid: senderID,
-                    imageUrl: "สวัสดี", // เพิ่ม URL ของภาพถ้าต้องการ
-                },
-            });
+            // ดึงข้อมูลคำถาม-คำตอบทั้งหมดจาก Firebase
+            const response = await axios.get(firebaseURL);
+            const data = response.data;
 
-            const end = Date.now(); // จับเวลาสิ้นสุด
-            const elapsedTime = ((end - start) / 1000).toFixed(2); // คำนวณเวลาที่ใช้ในหน่วยวินาที
+            if (data) {
+                // หา "คำถาม" ที่มีความคล้ายคลึงกับ "คำถามของผู้ใช้"
+                const questions = Object.keys(data);
+                const bestMatch = stringSimilarity.findBestMatch(userInput, questions);
 
-            // ตรวจสอบว่าข้อมูลจาก API มี `response` หรือไม่
-            const aiResponse = response.data.response || "ไม่สามารถรับคำตอบจาก AI ได้";
+                if (bestMatch.bestMatch.rating > 0.6) { // กำหนดคะแนนความคล้ายคลึงขั้นต่ำ
+                    const matchedQuestion = bestMatch.bestMatch.target;
+                    const answers = data[matchedQuestion];
 
-            // ส่งข้อความตอบกลับพร้อมเวลา
-            api.sendMessage(
-                `🤖 ตอบจาก AI: ${aiResponse}\n\n⏳ ใช้เวลาประมวลผลทั้งหมด: ${elapsedTime} วินาที`,
-                event.threadID
-            );
-        } catch (error) {
+                    // สุ่มคำตอบ (ถ้ามีหลายคำตอบ)
+                    const botResponse = Array.isArray(answers)
+                        ? answers[Math.floor(Math.random() * answers.length)]
+                        : answers;
+
+                    const end = Date.now();
+                    const elapsedTime = ((end - start) / 1000).toFixed(2); // เวลาในการประมวลผล
+
+                    return api.sendMessage(
+                        `⏰ ${elapsedTime}\n\n🎄 *Merry Christmas 2025!*\n🎅 เจอไนท์: ${botResponse}`,
+                        event.threadID
+                    );
+                }
+            }
+
             const end = Date.now();
             const elapsedTime = ((end - start) / 1000).toFixed(2);
 
-            // ส่งข้อความเมื่อเกิดข้อผิดพลาด
+            return api.sendMessage(
+                `⏰ ${elapsedTime}\n\n🎄 *Merry Christmas 2025!*\n🎅 เจอไนท์: ผมไม่เข้าใจคำสั่งนี้ 🎁\n🎀 คุณสามารถสอนผมได้โดยใช้คำสั่ง: "สอน คำถาม=คำตอบ"`,
+                event.threadID
+            );
+        } catch (error) {
             console.error("❌ เกิดข้อผิดพลาด:", error.message || error);
-            api.sendMessage(
-                `❌ ไม่สามารถติดต่อ AI ได้\n⏳ ใช้เวลาประมวลผลทั้งหมด: ${elapsedTime} วินาที`,
+            return api.sendMessage(
+                `❌ ไม่สามารถติดต่อฐานข้อมูลได้ โปรดลองอีกครั้ง 🎄`,
                 event.threadID
             );
         }
     },
+};
+
+// ฟีเจอร์สอน
+module.exports.s = async ({ api, event, args }) => {
+    const input = args.join(' ');
+
+    if (!input.includes('=')) {
+        return api.sendMessage("🎁 กรุณาพิมพ์ในรูปแบบ: สอน คำถาม=คำตอบ 🎀", event.threadID);
+    }
+
+    const [question, answer] = input.split('=').map(str => str.trim());
+    const firebaseURL = "https://goak-71ac8-default-rtdb.firebaseio.com/responses.json"; // URL ของ Firebase
+
+    try {
+        // ดึงคำตอบเก่า
+        const response = await axios.get(firebaseURL);
+        const data = response.data || {};
+
+        // เพิ่มคำตอบใหม่
+        if (!data[question]) {
+            data[question] = [];
+        }
+
+        if (!Array.isArray(data[question])) {
+            data[question] = [data[question]];
+        }
+
+        data[question].push(answer);
+
+        // อัปเดตฐานข้อมูล
+        await axios.put(firebaseURL, data);
+
+        return api.sendMessage(`✅ สอนเจอไนท์สำเร็จ! คำว่า "${question}" จะตอบแบบสุ่ม 🎄`, event.threadID);
+    } catch (error) {
+        console.error("❌ เกิดข้อผิดพลาด:", error.message || error);
+        return api.sendMessage("❌ ไม่สามารถบันทึกข้อมูลได้ 🎅", event.threadID);
+    }
 };
