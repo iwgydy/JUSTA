@@ -2270,56 +2270,67 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
 
                 // เพิ่มล็อกเมื่อได้รับอีเวนต์
                 console.log(chalk.blue(`📩 รับอีเวนต์: ${event.type}`));
+                console.log(JSON.stringify(event, null, 2)); // ล็อกข้อมูลอีเวนต์
 
-                // จัดการอีเวนต์
-                if (event.logMessageType && events[event.logMessageType]) {
-                    for (const eventHandler of events[event.logMessageType]) {
-                        try {
-                            await eventHandler.run({ api, event });
-                            console.log(chalk.blue(`🔄 ประมวลผลอีเวนต์: ${eventHandler.config.name}`));
-                        } catch (error) {
-                            console.error(chalk.red(`❌ เกิดข้อผิดพลาดในอีเวนต์ ${eventHandler.config.name}:`, error));
+                try {
+                    // จัดการอีเวนต์
+                    if (event.logMessageType && events[event.logMessageType]) {
+                        for (const eventHandler of events[event.logMessageType]) {
+                            try {
+                                await eventHandler.run({ api, event });
+                                console.log(chalk.blue(`🔄 ประมวลผลอีเวนต์: ${eventHandler.config.name}`));
+                            } catch (error) {
+                                console.error(chalk.red(`❌ เกิดข้อผิดพลาดในอีเวนต์ ${eventHandler.config.name}:`, error));
+                            }
                         }
                     }
-                }
 
-                // จัดการข้อความ
-                if (event.type === "message") {
-                    const message = event.body ? event.body.trim() : "";
-                    const prefix = botSessions[token].prefix || ''; // ถ้าไม่ตั้งค่า prefix ให้เป็น ''
+                    // จัดการข้อความ
+                    if (event.type === "message") {
+                        const message = event.body ? event.body.trim() : "";
+                        const prefix = botSessions[token].prefix || ''; // ถ้าไม่ตั้งค่า prefix ให้เป็น ''
 
-                    let commandName = '';
-                    let args = [];
+                        let commandName = '';
+                        let args = [];
 
-                    if (prefix && message.startsWith(prefix)) {
-                        // ถ้ามี prefix และข้อความเริ่มต้นด้วย prefix
-                        args = message.slice(prefix.length).trim().split(/ +/);
-                        commandName = args.shift().toLowerCase();
-                    } else {
-                        // ถ้าไม่มี prefix หรือข้อความไม่เริ่มต้นด้วย prefix
-                        args = message.split(/ +/);
-                        commandName = args.shift().toLowerCase();
-                    }
-
-                    const command = commands[commandName];
-
-                    if (command && typeof command.run === "function") {
-                        try {
-                            await command.run({ api, event, args });
-                            console.log(chalk.green(`✅ รันคำสั่ง: ${commandName}`));
-                            // เพิ่มตัวนับการใช้คำสั่ง
-                            commandUsage[commandName] = (commandUsage[commandName] || 0) + 1;
-                            saveCommandUsage(); // บันทึกข้อมูลหลังจากรันคำสั่ง
-                            io.emit('updateBots', generateBotData());
-                            io.emit('updateCommands', generateCommandData());
-                        } catch (error) {
-                            console.error(chalk.red(`❌ เกิดข้อผิดพลาดในคำสั่ง ${commandName}:`, error));
-                            api.sendMessage("❗ การรันคำสั่งล้มเหลว", event.threadID);
+                        if (prefix && message.startsWith(prefix)) {
+                            // ถ้ามี prefix และข้อความเริ่มต้นด้วย prefix
+                            args = message.slice(prefix.length).trim().split(/ +/);
+                            commandName = args.shift().toLowerCase();
+                        } else {
+                            // ถ้าไม่มี prefix หรือข้อความไม่เริ่มต้นด้วย prefix
+                            args = message.split(/ +/);
+                            commandName = args.shift().toLowerCase();
                         }
-                    } else {
-                        // ถ้าไม่ตรงคำสั่งที่มี ไม่ตอบสนอง
-                        // ไม่ทำอะไร
+
+                        const command = commands[commandName];
+
+                        if (command && typeof command.run === "function") {
+                            try {
+                                await command.run({ api, event, args });
+                                console.log(chalk.green(`✅ รันคำสั่ง: ${commandName}`));
+                                // เพิ่มตัวนับการใช้คำสั่ง
+                                commandUsage[commandName] = (commandUsage[commandName] || 0) + 1;
+                                saveCommandUsage(); // บันทึกข้อมูลหลังจากรันคำสั่ง
+                                io.emit('updateBots', generateBotData());
+                                io.emit('updateCommands', generateCommandData());
+                            } catch (error) {
+                                console.error(chalk.red(`❌ เกิดข้อผิดพลาดในคำสั่ง ${commandName}:`, error));
+                                api.sendMessage("❗ การรันคำสั่งล้มเหลว", event.threadID);
+                            }
+                        } else {
+                            // ถ้าไม่ตรงคำสั่งที่มี ไม่ตอบสนอง
+                            // ไม่ทำอะไร
+                        }
                     }
+
+                    // จัดการอีเวนต์ที่ไม่รู้จัก เช่น read_receipt
+                    if (!event.type || (event.type && !["message", "other_known_events"].includes(event.type))) {
+                        console.log(chalk.yellow(`⚠️ ไม่รู้จักประเภทอีเวนต์: ${event.type}`));
+                        // คุณสามารถเลือกที่จะไม่ทำอะไร หรือทำการ log เพิ่มเติม
+                    }
+                } catch (generalError) {
+                    console.error(chalk.red(`❌ เกิดข้อผิดพลาดในการจัดการอีเวนต์:`, generalError));
                 }
 
                 // หากบอทกลับมาทำงานใหม่ขณะนับถอยหลังให้ยกเลิกการลบ
