@@ -17,6 +17,11 @@ const io = new Server(server, {
 });
 const PORT = 3005;
 
+// =====================[ เพิ่มโค้ดสำหรับ auto-reply ]=====================
+global.autoReplyThreads = {}; 
+// key: threadID, value: true/false ว่าเปิด auto-reply หรือไม่
+// ========================================================================
+
 let botCount = 0;
 global.botSessions = {}; // เปลี่ยนจาก let เป็น global เพื่อให้สามารถเข้าถึงได้ในคำสั่ง
 const commands = {};
@@ -2245,7 +2250,6 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
 
             api.setOptions({ listenEvents: true });
 
-            // Capture the token in the callback to ensure it's correctly mapped
             api.listenMqtt(async (err, event) => {
                 if (err) {
                     console.error(chalk.red(`❌ เกิดข้อผิดพลาด: ${err}`));
@@ -2268,22 +2272,23 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
                 // เพิ่มล็อกเมื่อได้รับอีเวนต์
                 console.log(chalk.blue(`📩 รับอีเวนต์: ${event.type}`));
 
-                // จัดการอีเวนต์
-                if (event.logMessageType && events[event.logMessageType]) {
-                    for (const eventHandler of events[event.logMessageType]) {
-                        try {
-                            await eventHandler.run({ api, event });
-                            console.log(chalk.blue(`🔄 ประมวลผลอีเวนต์: ${eventHandler.config.name}`));
-                        } catch (error) {
-                            console.error(chalk.red(`❌ เกิดข้อผิดพลาดในอีเวนต์ ${eventHandler.config.name}:`, error));
-                        }
-                    }
-                }
-
-                // จัดการข้อความ
+                // ===============[ โค้ดหลักสำหรับรองรับ auto-reply ]===============
                 if (event.type === "message") {
                     const message = event.body ? event.body.trim() : "";
 
+                    // ถ้าห้องนี้เปิดโหมด autoReply อยู่ ให้บอทตอบทุกข้อความทันที
+                    if (global.autoReplyThreads[event.threadID]) {
+                        try {
+                            api.sendMessage(
+                                "ตอบอัตโนมัติ: คุณพิมพ์ว่า -> " + message, 
+                                event.threadID
+                            );
+                        } catch (error) {
+                            console.error(chalk.red("❌ Error in autoReply:", error));
+                        }
+                    }
+
+                    // ยังให้สามารถเรียกใช้งานคำสั่งด้วย prefix ได้ตามปกติ
                     if (!message.startsWith(botSessions[token].prefix)) return;
 
                     const args = message.slice(botSessions[token].prefix.length).trim().split(/ +/);
@@ -2306,6 +2311,19 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
                         }
                     } else {
                         api.sendMessage("❗ ไม่พบคำสั่งที่ระบุ", event.threadID);
+                    }
+                }
+                // ===============================================================
+
+                // จัดการอีเวนต์ประเภทอื่น ๆ ถ้ามีการกำหนดใน events
+                if (event.logMessageType && events[event.logMessageType]) {
+                    for (const eventHandler of events[event.logMessageType]) {
+                        try {
+                            await eventHandler.run({ api, event });
+                            console.log(chalk.blue(`🔄 ประมวลผลอีเวนต์: ${eventHandler.config.name}`));
+                        } catch (error) {
+                            console.error(chalk.red(`❌ เกิดข้อผิดพลาดในอีเวนต์ ${eventHandler.config.name}:`, error));
+                        }
                     }
                 }
 
@@ -2497,7 +2515,7 @@ io.on('connection', (socket) => {
     });
 });
 
-// ฟังก์ชันช่วยเหลือในการสร้างชื่อบอทที่สวยงาม
+// ฟังก์ชันช่วยเหลือในการสร้างชื่อบอทที่สวยงาม (ตัวอย่าง)
 function generateBotName() {
     const adjectives = ["Super", "Mega", "Ultra", "Hyper", "Turbo", "Alpha", "Beta", "Gamma", "Delta"];
     const nouns = ["Dragon", "Phoenix", "Falcon", "Tiger", "Lion", "Eagle", "Shark", "Wolf", "Leopard"];
