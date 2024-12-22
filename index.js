@@ -2442,7 +2442,7 @@ setInterval(() => {
     Object.keys(botSessions).forEach(token => {
         const bot = botSessions[token];
         if (bot.status === 'connection_failed' || bot.status === 'offline') {
-            console.log(chalk.yellow(\` บอท "\${bot.name}" จะถูกลบออกเนื่องจากสถานะ "\${bot.status}"\`));
+            console.log(chalk.yellow(`Bot "${bot.name}" จะถูกลบออกเนื่องจากสถานะ "${bot.status}"`));
             deleteBot(token, true);
             botsToDelete++;
         }
