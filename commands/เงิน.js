@@ -2,29 +2,40 @@ module.exports = {
     config: {
         name: "ดูเงิน",
         version: "1.0.0",
-        description: "ตรวจสอบยอดเงินของคุณ",
+        description: "ตรวจสอบยอดเงินของตัวเองหรือผู้ใช้ที่ถูกแท็ก",
         commandCategory: "economy",
-        usages: "",
+        usages: "[@mention]",
         cooldowns: 5
     },
-    run: async ({ api, event }) => {
-        const { senderID, threadID, messageID } = event;
+    run: async ({ api, event, args }) => {
+        const { senderID, threadID, messageID, mentions } = event;
 
         // ตรวจสอบว่า global.moneyData ถูกสร้างไว้หรือไม่
         global.moneyData = global.moneyData || {};
 
-        // ตั้งค่าเริ่มต้นเป็น 0 บาท หากผู้ใช้ยังไม่มีข้อมูลในระบบ
-        if (!global.moneyData[senderID]) {
-            global.moneyData[senderID] = 0;
+        let targetID;
+        let targetName;
+
+        // ถ้าผู้ใช้มีการแท็กคนอื่น
+        if (Object.keys(mentions).length > 0) {
+            targetID = Object.keys(mentions)[0]; // ใช้ ID ของคนแรกที่ถูกแท็ก
+            targetName = mentions[targetID];    // ชื่อของคนที่ถูกแท็ก
+        } else {
+            // หากไม่มีการแท็ก ให้แสดงยอดเงินของตัวเอง
+            targetID = senderID;
+            targetName = "คุณ";
         }
 
-        // ดึงยอดเงินของผู้ใช้
-        const userMoney = global.moneyData[senderID];
+        // ตรวจสอบว่าผู้ใช้เป้าหมายมีข้อมูลเงินหรือไม่
+        if (!global.moneyData[targetID]) {
+            global.moneyData[targetID] = 0; // ตั้งค่าเริ่มต้นเป็น 0 บาท
+        }
 
-        // สร้างข้อความสั้นและเรียบง่าย
-        const moneyMessage = `💸 ${userMoney.toLocaleString()}`;
+        // ดึงยอดเงินของผู้ใช้เป้าหมาย
+        const userMoney = global.moneyData[targetID];
 
         // ส่งข้อความแจ้งยอดเงิน
-        api.sendMessage(moneyMessage, threadID, messageID);
+        const message = `💸  ${userMoney.toLocaleString()} บาท`;
+        api.sendMessage(message, threadID, messageID);
     }
 };
