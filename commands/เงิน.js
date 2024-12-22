@@ -1,3 +1,6 @@
+const fs = require("fs");
+const path = require("path");
+
 module.exports = {
     config: {
         name: "ดูเงิน",
@@ -10,8 +13,16 @@ module.exports = {
     run: async ({ api, event, args }) => {
         const { senderID, threadID, messageID, mentions } = event;
 
-        // ตรวจสอบว่า global.moneyData ถูกสร้างไว้หรือไม่
-        global.moneyData = global.moneyData || {};
+        // กำหนดเส้นทางไฟล์เก็บข้อมูล
+        const filePath = path.resolve(__dirname, "moneyData.json");
+
+        // ตรวจสอบและสร้างไฟล์ JSON อัตโนมัติหากไม่มีไฟล์
+        if (!fs.existsSync(filePath)) {
+            fs.writeFileSync(filePath, JSON.stringify({}, null, 2), "utf8");
+        }
+
+        // อ่านข้อมูลจากไฟล์
+        let moneyData = JSON.parse(fs.readFileSync(filePath, "utf8"));
 
         let targetID;
         let targetName;
@@ -27,12 +38,15 @@ module.exports = {
         }
 
         // ตรวจสอบว่าผู้ใช้เป้าหมายมีข้อมูลเงินหรือไม่
-        if (!global.moneyData[targetID]) {
-            global.moneyData[targetID] = 0; // ตั้งค่าเริ่มต้นเป็น 0 บาท
+        if (!moneyData[targetID]) {
+            moneyData[targetID] = 0; // ตั้งค่าเริ่มต้นเป็น 0 บาท
         }
 
         // ดึงยอดเงินของผู้ใช้เป้าหมาย
-        const userMoney = global.moneyData[targetID];
+        const userMoney = moneyData[targetID];
+
+        // บันทึกข้อมูลกลับไปที่ไฟล์
+        fs.writeFileSync(filePath, JSON.stringify(moneyData, null, 2), "utf8");
 
         // ส่งข้อความแจ้งยอดเงิน
         const message = `💸  ${userMoney.toLocaleString()} บาท`;
