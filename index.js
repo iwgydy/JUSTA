@@ -1,3 +1,7 @@
+//-------------------------------------------------------------
+// server.js (ไฟล์หลักทั้งหมด)
+//-------------------------------------------------------------
+
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -16,11 +20,6 @@ const io = new Server(server, {
     }
 });
 const PORT = 3005;
-
-// =====================[ เพิ่มโค้ดสำหรับ auto-reply ]=====================
-global.autoReplyThreads = {}; 
-// key: threadID, value: true/false ว่าเปิด auto-reply หรือไม่
-// ========================================================================
 
 let botCount = 0;
 global.botSessions = {}; // เปลี่ยนจาก let เป็น global เพื่อให้สามารถเข้าถึงได้ในคำสั่ง
@@ -80,7 +79,8 @@ if (fs.existsSync(commandsPath)) {
                     name: command.config.name,
                     description: command.config.description || "ไม่มีคำอธิบาย",
                 });
-                commandUsage[command.config.name.toLowerCase()] = commandUsage[command.config.name.toLowerCase()] || 0; // เริ่มต้นตัวนับคำสั่ง
+                // เริ่มต้นตัวนับคำสั่งถ้ายังไม่มี
+                commandUsage[command.config.name.toLowerCase()] = commandUsage[command.config.name.toLowerCase()] || 0;
                 console.log(`📦 โหลดคำสั่ง: ${command.config.name}`);
             }
         }
@@ -117,6 +117,53 @@ function generate6DigitCode() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+// --------------------- เพิ่มปุ่ม ปิด/เปิด บอท: ฟังก์ชันเสริมในการแปลไทย/คลาสสถานะ ----------------------
+
+// ฟังก์ชันช่วยเหลือในการแปลสถานะเป็นข้อความ (เพิ่ม case 'paused')
+function translateStatus(status) {
+    switch(status) {
+        case 'connecting':
+            return 'กำลังเชื่อมต่อ';
+        case 'online':
+            return 'ออนไลน์';
+        case 'active':
+            return 'ทำงาน';
+        case 'connection_failed':
+            return 'เชื่อมต่อไม่สำเร็จ';
+        case 'offline':
+            return 'ออฟไลน์';
+        case 'paused':
+            return 'หยุดชั่วคราว';
+        default:
+            return status;
+    }
+}
+
+// ฟังก์ชันช่วยเหลือในการกำหนดคลาสสำหรับสถานะ (เพิ่ม case 'paused')
+function getStatusClass(status) {
+    switch(status) {
+        case 'connecting':
+            return 'status-connecting';
+        case 'online':
+            return 'status-online';
+        case 'active':
+            return 'status-active';
+        case 'connection_failed':
+            return 'status-connection-failed';
+        case 'offline':
+            return 'status-offline';
+        case 'paused':
+            return 'status-paused';
+        default:
+            return 'status-unknown';
+    }
+}
+
+// --------------------- ฟังก์ชันสร้างตารางบอท + ข้อมูลแดชบอร์ด ----------------------
+
+// ตัวแปรสำหรับเก็บค่าปิงของเว็บไซต์
+let websitePing = 0;
+
 // ฟังก์ชันช่วยเหลือในการสร้างข้อมูลบอทสำหรับการอัปเดตแบบเรียลไทม์
 function generateBotData() {
     const totalBots = Object.keys(botSessions).length;
@@ -124,33 +171,51 @@ function generateBotData() {
     const activeBots = Object.values(botSessions).filter(bot => bot.status === 'active').length;
 
     // สร้างแถวตารางบอทพร้อมข้อมูลปิงและสถานะใหม่
-    const botRows = Object.entries(botSessions).map(([token, bot]) => `
-        <tr id="bot-${encodeURIComponent(token)}">
-            <td>
-                <i class="fas fa-robot me-2" style="color: var(--primary-color);"></i>
-                <span class="bot-name">${bot.name}</span>
-            </td>
-            <td>
-                <span class="${getStatusClass(bot.status)}">
-                    <i class="fas fa-circle"></i>
-                    ${translateStatus(bot.status)}
-                </span>
-            </td>
-            <td>
-                <span class="runtime" data-start-time="${bot.startTime}">
-                    กำลังคำนวณ...
-                </span>
-            </td>
-            <td>
-                <span class="ping">${bot.ping || 'N/A'} ms</span>
-            </td>
-            <td>
-                <button class="btn btn-warning btn-sm edit-btn" data-token="${encodeURIComponent(token)}"><i class="fas fa-edit"></i> แก้ไข</button>
-                <button class="btn btn-danger btn-sm delete-btn" data-token="${encodeURIComponent(token)}"><i class="fas fa-trash-alt"></i> ลบ</button>
-                <button class="btn btn-secondary btn-sm restart-btn" data-token="${encodeURIComponent(token)}"><i class="fas fa-sync-alt"></i> รีสตาร์ท</button> <!-- ปุ่มรีสตาร์ท -->
-            </td>
-        </tr>
-    `).join('') || `
+    const botRows = Object.entries(botSessions).map(([token, bot]) => {
+        // กำหนด label บนปุ่ม Toggle ขึ้นอยู่กับสถานะปัจจุบัน
+        const toggleButtonLabel = (bot.status === 'online' || bot.status === 'active')
+            ? 'ปิด'
+            : 'เปิด';
+
+        return `
+            <tr id="bot-${encodeURIComponent(token)}">
+                <td>
+                    <i class="fas fa-robot me-2" style="color: var(--primary-color);"></i>
+                    <span class="bot-name">${bot.name}</span>
+                </td>
+                <td>
+                    <span class="${getStatusClass(bot.status)}">
+                        <i class="fas fa-circle"></i>
+                        ${translateStatus(bot.status)}
+                    </span>
+                </td>
+                <td>
+                    <span class="runtime" data-start-time="${bot.startTime}">
+                        กำลังคำนวณ...
+                    </span>
+                </td>
+                <td>
+                    <span class="ping">${bot.ping || 'N/A'} ms</span>
+                </td>
+                <td>
+                    <!-- ปุ่มแก้ไข/ลบ/รีสตาร์ท/ปิด-เปิด -->
+                    <button class="btn btn-warning btn-sm edit-btn" data-token="${encodeURIComponent(token)}">
+                        <i class="fas fa-edit"></i> แก้ไข
+                    </button>
+                    <button class="btn btn-danger btn-sm delete-btn" data-token="${encodeURIComponent(token)}">
+                        <i class="fas fa-trash-alt"></i> ลบ
+                    </button>
+                    <button class="btn btn-secondary btn-sm restart-btn" data-token="${encodeURIComponent(token)}">
+                        <i class="fas fa-sync-alt"></i> รีสตาร์ท
+                    </button>
+                    <!-- ปุ่ม ปิด/เปิด บอท -->
+                    <button class="btn btn-info btn-sm toggle-btn" data-token="${encodeURIComponent(token)}">
+                        <i class="fas fa-power-off"></i> ${toggleButtonLabel}
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('') || `
         <tr>
             <td colspan="5" class="text-center">ไม่มีบอทที่กำลังทำงาน</td>
         </tr>
@@ -164,42 +229,6 @@ function generateBotData() {
         commandDescriptions, 
         websitePing 
     };
-}
-
-// ฟังก์ชันช่วยเหลือในการแปลสถานะเป็นข้อความ
-function translateStatus(status) {
-    switch(status) {
-        case 'connecting':
-            return 'กำลังเชื่อมต่อ';
-        case 'online':
-            return 'ออนไลน์';
-        case 'active':
-            return 'ทำงาน';
-        case 'connection_failed':
-            return 'เชื่อมต่อไม่สำเร็จ';
-        case 'offline':
-            return 'ออฟไลน์';
-        default:
-            return status;
-    }
-}
-
-// ฟังก์ชันช่วยเหลือในการกำหนดคลาสสำหรับสถานะ
-function getStatusClass(status) {
-    switch(status) {
-        case 'connecting':
-            return 'status-connecting';
-        case 'online':
-            return 'status-online';
-        case 'active':
-            return 'status-active';
-        case 'connection_failed':
-            return 'status-connection-failed';
-        case 'offline':
-            return 'status-offline';
-        default:
-            return 'status-unknown';
-    }
 }
 
 // ฟังก์ชันช่วยเหลือในการสร้างข้อมูลคำสั่ง
@@ -222,7 +251,8 @@ function generateCommandData() {
     return commandsData;
 }
 
-// โหลดบอทจากไฟล์ที่เก็บไว้เมื่อตอนเริ่มต้นเซิร์ฟเวอร์
+// --------------------- ฟังก์ชันโหลดบอทจากไฟล์ ----------------------
+
 function loadBotsFromFiles() {
     fs.readdirSync(botsDir).forEach(file => {
         if (file.endsWith('.json')) {
@@ -240,13 +270,11 @@ function loadBotsFromFiles() {
     });
 }
 
-// ตัวแปรสำหรับเก็บค่าปิงของเว็บไซต์
-let websitePing = 0;
+// --------------------- Route แสดงหน้าเว็บต่าง ๆ ----------------------
 
 // หน้าแดชบอร์ดหลัก
 app.get("/", (req, res) => {
-    const data = generateBotData(); // เรียกใช้ generateBotData()
-
+    const data = generateBotData();
     res.send(`
         <!DOCTYPE html>
         <html lang="th">
@@ -267,25 +295,19 @@ app.get("/", (req, res) => {
                     position: relative;
                     overflow-x: hidden;
                 }
-
-                /* เพิ่ม Flexbox Layout */
                 html, body {
                     height: 100%;
                     margin: 0;
                     padding: 0;
                 }
-
                 body {
                     display: flex;
                     flex-direction: column;
                     min-height: 100vh;
                 }
-
                 main.flex-grow-1 {
                     flex: 1;
                 }
-
-                /* Overlay */
                 .overlay {
                     position: fixed;
                     top: 0;
@@ -295,29 +317,22 @@ app.get("/", (req, res) => {
                     background: rgba(0, 0, 0, 0.7);
                     z-index: -1;
                 }
-
-                /* ปรับแต่ง Navbar */
                 .navbar {
                     background: rgba(13, 110, 253, 0.9) !important;
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                 }
-
                 .navbar-brand {
                     font-family: 'Kanit', sans-serif;
                     font-weight: 600;
                     color: #ffffff !important;
                 }
-
                 .navbar-nav .nav-link {
                     color: #ffffff !important;
                     transition: color 0.3s ease;
                 }
-
                 .navbar-nav .nav-link:hover {
                     color: #ffc107 !important;
                 }
-
-                /* ปรับแต่ง Cards */
                 .stats-card {
                     background: rgba(255, 255, 255, 0.1);
                     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -327,24 +342,20 @@ app.get("/", (req, res) => {
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
-
                 .stats-card:hover {
                     transform: translateY(-5px);
                     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
                 }
-
                 .stats-number {
                     font-size: 2.5rem;
                     font-weight: 700;
                     margin: 10px 0;
                     color: #ffc107;
                 }
-
                 .stats-label {
                     font-size: 1rem;
                     color: #ffffff;
                 }
-
                 .glass-card {
                     background: rgba(255, 255, 255, 0.1);
                     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -353,36 +364,29 @@ app.get("/", (req, res) => {
                     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
-
                 .glass-card:hover {
                     transform: translateY(-5px);
                     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
                 }
-
                 .bot-table, .command-table {
                     width: 100%;
                     border-collapse: collapse;
                     margin-top: 20px;
                 }
-
                 .bot-table th, .bot-table td,
                 .command-table th, .command-table td {
                     padding: 12px 15px;
                     text-align: left;
                 }
-
                 .bot-table th, .command-table th {
                     background-color: rgba(13, 110, 253, 0.9);
                     color: #fff;
                     font-weight: 600;
                 }
-
                 .bot-table tr:nth-child(even),
                 .command-table tr:nth-child(even) {
                     background-color: rgba(255, 255, 255, 0.1);
                 }
-
-                /* ปรับแต่งสถานะ */
                 .status-online {
                     background: #198754;
                     color: #ffffff;
@@ -393,7 +397,6 @@ app.get("/", (req, res) => {
                     align-items: center;
                     gap: 6px;
                 }
-
                 .status-active {
                     background: #20c997;
                     color: #ffffff;
@@ -404,7 +407,6 @@ app.get("/", (req, res) => {
                     align-items: center;
                     gap: 6px;
                 }
-
                 .status-connecting {
                     background: #ffc107;
                     color: #212529;
@@ -415,7 +417,6 @@ app.get("/", (req, res) => {
                     align-items: center;
                     gap: 6px;
                 }
-
                 .status-connection-failed {
                     background: #dc3545;
                     color: #ffffff;
@@ -426,7 +427,6 @@ app.get("/", (req, res) => {
                     align-items: center;
                     gap: 6px;
                 }
-
                 .status-offline {
                     background: #6c757d;
                     color: #ffffff;
@@ -437,8 +437,17 @@ app.get("/", (req, res) => {
                     align-items: center;
                     gap: 6px;
                 }
-
-                /* ปรับแต่ง Footer */
+                /* เพิ่มสถานะ paused */
+                .status-paused {
+                    background: #0d6efd; /* สีน้ำเงินตาม bootstrap */
+                    color: #ffffff;
+                    padding: 5px 10px;
+                    border-radius: 20px;
+                    font-size: 0.9rem;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                }
                 .footer {
                     background: rgba(13, 110, 253, 0.9);
                     border-top: 2px solid rgba(255, 193, 7, 0.5);
@@ -446,8 +455,6 @@ app.get("/", (req, res) => {
                     font-size: 0.9rem;
                     color: #ffffff;
                 }
-
-                /* ปรับแต่งปุ่ม */
                 .btn-primary {
                     background: #ffc107;
                     border: none;
@@ -458,46 +465,35 @@ app.get("/", (req, res) => {
                     color: #212529;
                     font-weight: 600;
                 }
-
                 .btn-primary:hover {
                     background: #e0a800;
                     transform: translateY(-2px);
                 }
-
-                .btn-warning, .btn-danger, .btn-secondary {
+                .btn-warning, .btn-danger, .btn-secondary, .btn-info {
                     transition: transform 0.2s ease;
                 }
-
-                .btn-warning:hover, .btn-danger:hover, .btn-secondary:hover {
+                .btn-warning:hover, .btn-danger:hover, .btn-secondary:hover, .btn-info:hover {
                     transform: scale(1.05);
                 }
-
-                /* ปรับแต่ง Toast */
                 .toast-container {
                     position: fixed;
                     top: 20px;
                     right: 20px;
                     z-index: 1055;
                 }
-
-                /* ปรับแต่ง Text */
                 .bot-name {
                     font-family: 'Press Start 2P', cursive;
                     color: #ff5722;
                     font-size: 1.1rem;
                 }
-
                 .runtime {
                     font-weight: 500;
                     color: #ffc107;
                 }
-
                 .ping {
                     font-weight: 500;
                     color: #198754;
                 }
-
-                /* Responsive */
                 @media (max-width: 768px) {
                     .stats-card {
                         margin-bottom: 20px;
@@ -510,12 +506,9 @@ app.get("/", (req, res) => {
                         padding: 8px 10px;
                     }
                 }
-
-                /* เพิ่มแอนิเมชัน */
                 .animate-float {
                     animation: float 3s ease-in-out infinite;
                 }
-
                 @keyframes float {
                     0%, 100% { transform: translateY(0); }
                     50% { transform: translateY(-10px); }
@@ -554,7 +547,6 @@ app.get("/", (req, res) => {
 
             <main class="flex-grow-1">
                 <div class="container">
-                    <!-- สถิติ -->
                     <div class="row mb-4">
                         <div class="col-md-3 col-sm-6 mb-3">
                             <div class="stats-card">
@@ -587,7 +579,6 @@ app.get("/", (req, res) => {
                     </div>
 
                     <div class="row">
-                        <!-- ตารางบอท -->
                         <div class="col-12">
                             <div class="glass-card">
                                 <h5 class="mb-4">
@@ -646,20 +637,16 @@ app.get("/", (req, res) => {
                     });
                 }
 
-                // ฟังก์ชันส่งปิงไปยังเซิร์ฟเวอร์
                 function sendPing() {
                     const timestamp = Date.now();
                     socket.emit('ping', timestamp);
                 }
-
-                // ส่งปิงทุกๆ 5 วินาที
                 setInterval(sendPing, 5000);
-                // ส่งปิงทันทีเมื่อโหลดหน้า
-                sendPing();
+                sendPing(); // ping ทันทีเมื่อโหลดหน้า
 
-                // ฟังก์ชันแสดง Toast
                 function showToast(message, type = 'info') {
                     const toastContainer = document.querySelector('.toast-container');
+                    if (!toastContainer) return;
                     const toastEl = document.createElement('div');
                     toastEl.className = \`toast align-items-center text-bg-\${type} border-0\`;
                     toastEl.setAttribute('role', 'alert');
@@ -676,8 +663,6 @@ app.get("/", (req, res) => {
                     toastContainer.appendChild(toastEl);
                     const toast = new bootstrap.Toast(toastEl);
                     toast.show();
-
-                    // ลบ Toast หลังจากปิด
                     toastEl.addEventListener('hidden.bs.toast', () => {
                         toastEl.remove();
                     });
@@ -694,31 +679,25 @@ app.get("/", (req, res) => {
                     if (botTableBody) {
                         botTableBody.innerHTML = data.botRows;
                     }
-
                     updateRuntime();
                 });
 
-                // รับเหตุการณ์เฉพาะเมื่อบอทถูกลบ
                 socket.on('botDeleted', (botName) => {
                     showToast(\`บอท "\${botName}" ถูกลบเรียบร้อยแล้ว\`, 'success');
                 });
-
-                // รับเหตุการณ์เฉพาะเมื่อบอทไปออฟไลน์
                 socket.on('botOffline', (botName) => {
                     showToast(\`บอท "\${botName}" กำลังจะถูกลบภายใน 60 วินาที เนื่องจากออฟไลน์\`, 'warning');
                 });
-
-                // รับเหตุการณ์เฉพาะเมื่อบอทถูกรีสตาร์ท
                 socket.on('botRestarted', (botName) => {
                     showToast(\`บอท "\${botName}" ถูกรีสตาร์ทเรียบร้อยแล้ว\`, 'success');
                 });
 
-                // อัปเดตเวลารันทุกวินาที
                 setInterval(updateRuntime, 1000);
                 document.addEventListener('DOMContentLoaded', updateRuntime);
 
-                // Event Delegation สำหรับปุ่มลบ, แก้ไข, และรีสตาร์ท
+                // การจัดการปุ่มต่าง ๆ ด้วย Event Delegation
                 document.addEventListener('click', function(event) {
+                    // ลบบอท
                     if (event.target.closest('.delete-btn')) {
                         const token = decodeURIComponent(event.target.closest('.delete-btn').getAttribute('data-token'));
                         const deleteCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการลบบอท:');
@@ -745,11 +724,12 @@ app.get("/", (req, res) => {
                         }
                     }
 
+                    // แก้ไขโทเค่น
                     if (event.target.closest('.edit-btn')) {
                         const token = decodeURIComponent(event.target.closest('.edit-btn').getAttribute('data-token'));
                         const editCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการแก้ไขโทเค่น:');
                         if (editCode) {
-                            const newToken = prompt('กรุณากรอกโทเค่นใหม่:');
+                            const newToken = prompt('กรุณากรอกโทเค่นใหม่ (AppState ในรูป JSON):');
                             if (newToken) {
                                 fetch('/edit', {
                                     method: 'POST',
@@ -774,7 +754,7 @@ app.get("/", (req, res) => {
                         }
                     }
 
-                    // การจัดการปุ่มรีสตาร์ท
+                    // รีสตาร์ทบอท
                     if (event.target.closest('.restart-btn')) {
                         const token = decodeURIComponent(event.target.closest('.restart-btn').getAttribute('data-token'));
                         const restartCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการรีสตาร์ทบอท:');
@@ -790,7 +770,7 @@ app.get("/", (req, res) => {
                             .then(data => {
                                 if (data.success) {
                                     showToast('รีสตาร์ทบอทสำเร็จ', 'success');
-                                    socket.emit('botRestarted', data.botName); // ส่งเหตุการณ์รีสตาร์ทบอท
+                                    socket.emit('botRestarted', data.botName);
                                 } else {
                                     showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
                                 }
@@ -801,8 +781,37 @@ app.get("/", (req, res) => {
                             });
                         }
                     }
+
+                    // ปิด/เปิด (toggle) บอท
+                    if (event.target.closest('.toggle-btn')) {
+                        const token = decodeURIComponent(event.target.closest('.toggle-btn').getAttribute('data-token'));
+                        const toggleCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการปิด/เปิดบอท:');
+                        if (toggleCode) {
+                            fetch('/toggle', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ token, code: toggleCode })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    showToast(data.message || 'ดำเนินการสำเร็จ', 'success');
+                                } else {
+                                    showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
+                                }
+                            })
+                            .catch(err => {
+                                console.error(err);
+                                showToast('เกิดข้อผิดพลาดในการปิด/เปิดบอท', 'danger');
+                            });
+                        }
+                    }
                 });
             </script>
+            <!-- Toast container ส่วนแสดงข้อความเตือน -->
+            <div class="toast-container"></div>
         </body>
         </html>
     `);
@@ -814,25 +823,15 @@ app.get("/start", (req, res) => {
 
     let errorMessage = "";
     if (error === 'already-running') {
-        errorMessage = `<div class="alert alert-warning" role="alert">
-                            บอทนี้กำลังทำงานอยู่แล้ว
-                        </div>`;
+        errorMessage = `<div class="alert alert-warning" role="alert">บอทนี้กำลังทำงานอยู่แล้ว</div>`;
     } else if (error === 'invalid-token') {
-        errorMessage = `<div class="alert alert-danger" role="alert">
-                            โทเค็นไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง
-                        </div>`;
+        errorMessage = `<div class="alert alert-danger" role="alert">โทเค็นไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง</div>`;
     } else if (error === 'missing-fields') {
-        errorMessage = `<div class="alert alert-danger" role="alert">
-                            กรุณากรอกทั้งโทเค็น, รหัสผ่าน, ID แอดมิน, ชื่อบอท และคำนำหน้าบอท
-                        </div>`;
+        errorMessage = `<div class="alert alert-danger" role="alert">กรุณากรอกโทเค็น, รหัสผ่าน, ID แอดมิน, ชื่อบอท และคำนำหน้าบอท</div>`;
     } else if (error === 'invalid-password') {
-        errorMessage = `<div class="alert alert-danger" role="alert">
-                            รหัสผ่านไม่ถูกต้อง กรุณากรอกรหัสผ่าน 6 หลัก
-                        </div>`;
+        errorMessage = `<div class="alert alert-danger" role="alert">รหัสผ่านไม่ถูกต้อง กรุณากรอกรหัสผ่าน 6 หลัก</div>`;
     } else if (error === 'invalid-name') {
-        errorMessage = `<div class="alert alert-danger" role="alert">
-                            ชื่อบอทไม่ถูกต้อง กรุณากรอกชื่อบอทที่มีความยาว 3-20 ตัวอักษร และประกอบด้วย a-z, A-Z, 0-9, -, _
-                        </div>`;
+        errorMessage = `<div class="alert alert-danger" role="alert">ชื่อบอทไม่ถูกต้อง: ยาว 3-20 ตัวอักษร (a-z, A-Z, 0-9, -, _)</div>`;
     }
 
     res.send(`
@@ -846,7 +845,6 @@ app.get("/start", (req, res) => {
             <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* พื้นหลัง */
                 body {
                     background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png') no-repeat center center fixed;
                     background-size: cover;
@@ -855,25 +853,19 @@ app.get("/start", (req, res) => {
                     position: relative;
                     overflow-x: hidden;
                 }
-
-                /* เพิ่ม Flexbox Layout */
                 html, body {
                     height: 100%;
                     margin: 0;
                     padding: 0;
                 }
-
                 body {
                     display: flex;
                     flex-direction: column;
                     min-height: 100vh;
                 }
-
                 main.flex-grow-1 {
                     flex: 1;
                 }
-
-                /* Overlay */
                 .overlay {
                     position: fixed;
                     top: 0;
@@ -883,29 +875,22 @@ app.get("/start", (req, res) => {
                     background: rgba(0, 0, 0, 0.7);
                     z-index: -1;
                 }
-
-                /* ปรับแต่ง Navbar */
                 .navbar {
                     background: rgba(13, 110, 253, 0.9) !important;
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                 }
-
                 .navbar-brand {
                     font-family: 'Kanit', sans-serif;
                     font-weight: 600;
                     color: #ffffff !important;
                 }
-
                 .navbar-nav .nav-link {
                     color: #ffffff !important;
                     transition: color 0.3s ease;
                 }
-
                 .navbar-nav .nav-link:hover {
                     color: #ffc107 !important;
                 }
-
-                /* ปรับแต่ง Cards */
                 .glass-card {
                     background: rgba(255, 255, 255, 0.1);
                     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -914,17 +899,34 @@ app.get("/start", (req, res) => {
                     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
-
                 .glass-card:hover {
                     transform: translateY(-5px);
                     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
                 }
-
+                .footer {
+                    background: rgba(13, 110, 253, 0.9);
+                    border-top: 2px solid rgba(255, 193, 7, 0.5);
+                    padding: 20px 0;
+                    font-size: 0.9rem;
+                    color: #ffffff;
+                }
+                .animate-float {
+                    animation: float 3s ease-in-out infinite;
+                }
+                @keyframes float {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-10px); }
+                }
+                .toast-container {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 1055;
+                }
                 .add-bot-form .form-label {
                     font-weight: 500;
                     color: #ffffff;
                 }
-
                 .form-control {
                     background: rgba(255, 255, 255, 0.2);
                     border: 1px solid rgba(255, 255, 255, 0.3);
@@ -934,18 +936,15 @@ app.get("/start", (req, res) => {
                     transition: border-color 0.3s ease, background 0.3s ease;
                     color: #ffffff;
                 }
-
                 .form-control::placeholder {
                     color: #e0e0e0;
                 }
-
                 .form-control:focus {
                     border-color: #ffc107;
                     box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
                     background: rgba(255, 255, 255, 0.3);
                     color: #ffffff;
                 }
-
                 .btn-primary {
                     background: #ffc107;
                     border: none;
@@ -956,42 +955,9 @@ app.get("/start", (req, res) => {
                     color: #212529;
                     font-weight: 600;
                 }
-
                 .btn-primary:hover {
                     background: #e0a800;
                     transform: translateY(-2px);
-                }
-
-                .footer {
-                    background: rgba(13, 110, 253, 0.9);
-                    border-top: 2px solid rgba(255, 193, 7, 0.5);
-                    padding: 20px 0;
-                    font-size: 0.9rem;
-                    color: #ffffff;
-                }
-
-                .animate-float {
-                    animation: float 3s ease-in-out infinite;
-                }
-
-                @keyframes float {
-                    0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-10px); }
-                }
-
-                /* ปรับแต่ง Toast */
-                .toast-container {
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    z-index: 1055;
-                }
-
-                /* Responsive */
-                @media (max-width: 768px) {
-                    .glass-card {
-                        margin-bottom: 20px;
-                    }
                 }
             </style>
         </head>
@@ -1035,13 +1001,13 @@ app.get("/start", (req, res) => {
                         ${errorMessage}
                         <form class="add-bot-form" method="POST" action="/start">
                             <div class="mb-3">
-                                <label for="token" class="form-label">โทเค็นของคุณ</label>
+                                <label for="token" class="form-label">โทเค็นของคุณ (AppState JSON)</label>
                                 <textarea 
                                     id="token" 
                                     name="token" 
                                     class="form-control" 
                                     rows="4" 
-                                    placeholder='{"appState": "YOUR_APP_STATE"}'
+                                    placeholder='{"appState": "..."}'
                                     required
                                 ></textarea>
                             </div>
@@ -1115,119 +1081,6 @@ app.get("/start", (req, res) => {
             <div class="toast-container"></div>
 
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-            <script>
-                // ฟังก์ชันแสดง Toast
-                function showToast(message, type = 'info') {
-                    const toastContainer = document.querySelector('.toast-container');
-                    const toastEl = document.createElement('div');
-                    toastEl.className = \`toast align-items-center text-bg-\${type} border-0\`;
-                    toastEl.setAttribute('role', 'alert');
-                    toastEl.setAttribute('aria-live', 'assertive');
-                    toastEl.setAttribute('aria-atomic', 'true');
-                    toastEl.innerHTML = \`
-                        <div class="d-flex">
-                            <div class="toast-body">
-                                \${message}
-                            </div>
-                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                        </div>
-                    \`;
-                    toastContainer.appendChild(toastEl);
-                    const toast = new bootstrap.Toast(toastEl);
-                    toast.show();
-
-                    // ลบ Toast หลังจากปิด
-                    toastEl.addEventListener('hidden.bs.toast', () => {
-                        toastEl.remove();
-                    });
-                }
-
-                // Event Delegation สำหรับปุ่มลบ, แก้ไข, และรีสตาร์ท
-                document.addEventListener('click', function(event) {
-                    if (event.target.closest('.delete-btn')) {
-                        const token = decodeURIComponent(event.target.closest('.delete-btn').getAttribute('data-token'));
-                        const deleteCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการลบบอท:');
-                        if (deleteCode) {
-                            fetch('/delete', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({ token, code: deleteCode })
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    showToast('ลบบอทสำเร็จ', 'success');
-                                } else {
-                                    showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
-                                }
-                            })
-                            .catch(err => {
-                                console.error(err);
-                                showToast('เกิดข้อผิดพลาดในการลบบอท', 'danger');
-                            });
-                        }
-                    }
-
-                    if (event.target.closest('.edit-btn')) {
-                        const token = decodeURIComponent(event.target.closest('.edit-btn').getAttribute('data-token'));
-                        const editCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการแก้ไขโทเค่น:');
-                        if (editCode) {
-                            const newToken = prompt('กรุณากรอกโทเค่นใหม่:');
-                            if (newToken) {
-                                fetch('/edit', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json'
-                                    },
-                                    body: JSON.stringify({ token, code: editCode, newToken })
-                                })
-                                .then(response => response.json())
-                                .then(data => {
-                                    if (data.success) {
-                                        showToast('แก้ไขโทเค่นสำเร็จ', 'success');
-                                    } else {
-                                        showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
-                                    }
-                                })
-                                .catch(err => {
-                                    console.error(err);
-                                    showToast('เกิดข้อผิดพลาดในการแก้ไขโทเค่น', 'danger');
-                                });
-                            }
-                        }
-                    }
-
-                    // การจัดการปุ่มรีสตาร์ท
-                    if (event.target.closest('.restart-btn')) {
-                        const token = decodeURIComponent(event.target.closest('.restart-btn').getAttribute('data-token'));
-                        const restartCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการรีสตาร์ทบอท:');
-                        if (restartCode) {
-                            fetch('/restart', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({ token, code: restartCode })
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    showToast('รีสตาร์ทบอทสำเร็จ', 'success');
-                                    socket.emit('botRestarted', data.botName); // ส่งเหตุการณ์รีสตาร์ทบอท
-                                } else {
-                                    showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
-                                }
-                            })
-                            .catch(err => {
-                                console.error(err);
-                                showToast('เกิดข้อผิดพลาดในการรีสตาร์ทบอท', 'danger');
-                            });
-                        }
-                    }
-                });
-            </script>
         </body>
         </html>
     `);
@@ -1235,8 +1088,7 @@ app.get("/start", (req, res) => {
 
 // หน้าแสดงบอทรัน
 app.get("/bots", (req, res) => {
-    const data = generateBotData(); // เรียกใช้ generateBotData()
-
+    const data = generateBotData();
     res.send(`
         <!DOCTYPE html>
         <html lang="th">
@@ -1248,7 +1100,6 @@ app.get("/bots", (req, res) => {
             <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* พื้นหลัง */
                 body {
                     background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png') no-repeat center center fixed;
                     background-size: cover;
@@ -1257,25 +1108,19 @@ app.get("/bots", (req, res) => {
                     position: relative;
                     overflow-x: hidden;
                 }
-
-                /* เพิ่ม Flexbox Layout */
                 html, body {
                     height: 100%;
                     margin: 0;
                     padding: 0;
                 }
-
                 body {
                     display: flex;
                     flex-direction: column;
                     min-height: 100vh;
                 }
-
                 main.flex-grow-1 {
                     flex: 1;
                 }
-
-                /* Overlay */
                 .overlay {
                     position: fixed;
                     top: 0;
@@ -1285,29 +1130,22 @@ app.get("/bots", (req, res) => {
                     background: rgba(0, 0, 0, 0.7);
                     z-index: -1;
                 }
-
-                /* ปรับแต่ง Navbar */
                 .navbar {
                     background: rgba(13, 110, 253, 0.9) !important;
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                 }
-
                 .navbar-brand {
                     font-family: 'Kanit', sans-serif;
                     font-weight: 600;
                     color: #ffffff !important;
                 }
-
                 .navbar-nav .nav-link {
                     color: #ffffff !important;
                     transition: color 0.3s ease;
                 }
-
                 .navbar-nav .nav-link:hover {
                     color: #ffc107 !important;
                 }
-
-                /* ปรับแต่ง Cards */
                 .glass-card {
                     background: rgba(255, 255, 255, 0.1);
                     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -1316,36 +1154,29 @@ app.get("/bots", (req, res) => {
                     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
-
                 .glass-card:hover {
                     transform: translateY(-5px);
                     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
                 }
-
                 .bot-table, .command-table {
                     width: 100%;
                     border-collapse: collapse;
                     margin-top: 20px;
                 }
-
                 .bot-table th, .bot-table td,
                 .command-table th, .command-table td {
                     padding: 12px 15px;
                     text-align: left;
                 }
-
                 .bot-table th, .command-table th {
                     background-color: rgba(13, 110, 253, 0.9);
                     color: #fff;
                     font-weight: 600;
                 }
-
                 .bot-table tr:nth-child(even),
                 .command-table tr:nth-child(even) {
                     background-color: rgba(255, 255, 255, 0.1);
                 }
-
-                /* ปรับแต่งสถานะ */
                 .status-online {
                     background: #198754;
                     color: #ffffff;
@@ -1356,7 +1187,6 @@ app.get("/bots", (req, res) => {
                     align-items: center;
                     gap: 6px;
                 }
-
                 .status-active {
                     background: #20c997;
                     color: #ffffff;
@@ -1367,7 +1197,6 @@ app.get("/bots", (req, res) => {
                     align-items: center;
                     gap: 6px;
                 }
-
                 .status-connecting {
                     background: #ffc107;
                     color: #212529;
@@ -1378,7 +1207,6 @@ app.get("/bots", (req, res) => {
                     align-items: center;
                     gap: 6px;
                 }
-
                 .status-connection-failed {
                     background: #dc3545;
                     color: #ffffff;
@@ -1389,7 +1217,6 @@ app.get("/bots", (req, res) => {
                     align-items: center;
                     gap: 6px;
                 }
-
                 .status-offline {
                     background: #6c757d;
                     color: #ffffff;
@@ -1400,8 +1227,17 @@ app.get("/bots", (req, res) => {
                     align-items: center;
                     gap: 6px;
                 }
-
-                /* ปรับแต่ง Footer */
+                /* เพิ่มสถานะ paused */
+                .status-paused {
+                    background: #0d6efd;
+                    color: #ffffff;
+                    padding: 5px 10px;
+                    border-radius: 20px;
+                    font-size: 0.9rem;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                }
                 .footer {
                     background: rgba(13, 110, 253, 0.9);
                     border-top: 2px solid rgba(255, 193, 7, 0.5);
@@ -1409,34 +1245,25 @@ app.get("/bots", (req, res) => {
                     font-size: 0.9rem;
                     color: #ffffff;
                 }
-
-                /* ปรับแต่งปุ่ม */
-                .btn-warning, .btn-danger, .btn-secondary {
+                .btn-warning, .btn-danger, .btn-secondary, .btn-info {
                     transition: transform 0.2s ease;
                 }
-
-                .btn-warning:hover, .btn-danger:hover, .btn-secondary:hover {
+                .btn-warning:hover, .btn-danger:hover, .btn-secondary:hover, .btn-info:hover {
                     transform: scale(1.05);
                 }
-
-                /* ปรับแต่ง Text */
                 .bot-name {
                     font-family: 'Press Start 2P', cursive;
                     color: #ff5722;
                     font-size: 1.1rem;
                 }
-
                 .runtime {
                     font-weight: 500;
                     color: #ffc107;
                 }
-
                 .ping {
                     font-weight: 500;
                     color: #198754;
                 }
-
-                /* Responsive */
                 @media (max-width: 768px) {
                     .glass-card {
                         margin-bottom: 20px;
@@ -1446,12 +1273,9 @@ app.get("/bots", (req, res) => {
                         padding: 8px 10px;
                     }
                 }
-
-                /* เพิ่มแอนิเมชัน */
                 .animate-float {
                     animation: float 3s ease-in-out infinite;
                 }
-
                 @keyframes float {
                     0%, 100% { transform: translateY(0); }
                     50% { transform: translateY(-10px); }
@@ -1490,7 +1314,6 @@ app.get("/bots", (req, res) => {
 
             <main class="flex-grow-1">
                 <div class="container">
-                    <!-- ตารางบอท -->
                     <div class="glass-card">
                         <h5 class="mb-4">
                             <i class="fas fa-list me-2" style="color: #198754;"></i>
@@ -1527,181 +1350,56 @@ app.get("/bots", (req, res) => {
             <script>
                 const socket = io();
 
-                // ฟังก์ชันอัปเดตเวลารัน
                 function updateRuntime() {
                     const runtimeElements = document.querySelectorAll('.runtime');
                     const now = Date.now();
-
                     runtimeElements.forEach(el => {
                         const startTime = parseInt(el.getAttribute('data-start-time'));
                         if (!startTime) return;
-
                         const elapsed = now - startTime;
                         const seconds = Math.floor((elapsed / 1000) % 60);
                         const minutes = Math.floor((elapsed / (1000 * 60)) % 60);
                         const hours = Math.floor((elapsed / (1000 * 60 * 60)) % 24);
                         const days = Math.floor(elapsed / (1000 * 60 * 60 * 24));
-
                         el.textContent = \`\${days} วัน \${hours} ชั่วโมง \${minutes} นาที \${seconds} วินาที\`;
                     });
                 }
-
-                // ฟังก์ชันส่งปิงไปยังเซิร์ฟเวอร์
                 function sendPing() {
                     const timestamp = Date.now();
                     socket.emit('ping', timestamp);
                 }
-
-                // ส่งปิงทุกๆ 5 วินาที
                 setInterval(sendPing, 5000);
-                // ส่งปิงทันทีเมื่อโหลดหน้า
                 sendPing();
 
-                // ฟังก์ชันแสดง Toast
-                function showToast(message, type = 'info') {
-                    const toastContainer = document.querySelector('.toast-container');
-                    const toastEl = document.createElement('div');
-                    toastEl.className = \`toast align-items-center text-bg-\${type} border-0\`;
-                    toastEl.setAttribute('role', 'alert');
-                    toastEl.setAttribute('aria-live', 'assertive');
-                    toastEl.setAttribute('aria-atomic', 'true');
-                    toastEl.innerHTML = \`
-                        <div class="d-flex">
-                            <div class="toast-body">
-                                \${message}
-                            </div>
-                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                        </div>
-                    \`;
-                    toastContainer.appendChild(toastEl);
-                    const toast = new bootstrap.Toast(toastEl);
-                    toast.show();
-
-                    // ลบ Toast หลังจากปิด
-                    toastEl.addEventListener('hidden.bs.toast', () => {
-                        toastEl.remove();
-                    });
-                }
-
-                // รับข้อมูลอัปเดตจากเซิร์ฟเวอร์
                 socket.on('updateBots', (data) => {
-                    document.getElementById('totalBots').textContent = data.totalBots;
-                    document.getElementById('onlineBots').textContent = data.onlineBots;
-                    document.getElementById('activeBots').textContent = data.activeBots;
-                    document.getElementById('websitePing').textContent = data.websitePing + ' ms';
+                    const totalBotsEl = document.getElementById('totalBots');
+                    if (totalBotsEl) totalBotsEl.textContent = data.totalBots;
+                    const onlineBotsEl = document.getElementById('onlineBots');
+                    if (onlineBotsEl) onlineBotsEl.textContent = data.onlineBots;
+                    const activeBotsEl = document.getElementById('activeBots');
+                    if (activeBotsEl) activeBotsEl.textContent = data.activeBots;
+                    const websitePingEl = document.getElementById('websitePing');
+                    if (websitePingEl) websitePingEl.textContent = data.websitePing + ' ms';
 
                     const botTableBody = document.getElementById('botTableBody');
                     if (botTableBody) {
                         botTableBody.innerHTML = data.botRows;
                     }
-
                     updateRuntime();
                 });
 
-                // รับเหตุการณ์เฉพาะเมื่อบอทถูกลบ
                 socket.on('botDeleted', (botName) => {
-                    showToast(\`บอท "\${botName}" ถูกลบเรียบร้อยแล้ว\`, 'success');
+                    console.log(\`บอท "\${botName}" ถูกลบ\`);
                 });
-
-                // รับเหตุการณ์เฉพาะเมื่อบอทไปออฟไลน์
                 socket.on('botOffline', (botName) => {
-                    showToast(\`บอท "\${botName}" กำลังจะถูกลบภายใน 60 วินาที เนื่องจากออฟไลน์\`, 'warning');
+                    console.log(\`บอท "\${botName}" ออฟไลน์\`);
                 });
-
-                // รับเหตุการณ์เฉพาะเมื่อบอทถูกรีสตาร์ท
                 socket.on('botRestarted', (botName) => {
-                    showToast(\`บอท "\${botName}" ถูกรีสตาร์ทเรียบร้อยแล้ว\`, 'success');
+                    console.log(\`บอท "\${botName}" รีสตาร์ท\`);
                 });
 
-                // อัปเดตเวลารันทุกวินาที
                 setInterval(updateRuntime, 1000);
                 document.addEventListener('DOMContentLoaded', updateRuntime);
-
-                // Event Delegation สำหรับปุ่มลบ, แก้ไข, และรีสตาร์ท
-                document.addEventListener('click', function(event) {
-                    if (event.target.closest('.delete-btn')) {
-                        const token = decodeURIComponent(event.target.closest('.delete-btn').getAttribute('data-token'));
-                        const deleteCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการลบบอท:');
-                        if (deleteCode) {
-                            fetch('/delete', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({ token, code: deleteCode })
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    showToast('ลบบอทสำเร็จ', 'success');
-                                } else {
-                                    showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
-                                }
-                            })
-                            .catch(err => {
-                                console.error(err);
-                                showToast('เกิดข้อผิดพลาดในการลบบอท', 'danger');
-                            });
-                        }
-                    }
-
-                    if (event.target.closest('.edit-btn')) {
-                        const token = decodeURIComponent(event.target.closest('.edit-btn').getAttribute('data-token'));
-                        const editCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการแก้ไขโทเค่น:');
-                        if (editCode) {
-                            const newToken = prompt('กรุณากรอกโทเค่นใหม่:');
-                            if (newToken) {
-                                fetch('/edit', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json'
-                                    },
-                                    body: JSON.stringify({ token, code: editCode, newToken })
-                                })
-                                .then(response => response.json())
-                                .then(data => {
-                                    if (data.success) {
-                                        showToast('แก้ไขโทเค่นสำเร็จ', 'success');
-                                    } else {
-                                        showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
-                                    }
-                                })
-                                .catch(err => {
-                                    console.error(err);
-                                    showToast('เกิดข้อผิดพลาดในการแก้ไขโทเค่น', 'danger');
-                                });
-                            }
-                        }
-                    }
-
-                    // การจัดการปุ่มรีสตาร์ท
-                    if (event.target.closest('.restart-btn')) {
-                        const token = decodeURIComponent(event.target.closest('.restart-btn').getAttribute('data-token'));
-                        const restartCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการรีสตาร์ทบอท:');
-                        if (restartCode) {
-                            fetch('/restart', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({ token, code: restartCode })
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    showToast('รีสตาร์ทบอทสำเร็จ', 'success');
-                                    socket.emit('botRestarted', data.botName); // ส่งเหตุการณ์รีสตาร์ทบอท
-                                } else {
-                                    showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
-                                }
-                            })
-                            .catch(err => {
-                                console.error(err);
-                                showToast('เกิดข้อผิดพลาดในการรีสตาร์ทบอท', 'danger');
-                            });
-                        }
-                    }
-                });
             </script>
         </body>
         </html>
@@ -1711,7 +1409,6 @@ app.get("/bots", (req, res) => {
 // หน้าแสดงคำสั่งที่ใช้
 app.get("/commands", (req, res) => {
     const commandsData = generateCommandData();
-
     res.send(`
         <!DOCTYPE html>
         <html lang="th">
@@ -1723,7 +1420,6 @@ app.get("/commands", (req, res) => {
             <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* พื้นหลัง */
                 body {
                     background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png') no-repeat center center fixed;
                     background-size: cover;
@@ -1732,25 +1428,19 @@ app.get("/commands", (req, res) => {
                     position: relative;
                     overflow-x: hidden;
                 }
-
-                /* เพิ่ม Flexbox Layout */
                 html, body {
                     height: 100%;
                     margin: 0;
                     padding: 0;
                 }
-
                 body {
                     display: flex;
                     flex-direction: column;
                     min-height: 100vh;
                 }
-
                 main.flex-grow-1 {
                     flex: 1;
                 }
-
-                /* Overlay */
                 .overlay {
                     position: fixed;
                     top: 0;
@@ -1760,29 +1450,22 @@ app.get("/commands", (req, res) => {
                     background: rgba(0, 0, 0, 0.7);
                     z-index: -1;
                 }
-
-                /* ปรับแต่ง Navbar */
                 .navbar {
                     background: rgba(13, 110, 253, 0.9) !important;
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                 }
-
                 .navbar-brand {
                     font-family: 'Kanit', sans-serif;
                     font-weight: 600;
                     color: #ffffff !important;
                 }
-
                 .navbar-nav .nav-link {
                     color: #ffffff !important;
                     transition: color 0.3s ease;
                 }
-
                 .navbar-nav .nav-link:hover {
                     color: #ffc107 !important;
                 }
-
-                /* ปรับแต่ง Cards */
                 .glass-card {
                     background: rgba(255, 255, 255, 0.1);
                     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -1791,34 +1474,27 @@ app.get("/commands", (req, res) => {
                     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
-
                 .glass-card:hover {
                     transform: translateY(-5px);
                     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
                 }
-
                 .command-table {
                     width: 100%;
                     border-collapse: collapse;
                     margin-top: 20px;
                 }
-
                 .command-table th, .command-table td {
                     padding: 12px 15px;
                     text-align: left;
                 }
-
                 .command-table th {
                     background-color: rgba(13, 110, 253, 0.9);
                     color: #fff;
                     font-weight: 600;
                 }
-
                 .command-table tr:nth-child(even) {
                     background-color: rgba(255, 255, 255, 0.1);
                 }
-
-                /* ปรับแต่ง Footer */
                 .footer {
                     background: rgba(13, 110, 253, 0.9);
                     border-top: 2px solid rgba(255, 193, 7, 0.5);
@@ -1826,34 +1502,6 @@ app.get("/commands", (req, res) => {
                     font-size: 0.9rem;
                     color: #ffffff;
                 }
-
-                /* ปรับแต่งปุ่ม */
-                .btn-warning, .btn-danger, .btn-secondary {
-                    transition: transform 0.2s ease;
-                }
-
-                .btn-warning:hover, .btn-danger:hover, .btn-secondary:hover {
-                    transform: scale(1.05);
-                }
-
-                /* ปรับแต่ง Text */
-                .bot-name {
-                    font-family: 'Press Start 2P', cursive;
-                    color: #ff5722;
-                    font-size: 1.1rem;
-                }
-
-                .runtime {
-                    font-weight: 500;
-                    color: #ffc107;
-                }
-
-                .ping {
-                    font-weight: 500;
-                    color: #198754;
-                }
-
-                /* Responsive */
                 @media (max-width: 768px) {
                     .glass-card {
                         margin-bottom: 20px;
@@ -1862,12 +1510,9 @@ app.get("/commands", (req, res) => {
                         padding: 8px 10px;
                     }
                 }
-
-                /* เพิ่มแอนิเมชัน */
                 .animate-float {
                     animation: float 3s ease-in-out infinite;
                 }
-
                 @keyframes float {
                     0%, 100% { transform: translateY(0); }
                     50% { transform: translateY(-10px); }
@@ -1906,7 +1551,6 @@ app.get("/commands", (req, res) => {
 
             <main class="flex-grow-1">
                 <div class="container">
-                    <!-- ตารางคำสั่งที่ใช้ -->
                     <div class="glass-card">
                         <h5 class="mb-4">
                             <i class="fas fa-terminal me-2" style="color: #198754;"></i>
@@ -1935,10 +1579,6 @@ app.get("/commands", (req, res) => {
                     <p class="mb-0">© ${new Date().getFullYear()} ระบบจัดการบอท | พัฒนาด้วย ❤️</p>
                 </div>
             </footer>
-
-            <!-- Toast Container -->
-            <div class="toast-container"></div>
-
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
         </body>
         </html>
@@ -1958,7 +1598,6 @@ app.get("/how-to-make-bot", (req, res) => {
             <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* พื้นหลัง */
                 body {
                     background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png') no-repeat center center fixed;
                     background-size: cover;
@@ -1967,25 +1606,19 @@ app.get("/how-to-make-bot", (req, res) => {
                     position: relative;
                     overflow-x: hidden;
                 }
-
-                /* เพิ่ม Flexbox Layout */
                 html, body {
                     height: 100%;
                     margin: 0;
                     padding: 0;
                 }
-
                 body {
                     display: flex;
                     flex-direction: column;
                     min-height: 100vh;
                 }
-
                 main.flex-grow-1 {
                     flex: 1;
                 }
-
-                /* Overlay */
                 .overlay {
                     position: fixed;
                     top: 0;
@@ -1995,29 +1628,22 @@ app.get("/how-to-make-bot", (req, res) => {
                     background: rgba(0, 0, 0, 0.7);
                     z-index: -1;
                 }
-
-                /* ปรับแต่ง Navbar */
                 .navbar {
                     background: rgba(13, 110, 253, 0.9) !important;
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                 }
-
                 .navbar-brand {
                     font-family: 'Kanit', sans-serif;
                     font-weight: 600;
                     color: #ffffff !important;
                 }
-
                 .navbar-nav .nav-link {
                     color: #ffffff !important;
                     transition: color 0.3s ease;
                 }
-
                 .navbar-nav .nav-link:hover {
                     color: #ffc107 !important;
                 }
-
-                /* ปรับแต่ง Cards */
                 .glass-card {
                     background: rgba(255, 255, 255, 0.1);
                     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -2026,12 +1652,10 @@ app.get("/how-to-make-bot", (req, res) => {
                     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
-
                 .glass-card:hover {
                     transform: translateY(-5px);
                     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
                 }
-
                 .footer {
                     background: rgba(13, 110, 253, 0.9);
                     border-top: 2px solid rgba(255, 193, 7, 0.5);
@@ -2039,29 +1663,12 @@ app.get("/how-to-make-bot", (req, res) => {
                     font-size: 0.9rem;
                     color: #ffffff;
                 }
-
                 .animate-float {
                     animation: float 3s ease-in-out infinite;
                 }
-
                 @keyframes float {
                     0%, 100% { transform: translateY(0); }
                     50% { transform: translateY(-10px); }
-                }
-
-                /* ปรับแต่ง Toast */
-                .toast-container {
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    z-index: 1055;
-                }
-
-                /* Responsive */
-                @media (max-width: 768px) {
-                    .glass-card {
-                        margin-bottom: 20px;
-                    }
                 }
             </style>
         </head>
@@ -2097,26 +1704,25 @@ app.get("/how-to-make-bot", (req, res) => {
 
             <main class="flex-grow-1">
                 <div class="container">
-                    <!-- เนื้อหาของหน้า "วิธีทำบอทของคุณเอง" -->
                     <div class="glass-card">
                         <h5 class="mb-4">
                             <i class="fas fa-video me-2" style="color: #ffc107;"></i>
                             วิธีทำบอทของคุณเอง
                         </h5>
-                        <p>ขอแนะนำวิธีการทำบอทของคุณเองโดยดูจากคลิปวิดีโอต่อไปนี้:</p>
+                        <p>ตัวอย่างวิธีการทำบอทของคุณเอง สามารถดูคลิปด้านล่างนี้:</p>
                         <div class="ratio ratio-16x9">
                             <iframe src="https://firebasestorage.googleapis.com/v0/b/goak-71ac8.appspot.com/o/XRecorder_18122024_114720.mp4?alt=media&token=1f243d3d-91ed-448f-83c7-3ee01d0407e4" allowfullscreen></iframe>
                         </div>
                         <hr>
                         <h6>ขั้นตอนเบื้องต้น:</h6>
                         <ol>
-                            <li>ดาวน์โหลดซอฟต์แวร์ที่จำเป็นจาก <a href="https://github.com/c3cbot/c3c-ufc-utility/archive/refs/tags/1.5.zip" target="_blank" class="text-decoration-none text-warning">GitHub</a>.</li>
-                            <li>แตกไฟล์ ZIP ที่ดาวน์โหลดมาและเปิดโปรเจกต์ในโปรแกรมแก้ไขโค้ดของคุณ.</li>
-                            <li>ตั้งค่าการเชื่อมต่อกับ API และปรับแต่งการตั้งค่าตามความต้องการของคุณ.</li>
-                            <li>รันเซิร์ฟเวอร์และตรวจสอบบอทของคุณผ่านหน้าแดชบอร์ด.</li>
-                            <li>ปรับแต่งคำสั่งและอีเวนต์เพิ่มเติมเพื่อเพิ่มความสามารถให้กับบอทของคุณ.</li>
+                            <li>ดาวน์โหลดซอฟต์แวร์ที่จำเป็นจาก <a href="https://github.com/c3cbot/c3c-ufc-utility/archive/refs/tags/1.5.zip" target="_blank" class="text-decoration-none text-warning">GitHub</a></li>
+                            <li>แตกไฟล์ ZIP แล้วเปิดโค้ดในโปรแกรมแก้ไขของคุณ</li>
+                            <li>ตั้งค่า API และปรับแต่งตามต้องการ</li>
+                            <li>รันเซิร์ฟเวอร์และตรวจสอบผ่านหน้าแดชบอร์ด</li>
+                            <li>ปรับแต่งคำสั่งและอีเวนต์เพิ่มเติมได้ตามต้องการ</li>
                         </ol>
-                        <p>สำหรับรายละเอียดเพิ่มเติม โปรดดูวิดีโอที่แนบมาด้านบน.</p>
+                        <p>ดูรายละเอียดเพิ่มเติมในวิดีโอด้านบน</p>
                     </div>
                 </div>
             </main>
@@ -2126,9 +1732,6 @@ app.get("/how-to-make-bot", (req, res) => {
                     <p class="mb-0">© ${new Date().getFullYear()} ระบบจัดการบอท | พัฒนาด้วย ❤️</p>
                 </div>
             </footer>
-
-            <!-- Toast Container -->
-            <div class="toast-container"></div>
 
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
         </body>
@@ -2150,11 +1753,10 @@ app.get("/debug/bots", (req, res) => {
     res.json(bots);
 });
 
-// POST /start เพื่อเริ่มต้นบอท
+// --------------------- POST /start (เริ่มต้นบอทใหม่) ----------------------
 app.post('/start', async (req, res) => {
     const { token, prefix, name, password, adminID } = req.body;
 
-    // ตรวจสอบว่ามีการกรอกโทเค็น, รหัสผ่าน, ID แอดมิน, ชื่อบอท และคำนำหน้าบอท
     if (!token || !prefix || !name || !password || !adminID) {
         return res.redirect('/start?error=missing-fields');
     }
@@ -2182,17 +1784,17 @@ app.post('/start', async (req, res) => {
         const botPrefix = prefix.trim();
         const startTime = Date.now();
 
-        // ปรับจำนวนครั้งในการลองเชื่อมต่อเป็น 5 ครั้ง
+        // ลองเชื่อมต่อสูงสุด 5 ครั้ง
         await startBotWithRetry(appState, tokenKey, botName, botPrefix, startTime, password, adminID, 5);
         res.redirect('/bots');
         io.emit('updateBots', generateBotData());
     } catch (err) {
         console.error(chalk.red(`❌ เกิดข้อผิดพลาดในการเริ่มบอท: ${err ? err.message : err}`));
-        res.redirect('/start?error=invalid-token');
+        return res.redirect('/start?error=invalid-token');
     }
 });
 
-// ฟังก์ชันเริ่มต้นบอทด้วยการลองล็อกอินซ้ำ
+// --------------------- ฟังก์ชัน startBotWithRetry ----------------------
 async function startBotWithRetry(appState, token, name, prefix, startTime, password, adminID, retries) {
     let attempt = 0;
     while (attempt < retries) {
@@ -2205,90 +1807,89 @@ async function startBotWithRetry(appState, token, name, prefix, startTime, passw
             console.error(chalk.red(`❌ ลองเริ่มบอทครั้งที่ ${attempt} ล้มเหลว: ${err.message}`));
             if (attempt >= retries) {
                 console.error(chalk.red(`❌ บอท ${name} ล้มเหลวในการล็อกอินหลังจากลอง ${retries} ครั้ง`));
-                await deleteBot(token, false); // ลบบอทโดยไม่ต้อง emit 'botDeleted' อีกครั้ง
+                await deleteBot(token, false);
                 throw new Error(`บอท ${name} ล้มเหลวในการล็อกอิน`);
             }
-            // รอ 2 วินาทีก่อนลองใหม่
             await new Promise(resolve => setTimeout(resolve, 2000));
         }
     }
 }
 
-// ฟังก์ชันเริ่มต้นบอท
+// --------------------- ฟังก์ชัน startBot (เชื่อมต่อ ryuu-fca-api) ----------------------
 async function startBot(appState, token, name, prefix, startTime, password, adminID, saveToFile = true) {
     return new Promise((resolve, reject) => {
-        // ตั้งสถานะเป็น 'connecting' ก่อนเริ่มเชื่อมต่อ
         botSessions[token] = { 
             api: null, 
             name, 
             prefix,
             startTime, 
-            status: 'connecting', // ตั้งสถานะเริ่มต้นเป็น 'connecting'
-            password: password.toString(), // แปลงเป็น string เพื่อความแน่ใจ
-            adminID: adminID.trim(), // เก็บ ID แอดมิน
-            ping: 'N/A', // เริ่มต้นปิงเป็น N/A
-            deletionTimeout: null, // เพิ่มตัวแปรสำหรับการลบอัตโนมัติ
-            retryCount: 0 // เพิ่มตัวนับการลองล็อกอิน
+            status: 'connecting',
+            password: password.toString(),
+            adminID: adminID.trim(),
+            ping: 'N/A',
+            deletionTimeout: null,
+            retryCount: 0
         };
 
         login({ appState }, (err, api) => {
             if (err) {
                 console.error(chalk.red(`❌ การเข้าสู่ระบบล้มเหลวสำหรับโทเค็น: ${token}`));
-                botSessions[token].status = 'connection_failed'; // เปลี่ยนสถานะเป็น 'connection_failed'
+                botSessions[token].status = 'connection_failed';
                 io.emit('updateBots', generateBotData());
                 return reject(err);
             }
 
             botSessions[token].api = api;
-            botSessions[token].status = 'online'; // เปลี่ยนสถานะเป็น 'online'
-            botCount = Math.max(botCount, parseInt(name.replace(/✨/g, '').replace('Bot ', '') || '0')); // ปรับ botCount ให้สูงสุด
+            botSessions[token].status = 'online';
+            botCount = Math.max(botCount, parseInt(name.replace(/✨/g, '').replace('Bot ', '') || '0'));
 
             console.log(chalk.green(figlet.textSync("Bot Started!", { horizontalLayout: "full" })));
             console.log(chalk.green(`✅ ${name} กำลังทำงานด้วยโทเค็น: ${token}`));
-            console.log(chalk.green(`🔑 รหัสผ่านสำหรับลบ/แก้ไขโทเค่น: ${password}`)); // แสดงรหัสผ่านใน console
-            console.log(chalk.green(`🔑 ID แอดมิน: ${adminID}`)); // แสดง ID แอดมินใน console
+            console.log(chalk.green(`🔑 รหัสผ่านสำหรับลบ/แก้ไข/ปิด/เปิด: ${password}`));
+            console.log(chalk.green(`🔑 ID แอดมิน: ${adminID}`));
 
             api.setOptions({ listenEvents: true });
 
+            // ฟังอีเวนต์
             api.listenMqtt(async (err, event) => {
                 if (err) {
                     console.error(chalk.red(`❌ เกิดข้อผิดพลาด: ${err}`));
                     botSessions[token].status = 'offline';
                     io.emit('updateBots', generateBotData());
-
-                    // แจ้งเตือนว่า บอทจะถูกลบภายใน 60 วินาที
                     io.emit('botOffline', botSessions[token].name);
 
-                    // ตั้งเวลา 60 วินาทีสำหรับการลบบอทเมื่อออฟไลน์
+                    // ตั้งเวลา 60 วินาทีสำหรับการลบอัตโนมัติ
                     if (!botSessions[token].deletionTimeout) {
                         botSessions[token].deletionTimeout = setTimeout(() => {
                             deleteBot(token, true);
-                        }, 60000); // 60,000 มิลลิวินาที = 60 วินาที
+                        }, 60000);
                         console.log(chalk.yellow(`⌛ บอท ${name} จะถูกลบในอีก 60 วินาที`));
                     }
                     return;
                 }
 
-                // เพิ่มล็อกเมื่อได้รับอีเวนต์
-                console.log(chalk.blue(`📩 รับอีเวนต์: ${event.type}`));
+                // ถ้าบอทถูก "pause" (status === 'paused') เราจะข้ามไม่ประมวลผลอีเวนต์
+                if (botSessions[token].status === 'paused') {
+                    return; 
+                }
 
-                // ===============[ โค้ดหลักสำหรับรองรับ auto-reply ]===============
-                if (event.type === "message") {
-                    const message = event.body ? event.body.trim() : "";
+                // ล็อกอีเวนต์
+                // console.log(chalk.blue(`📩 รับอีเวนต์: ${event.type}`));
 
-                    // ถ้าห้องนี้เปิดโหมด autoReply อยู่ ให้บอทตอบทุกข้อความทันที
-                    if (global.autoReplyThreads[event.threadID]) {
+                // จัดการอีเวนต์ตามไฟล์ในโฟลเดอร์ events
+                if (event.logMessageType && events[event.logMessageType]) {
+                    for (const eventHandler of events[event.logMessageType]) {
                         try {
-                            api.sendMessage(
-                                "ตอบอัตโนมัติ: คุณพิมพ์ว่า -> " + message, 
-                                event.threadID
-                            );
+                            await eventHandler.run({ api, event });
                         } catch (error) {
-                            console.error(chalk.red("❌ Error in autoReply:", error));
+                            console.error(chalk.red(`❌ เกิดข้อผิดพลาดในอีเวนต์ ${eventHandler.config.name}:`, error));
                         }
                     }
+                }
 
-                    // ยังให้สามารถเรียกใช้งานคำสั่งด้วย prefix ได้ตามปกติ
+                // จัดการข้อความ
+                if (event.type === "message") {
+                    const message = event.body ? event.body.trim() : "";
                     if (!message.startsWith(botSessions[token].prefix)) return;
 
                     const args = message.slice(botSessions[token].prefix.length).trim().split(/ +/);
@@ -2298,11 +1899,8 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
                     if (command && typeof command.run === "function") {
                         try {
                             await command.run({ api, event, args });
-                            console.log(chalk.green(`✅ รันคำสั่ง: ${commandName}`));
-                            // เพิ่มตัวนับการใช้คำสั่ง
                             commandUsage[commandName] = (commandUsage[commandName] || 0) + 1;
-                            saveCommandUsage(); // บันทึกการใช้งานคำสั่งลงไฟล์
-
+                            saveCommandUsage();
                             io.emit('updateBots', generateBotData());
                             io.emit('updateCommands', generateCommandData());
                         } catch (error) {
@@ -2313,21 +1911,8 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
                         api.sendMessage("❗ ไม่พบคำสั่งที่ระบุ", event.threadID);
                     }
                 }
-                // ===============================================================
 
-                // จัดการอีเวนต์ประเภทอื่น ๆ ถ้ามีการกำหนดใน events
-                if (event.logMessageType && events[event.logMessageType]) {
-                    for (const eventHandler of events[event.logMessageType]) {
-                        try {
-                            await eventHandler.run({ api, event });
-                            console.log(chalk.blue(`🔄 ประมวลผลอีเวนต์: ${eventHandler.config.name}`));
-                        } catch (error) {
-                            console.error(chalk.red(`❌ เกิดข้อผิดพลาดในอีเวนต์ ${eventHandler.config.name}:`, error));
-                        }
-                    }
-                }
-
-                // หากบอทกลับมาทำงานใหม่ขณะนับถอยหลังให้ยกเลิกการลบ
+                // ถ้าบอทเคยออฟไลน์แล้วกลับมา online
                 if (botSessions[token].status === 'online') {
                     if (botSessions[token].deletionTimeout) {
                         clearTimeout(botSessions[token].deletionTimeout);
@@ -2337,7 +1922,7 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
                 }
             });
 
-            // บันทึกข้อมูลบอทลงไฟล์
+            // บันทึกลงไฟล์
             if (saveToFile) {
                 const botData = { appState, token, name, prefix, startTime, password, adminID };
                 const botFilePath = path.join(botsDir, `${name.replace(/ /g, '_')}.json`);
@@ -2350,7 +1935,7 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
     });
 }
 
-// ฟังก์ชันสำหรับลบบอท
+// --------------------- ฟังก์ชัน deleteBot ----------------------
 function deleteBot(token, emitDeleted = true) {
     const bot = botSessions[token];
     if (!bot) {
@@ -2360,14 +1945,14 @@ function deleteBot(token, emitDeleted = true) {
 
     const { name } = bot;
 
-    // ลบไฟล์บอท
+    // ลบไฟล์ .json
     const botFilePath = path.join(botsDir, `${name.replace(/ /g, '_')}.json`);
     if (fs.existsSync(botFilePath)) {
         fs.unlinkSync(botFilePath);
         console.log(chalk.green(`✅ ลบไฟล์บอท: ${botFilePath}`));
     }
 
-    // ลบจาก botSessions
+    // ลบจากหน่วยความจำ
     delete botSessions[token];
     console.log(chalk.green(`✅ ลบบอทจากระบบ: ${token}`));
 
@@ -2377,34 +1962,21 @@ function deleteBot(token, emitDeleted = true) {
     }
 }
 
-// Route สำหรับลบบอท
+// --------------------- ลบบอท (POST /delete) ----------------------
 app.post('/delete', async (req, res) => {
     const { token, code } = req.body;
-
-    console.log(`ได้รับคำขอลบบอท: token=${token}, code=${code}`);
-
     if (!token || !code) {
-        console.log('ข้อมูลไม่ครบถ้วน');
         return res.json({ success: false, message: 'ข้อมูลไม่ครบถ้วน' });
     }
-
-    const trimmedToken = token.trim(); // ทำการ trim โทเค็นก่อนค้นหา
+    const trimmedToken = token.trim();
     const bot = botSessions[trimmedToken];
     if (!bot) {
-        console.log('ไม่พบบอทที่ต้องการลบ');
         return res.json({ success: false, message: 'ไม่พบบอทที่ต้องการลบ' });
     }
-
-    console.log(`ตรวจสอบรหัสผ่าน: bot.password=${bot.password}, code=${code}`);
-
-    if (bot.password.toString() !== code.toString()) { // ตรวจสอบรหัสผ่าน
-        console.log('รหัสผ่านไม่ถูกต้อง');
+    if (bot.password.toString() !== code.toString()) {
         return res.json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
     }
-
-    // หยุดการทำงานของบอทและลบทันที
     try {
-        // ไม่พึ่งพาเมธอด logout เพื่อลบบอทอย่างถูกต้อง
         deleteBot(trimmedToken, true);
         res.json({ success: true, message: 'ลบบอทสำเร็จ' });
     } catch (err) {
@@ -2413,38 +1985,31 @@ app.post('/delete', async (req, res) => {
     }
 });
 
-// Route สำหรับแก้ไขโทเค่น
+// --------------------- แก้ไขโทเค่น (POST /edit) ----------------------
 app.post('/edit', async (req, res) => {
     const { token, code, newToken } = req.body;
-
     if (!token || !code || !newToken) {
         return res.json({ success: false, message: 'ข้อมูลไม่ครบถ้วน' });
     }
-
     const trimmedToken = token.trim();
     const bot = botSessions[trimmedToken];
     if (!bot) {
         return res.json({ success: false, message: 'ไม่พบบอทที่ต้องการแก้ไข' });
     }
-
-    if (bot.password.toString() !== code.toString()) { // ตรวจสอบรหัสผ่าน
+    if (bot.password.toString() !== code.toString()) {
         return res.json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
     }
-
     const trimmedNewToken = newToken.trim();
     if (botSessions[trimmedNewToken]) {
         return res.json({ success: false, message: 'โทเค่นใหม่ถูกใช้งานแล้ว' });
     }
-
     try {
         // ลบบอทเก่า
         deleteBot(trimmedToken, false);
-
-        // เริ่มต้นบอทใหม่ด้วยโทเค่นใหม่และรหัสผ่านใหม่
-        const newAppState = JSON.parse(newToken); // ตรวจสอบว่า newToken เป็น JSON string
-        const newPassword = generate6DigitCode();
+        const newAppState = JSON.parse(newToken);
+        const newPassword = generate6DigitCode(); // หรือจะใช้ bot.password เดิมก็ได้
         const startTime = Date.now();
-        await startBotWithRetry(newAppState, trimmedNewToken, bot.name, bot.prefix, startTime, newPassword, bot.adminID, 5); // ปรับ retries เป็น 5
+        await startBotWithRetry(newAppState, trimmedNewToken, bot.name, bot.prefix, startTime, newPassword, bot.adminID, 5);
 
         console.log(chalk.green(`✅ แก้ไขโทเค่นของบอท: ${bot.name} เป็น ${trimmedNewToken}`));
         io.emit('updateBots', generateBotData());
@@ -2455,38 +2020,24 @@ app.post('/edit', async (req, res) => {
     }
 });
 
-// Route สำหรับรีสตาร์ทบอท
+// --------------------- รีสตาร์ทบอท (POST /restart) ----------------------
 app.post('/restart', async (req, res) => {
     const { token, code } = req.body;
-
-    console.log(`ได้รับคำขอรีสตาร์ทบอท: token=${token}, code=${code}`);
-
     if (!token || !code) {
-        console.log('ข้อมูลไม่ครบถ้วน');
         return res.json({ success: false, message: 'ข้อมูลไม่ครบถ้วน' });
     }
-
     const trimmedToken = token.trim();
     const bot = botSessions[trimmedToken];
     if (!bot) {
-        console.log('ไม่พบบอทที่ต้องการรีสตาร์ท');
         return res.json({ success: false, message: 'ไม่พบบอทที่ต้องการรีสตาร์ท' });
     }
-
-    console.log(`ตรวจสอบรหัสผ่านสำหรับรีสตาร์ท: bot.password=${bot.password}, code=${code}`);
-
-    if (bot.password.toString() !== code.toString()) { // ตรวจสอบรหัสผ่าน
-        console.log('รหัสผ่านไม่ถูกต้องสำหรับการรีสตาร์ท');
+    if (bot.password.toString() !== code.toString()) {
         return res.json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
     }
-
     try {
-        const { appState, name, prefix, startTime, password, adminID } = bot;
-
-        // รีสตาร์ทบอทโดยการลบและเริ่มต้นใหม่
+        const { appState, name, prefix, password, adminID } = bot;
         deleteBot(trimmedToken, false);
         await startBotWithRetry(appState, trimmedToken, name, prefix, Date.now(), password, adminID, 5);
-
         console.log(chalk.green(`✅ รีสตาร์ทบอทสำเร็จ: ${name}`));
         io.emit('updateBots', generateBotData());
         res.json({ success: true, message: 'รีสตาร์ทบอทสำเร็จ', botName: name });
@@ -2496,11 +2047,46 @@ app.post('/restart', async (req, res) => {
     }
 });
 
-// Socket.io สำหรับหน้าแดชบอร์ดหลักและดูบอทรัน
+// --------------------- ใหม่: ปุ่ม “ปิด/เปิด” (Pause/Unpause) บอท (POST /toggle) ----------------------
+app.post('/toggle', (req, res) => {
+    const { token, code } = req.body;
+    if (!token || !code) {
+        return res.json({ success: false, message: 'ข้อมูลไม่ครบถ้วน' });
+    }
+    const trimmedToken = token.trim();
+    const bot = botSessions[trimmedToken];
+    if (!bot) {
+        return res.json({ success: false, message: 'ไม่พบบอทที่ต้องการปิด/เปิด' });
+    }
+    // ตรวจสอบรหัสผ่าน
+    if (bot.password.toString() !== code.toString()) {
+        return res.json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
+    }
+
+    // ถ้า status เป็น online/active ให้เปลี่ยนเป็น paused
+    if (bot.status === 'online' || bot.status === 'active') {
+        bot.status = 'paused';
+        io.emit('updateBots', generateBotData());
+        return res.json({ success: true, message: `บอท "${bot.name}" ถูกหยุดชั่วคราวแล้ว` });
+    }
+    // ถ้า status เป็น paused ให้เปิดกลับเป็น online
+    if (bot.status === 'paused') {
+        bot.status = 'online';
+        io.emit('updateBots', generateBotData());
+        return res.json({ success: true, message: `บอท "${bot.name}" กลับมาออนไลน์แล้ว` });
+    }
+
+    // กรณีสถานะอื่น ๆ (เช่น connection_failed, offline ฯลฯ) จะไม่รองรับ toggle
+    return res.json({ 
+        success: false, 
+        message: `บอทอยู่ในสถานะ "${bot.status}" ไม่สามารถปิด/เปิดด้วยวิธีนี้ได้` 
+    });
+});
+
+// --------------------- Socket.io ----------------------
 io.on('connection', (socket) => {
     console.log(chalk.blue('🔌 Socket.io client connected'));
 
-    // Handle 'ping' event from client
     socket.on('ping', (timestamp) => {
         const latency = Date.now() - timestamp;
         const ping = Math.min(latency, 200);
@@ -2515,38 +2101,21 @@ io.on('connection', (socket) => {
     });
 });
 
-// ฟังก์ชันช่วยเหลือในการสร้างชื่อบอทที่สวยงาม (ตัวอย่าง)
-function generateBotName() {
-    const adjectives = ["Super", "Mega", "Ultra", "Hyper", "Turbo", "Alpha", "Beta", "Gamma", "Delta"];
-    const nouns = ["Dragon", "Phoenix", "Falcon", "Tiger", "Lion", "Eagle", "Shark", "Wolf", "Leopard"];
-    const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const noun = nouns[Math.floor(Math.random() * nouns.length)];
-    return `${adjective}${noun}`;
-}
-
-// เริ่มต้นเซิร์ฟเวอร์และโหลดบอทจากไฟล์ที่เก็บไว้
-server.listen(PORT, () => {
-    console.log(chalk.blue(`🌐 เซิร์ฟเวอร์กำลังทำงานที่ http://localhost:${PORT}`));
-    console.log(chalk.green(figlet.textSync("Bot Management", { horizontalLayout: "full" })));
-    loadBotsFromFiles();
-});
-
-// ฟังก์ชันช่วยเหลือในการอัปเดตปิงของบอททุกๆ 5 วินาที
+// --------------------- ฟังก์ชันระบบอัปเดตปิง + ลบบอท offline อัตโนมัติ ----------------------
 setInterval(() => {
     Object.values(botSessions).forEach(bot => {
-        // จำลองการปิงด้วยการสุ่มค่าระหว่าง 1-200 ms
+        // จำลองการปิงสุ่ม 1-200 ms
         bot.ping = Math.floor(Math.random() * 200) + 1;
     });
     io.emit('updateBots', generateBotData());
-}, 5000); // อัปเดตทุก 5 วินาที
+}, 5000);
 
-// ฟังก์ชันระบบอัตโนมัติทุก ๆ 5 นาที เพื่อลบบอทที่ยังล้มเหลว
 setInterval(() => {
     console.log(chalk.yellow('🔍 กำลังตรวจสอบบอททั้งหมดสำหรับการลบอัตโนมัติ...'));
     let botsToDelete = 0;
     Object.keys(botSessions).forEach(token => {
         const bot = botSessions[token];
-        if (bot.status === 'connection_failed' || bot.status === 'offline') { // ตรวจสอบทั้งสองสถานะ
+        if (bot.status === 'connection_failed' || bot.status === 'offline') {
             console.log(chalk.yellow(`⌛ บอท "${bot.name}" จะถูกลบออกเนื่องจากสถานะ "${bot.status}"`));
             deleteBot(token, true);
             botsToDelete++;
@@ -2555,4 +2124,11 @@ setInterval(() => {
     if (botsToDelete === 0) {
         console.log(chalk.green('✅ ไม่มีบอทที่ต้องการลบในครั้งนี้'));
     }
-}, 300000); // 300,000 มิลลิวินาที = 5 นาที
+}, 300000); // 5 นาที
+
+// --------------------- เริ่มต้นเซิร์ฟเวอร์ + โหลดบอทจากไฟล์ ----------------------
+server.listen(PORT, () => {
+    console.log(chalk.blue(`🌐 เซิร์ฟเวอร์กำลังทำงานที่ http://localhost:${PORT}`));
+    console.log(chalk.green(figlet.textSync("Bot Management", { horizontalLayout: "full" })));
+    loadBotsFromFiles();
+});
