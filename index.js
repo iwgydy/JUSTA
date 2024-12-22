@@ -2390,11 +2390,34 @@ io.on('connection', (socket) => {
 });
 
 function generateBotName() {
-    const adjectives = ["Super", "Mega", "Ultra", "Hyper", "Turbo", "Alpha", "Beta", "Gamma", "Delta"];
-    const nouns = ["Dragon", "Phoenix", "Falcon", "Tiger", "Lion", "Eagle", "Shark", "Wolf", "Leopard"];
-    const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const noun = nouns[Math.floor(Math.random() * nouns.length)];
-    return \`\${adjective}\${noun}\`;
+  const adjectives = [
+    "Super",
+    "Mega",
+    "Ultra",
+    "Hyper",
+    "Turbo",
+    "Alpha",
+    "Beta",
+    "Gamma",
+    "Delta",
+  ];
+  const nouns = [
+    "Dragon",
+    "Phoenix",
+    "Falcon",
+    "Tiger",
+    "Lion",
+    "Eagle",
+    "Shark",
+    "Wolf",
+    "Leopard",
+  ];
+  
+  const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const noun = nouns[Math.floor(Math.random() * nouns.length)];
+  
+  // ใช้ Template Literal ธรรมดา
+  return `${adjective}${noun}`;
 }
 
 // เริ่มต้นเซิร์ฟเวอร์
