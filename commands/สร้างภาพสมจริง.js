@@ -6,8 +6,8 @@ const path = require("path");
 module.exports = {
     config: {
         name: "สร้างภาพสมจริง",
-        version: "1.8.0",
-        description: "สร้างภาพสมจริงจาก AI API พร้อมการจัดการข้อผิดพลาด",
+        version: "1.9.0",
+        description: "สร้างภาพสมจริงจาก AI API พร้อมการจัดการการตอบกลับที่หลากหลาย",
         commandCategory: "image",
         usages: "<คำอธิบายภาพ>",
         cooldowns: 5
@@ -53,22 +53,24 @@ module.exports = {
             console.log("Requesting API:", apiUrl);
 
             const response = await axios.get(apiUrl);
+            console.log("API Response Full:", response.data);
 
-            if (!response || !response.data) {
-                throw new Error("API ไม่ได้ส่งข้อมูลกลับมา");
-            }
-            if (typeof response.data !== "string" || !response.data.startsWith("http")) {
+            let imageUrl;
+            // ตรวจสอบการตอบกลับ
+            if (typeof response.data === "string" && response.data.startsWith("http")) {
+                // กรณี API ส่ง URL ตรงๆ
+                imageUrl = response.data;
+            } else if (response.data.url && typeof response.data.url === "string" && response.data.url.startsWith("http")) {
+                // กรณี API ส่งข้อมูลในฟิลด์ `url`
+                imageUrl = response.data.url;
+            } else {
                 throw new Error("API ส่งข้อมูลไม่ถูกต้อง (ไม่ได้ส่ง URL)");
             }
 
-            console.log("API Response Data:", response.data);
+            console.log("Image URL:", imageUrl);
 
             // ดาวน์โหลดภาพจาก URL
-            const imageResponse = await axios.get(response.data, { responseType: "arraybuffer" });
-            if (!imageResponse || !imageResponse.data) {
-                throw new Error("ไม่สามารถดาวน์โหลดภาพจาก URL ได้");
-            }
-
+            const imageResponse = await axios.get(imageUrl, { responseType: "arraybuffer" });
             const imageBuffer = Buffer.from(imageResponse.data, "binary");
             const readableStream = new stream.PassThrough();
             readableStream.end(imageBuffer);
