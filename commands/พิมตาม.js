@@ -1,5 +1,3 @@
-const axios = require("axios");
-
 module.exports = {
     config: {
         name: "พิมตามผม",
@@ -11,26 +9,6 @@ module.exports = {
     },
     run: async ({ api, event, args }) => {
         const { senderID, threadID, messageID } = event;
-
-        // ดึงข้อมูลบอทที่กำลังใช้งานอยู่
-        const botSessions = global.botSessions || {};
-        let currentBot = null;
-
-        for (const token in botSessions) {
-            if (botSessions[token].api === api) {
-                currentBot = botSessions[token];
-                break;
-            }
-        }
-
-        if (!currentBot) {
-            return api.sendMessage("❗ ไม่พบบอทที่กำลังใช้งานอยู่", threadID, messageID);
-        }
-
-        // ตรวจสอบสิทธิ์ว่าเป็นแอดมินบอทหรือไม่
-        if (senderID !== currentBot.adminID) {
-            return api.sendMessage("❗ คุณไม่มีสิทธิ์ใช้คำสั่งนี้", threadID, messageID);
-        }
 
         // ดึงสถานะเปิด/ปิด จาก args
         const toggle = args[0]?.toLowerCase();
@@ -50,16 +28,16 @@ module.exports = {
         );
     },
 
-    // ฟังก์ชันนี้จะถูกเรียกเมื่อมีข้อความใหม่
     handleEvent: async ({ api, event }) => {
-        const { threadID, body } = event;
+        const { threadID, body, senderID } = event;
 
         // ตรวจสอบว่าโหมดพิมตามเปิดอยู่หรือไม่
         if (global.followMode && global.followMode[threadID]) {
-            if (body) {
-                // บอทจะพิมข้อความตามที่ผู้ใช้พิม
-                api.sendMessage(`บอท: ${body}`, threadID);
-            }
+            // บอทไม่ตอบสนองตัวเอง
+            if (!body || senderID === api.getCurrentUserID()) return;
+
+            // บอทจะพิมข้อความตามที่ผู้ใช้พิม
+            api.sendMessage(body, threadID);
         }
     }
 };
