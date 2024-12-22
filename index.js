@@ -268,7 +268,7 @@ app.get("/", (req, res) => {
 
                 /* พื้นหลัง */
                 body {
-                    background: url('https://i.postimg.cc/VLN0PsTk/christmas-background.jpg') no-repeat center center fixed;
+                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png') no-repeat center center fixed;
                     background-size: cover;
                     color: #ffffff;
                     font-family: 'Roboto', sans-serif;
@@ -863,7 +863,7 @@ app.get("/start", (req, res) => {
                 }
 
                 body {
-                    background: url('https://i.postimg.cc/VLN0PsTk/christmas-background.jpg') no-repeat center center fixed;
+                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png') no-repeat center center fixed;
                     background-size: cover;
                     color: #ffffff;
                     font-family: 'Roboto', sans-serif;
@@ -1258,7 +1258,7 @@ app.get("/bots", (req, res) => {
                 }
 
                 body {
-                    background: url('https://i.postimg.cc/VLN0PsTk/christmas-background.jpg') no-repeat center center fixed;
+                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png') no-repeat center center fixed;
                     background-size: cover;
                     color: #ffffff;
                     font-family: 'Roboto', sans-serif;
@@ -1683,7 +1683,7 @@ app.get("/commands", (req, res) => {
                 }
 
                 body {
-                    background: url('https://i.postimg.cc/VLN0PsTk/christmas-background.jpg') no-repeat center center fixed;
+                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png') no-repeat center center fixed;
                     background-size: cover;
                     color: #ffffff;
                     font-family: 'Roboto', sans-serif;
