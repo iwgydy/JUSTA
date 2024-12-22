@@ -4,7 +4,7 @@ const path = require("path");
 module.exports = {
     config: {
         name: "เสกเงิน",
-        version: "1.1.0",
+        version: "1.2.0",
         description: "เสกเงินให้ตัวเองหรือผู้ใช้คนอื่น (เฉพาะแอดมินบอท)",
         commandCategory: "admin",
         usages: "<@mention หรือ 'me'> <จำนวนเงิน>",
@@ -33,8 +33,8 @@ module.exports = {
             return api.sendMessage("❗ คุณไม่มีสิทธิ์ใช้คำสั่งนี้", threadID, messageID);
         }
 
-        // ตรวจสอบจำนวนเงิน
-        const amount = parseInt(args[args.length - 1]);
+        // ตรวจสอบว่าใส่จำนวนเงินถูกต้องหรือไม่
+        const amount = parseInt(args[args.length - 1], 10);
         if (isNaN(amount) || amount <= 0) {
             return api.sendMessage("❌ กรุณาใส่จำนวนเงินที่เป็นตัวเลขและมากกว่า 0!", threadID, messageID);
         }
@@ -45,7 +45,7 @@ module.exports = {
         if (args[0] === "me") {
             targetID = senderID;
             targetName = "คุณ";
-        } else if (Object.keys(mentions).length > 0) {
+        } else if (mentions && Object.keys(mentions).length > 0) {
             targetID = Object.keys(mentions)[0];
             targetName = mentions[targetID];
         } else {
@@ -61,7 +61,12 @@ module.exports = {
         }
 
         // อ่านข้อมูลจากไฟล์
-        let moneyData = JSON.parse(fs.readFileSync(filePath, "utf8"));
+        let moneyData = {};
+        try {
+            moneyData = JSON.parse(fs.readFileSync(filePath, "utf8"));
+        } catch (error) {
+            return api.sendMessage("❌ เกิดข้อผิดพลาดในการอ่านข้อมูลไฟล์เงิน!", threadID, messageID);
+        }
 
         // เพิ่มเงินให้เป้าหมาย
         if (!moneyData[targetID]) {
@@ -70,7 +75,11 @@ module.exports = {
         moneyData[targetID] += amount;
 
         // บันทึกข้อมูลกลับไปที่ไฟล์
-        fs.writeFileSync(filePath, JSON.stringify(moneyData, null, 2), "utf8");
+        try {
+            fs.writeFileSync(filePath, JSON.stringify(moneyData, null, 2), "utf8");
+        } catch (error) {
+            return api.sendMessage("❌ เกิดข้อผิดพลาดในการบันทึกข้อมูลไฟล์เงิน!", threadID, messageID);
+        }
 
         // ส่งข้อความแจ้งผล
         api.sendMessage(
