@@ -1,3 +1,7 @@
+/*****************************************************
+ * index.js (ธีมคริสต์มาส 2025)
+ * ปรับปรุงจากโค้ดต้นฉบับ โดยเปลี่ยนให้เป็นธีมคริสต์มาส
+ *****************************************************/
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -18,10 +22,10 @@ const io = new Server(server, {
 const PORT = 3005;
 
 let botCount = 0;
-global.botSessions = {}; // เปลี่ยนจาก let เป็น global เพื่อให้สามารถเข้าถึงได้ในคำสั่ง
+global.botSessions = {}; 
 const commands = {};
 const commandDescriptions = [];
-let commandUsage = {}; // ติดตามการใช้งานคำสั่ง
+let commandUsage = {};
 
 const botsDir = path.join(__dirname, 'bots');
 const dataDir = path.join(__dirname, 'data'); // โฟลเดอร์สำหรับเก็บข้อมูล
@@ -112,13 +116,16 @@ function generate6DigitCode() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// ฟังก์ชันช่วยเหลือในการสร้างข้อมูลบอทสำหรับการอัปเดตแบบเรียลไทม์
+// ตัวแปรสำหรับเก็บค่าปิงของเว็บไซต์
+let websitePing = 0;
+
+// ฟังก์ชันสร้างข้อมูลบอทสำหรับอัปเดต
 function generateBotData() {
     const totalBots = Object.keys(botSessions).length;
     const onlineBots = Object.values(botSessions).filter(bot => bot.status === 'online' || bot.status === 'active').length;
     const activeBots = Object.values(botSessions).filter(bot => bot.status === 'active').length;
 
-    // สร้างแถวตารางบอทพร้อมข้อมูลปิงและสถานะใหม่
+    // สร้างแถวตารางบอท
     const botRows = Object.entries(botSessions).map(([token, bot]) => `
         <tr id="bot-${encodeURIComponent(token)}">
             <td>
@@ -142,7 +149,7 @@ function generateBotData() {
             <td>
                 <button class="btn btn-warning btn-sm edit-btn" data-token="${encodeURIComponent(token)}"><i class="fas fa-edit"></i> แก้ไข</button>
                 <button class="btn btn-danger btn-sm delete-btn" data-token="${encodeURIComponent(token)}"><i class="fas fa-trash-alt"></i> ลบ</button>
-                <button class="btn btn-secondary btn-sm restart-btn" data-token="${encodeURIComponent(token)}"><i class="fas fa-sync-alt"></i> รีสตาร์ท</button> <!-- ปุ่มรีสตาร์ท -->
+                <button class="btn btn-secondary btn-sm restart-btn" data-token="${encodeURIComponent(token)}"><i class="fas fa-sync-alt"></i> รีสตาร์ท</button>
             </td>
         </tr>
     `).join('') || `
@@ -161,7 +168,7 @@ function generateBotData() {
     };
 }
 
-// ฟังก์ชันช่วยเหลือในการแปลสถานะเป็นข้อความ
+// ฟังก์ชันช่วยเหลือในการแปลสถานะ
 function translateStatus(status) {
     switch(status) {
         case 'connecting':
@@ -179,7 +186,7 @@ function translateStatus(status) {
     }
 }
 
-// ฟังก์ชันช่วยเหลือในการกำหนดคลาสสำหรับสถานะ
+// ฟังก์ชันกำหนดคลาสสีสถานะ
 function getStatusClass(status) {
     switch(status) {
         case 'connecting':
@@ -197,7 +204,7 @@ function getStatusClass(status) {
     }
 }
 
-// ฟังก์ชันช่วยเหลือในการสร้างข้อมูลคำสั่ง
+// ฟังก์ชันสร้างข้อมูลคำสั่ง
 function generateCommandData() {
     const commandsData = Object.entries(commandUsage).map(([name, count]) => {
         const description = commandDescriptions.find(cmd => cmd.name.toLowerCase() === name)?.description || "ไม่มีคำอธิบาย";
@@ -213,11 +220,10 @@ function generateCommandData() {
             <td colspan="3" class="text-center">ไม่มีคำสั่งที่ถูกใช้งาน</td>
         </tr>
     `;
-
     return commandsData;
 }
 
-// โหลดบอทจากไฟล์ที่เก็บไว้เมื่อตอนเริ่มต้นเซิร์ฟเวอร์
+// โหลดบอทจากไฟล์
 function loadBotsFromFiles() {
     fs.readdirSync(botsDir).forEach(file => {
         if (file.endsWith('.json')) {
@@ -235,35 +241,34 @@ function loadBotsFromFiles() {
     });
 }
 
-// ตัวแปรสำหรับเก็บค่าปิงของเว็บไซต์
-let websitePing = 0;
+// ------------------------- หน้าเว็บต่าง ๆ -------------------------
 
 // หน้าแดชบอร์ดหลัก
 app.get("/", (req, res) => {
-    const data = generateBotData(); // เรียกใช้ generateBotData()
+    const data = generateBotData(); 
 
+    // เปลี่ยนเฉพาะธีมให้เป็นคริสต์มาส 2025
     res.send(`
         <!DOCTYPE html>
         <html lang="th">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>แดชบอร์ดหลัก | ระบบจัดการบอท</title>
+            <title>แดชบอร์ดหลัก | Merry Christmas 2025</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
             <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* เปลี่ยนสีหลักและพื้นหลังเป็นธีมคริสต์มาส */
+                /* ========= ธีมคริสต์มาส 2025 ========= */
+
                 :root {
-                    --primary-color: #d32f2f;
-                    --secondary-color: #388e3c;
-                    --accent-color: #ffeb3b;
-                    --background-image: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png');
+                    --primary-color: #c62828;   /* โทนแดงคริสต์มาส */
+                    --secondary-color: #2e7d32; /* โทนเขียวคริสต์มาส */
                 }
 
-                /* พื้นหลังของหน้าเว็บ */
+                /* พื้นหลัง */
                 body {
-                    background: url(var(--background-image)) no-repeat center center fixed;
+                    background: url('https://i.postimg.cc/VLN0PsTk/christmas-background.jpg') no-repeat center center fixed;
                     background-size: cover;
                     color: #ffffff;
                     font-family: 'Roboto', sans-serif;
@@ -271,36 +276,57 @@ app.get("/", (req, res) => {
                     overflow-x: hidden;
                 }
 
-                /* Overlay */
-                .overlay {
-                    background: rgba(0, 0, 0, 0.5);
+                /* เพิ่ม Flexbox Layout */
+                html, body {
+                    height: 100%;
+                    margin: 0;
+                    padding: 0;
                 }
 
-                /* ปรับแต่ง Navbar ให้มีสีธีมคริสต์มาส */
+                body {
+                    display: flex;
+                    flex-direction: column;
+                    min-height: 100vh;
+                }
+
+                main.flex-grow-1 {
+                    flex: 1;
+                }
+
+                /* Overlay */
+                .overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.6);
+                    z-index: -1;
+                }
+
+                /* ปรับแต่ง Navbar */
                 .navbar {
-                    background: var(--primary-color) !important;
+                    background: rgba(198, 40, 40, 0.9) !important;
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
                 }
 
-                /* เปลี่ยนสีข้อความใน Navbar */
-                .navbar-brand, .navbar-nav .nav-link {
-                    color: #ffffff !important;
+                .navbar-brand {
+                    font-family: 'Kanit', sans-serif;
+                    font-weight: 600;
+                    color: #fff !important;
+                }
+
+                .navbar-nav .nav-link {
+                    color: #fff !important;
+                    transition: color 0.3s ease;
                 }
 
                 .navbar-nav .nav-link:hover {
-                    color: var(--accent-color) !important;
+                    color: #ffd54f !important;
                 }
 
-                /* ปรับแต่งปุ่มให้มีสีธีมคริสต์มาส */
-                .btn-primary {
-                    background-color: var(--accent-color);
-                    border: none;
-                    color: #212529;
-                    transition: background-color 0.3s ease, transform 0.2s ease;
-                }
-
-                .btn-primary:hover {
-                    background-color: #fbc02d;
+                /* ปุ่ม Hover */
+                .btn:hover {
                     transform: translateY(-2px);
                 }
 
@@ -324,7 +350,7 @@ app.get("/", (req, res) => {
                     font-size: 2.5rem;
                     font-weight: 700;
                     margin: 10px 0;
-                    color: var(--accent-color);
+                    color: #ffd54f; /* เหลืองทองเข้ากับคริสต์มาส */
                 }
 
                 .stats-label {
@@ -333,17 +359,17 @@ app.get("/", (req, res) => {
                 }
 
                 .glass-card {
-                    background: rgba(255, 255, 255, 0.1);
+                    background: rgba(255, 255, 255, 0.15);
                     border: 1px solid rgba(255, 255, 255, 0.2);
                     border-radius: 16px;
                     padding: 24px;
-                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
 
                 .glass-card:hover {
                     transform: translateY(-5px);
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.7);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
                 }
 
                 .bot-table, .command-table {
@@ -359,7 +385,7 @@ app.get("/", (req, res) => {
                 }
 
                 .bot-table th, .command-table th {
-                    background-color: var(--primary-color);
+                    background-color: rgba(198, 40, 40, 0.9);
                     color: #fff;
                     font-weight: 600;
                 }
@@ -371,7 +397,7 @@ app.get("/", (req, res) => {
 
                 /* ปรับแต่งสถานะ */
                 .status-online {
-                    background: #198754;
+                    background: #2e7d32;
                     color: #ffffff;
                     padding: 5px 10px;
                     border-radius: 20px;
@@ -382,7 +408,7 @@ app.get("/", (req, res) => {
                 }
 
                 .status-active {
-                    background: #20c997;
+                    background: #43a047;
                     color: #ffffff;
                     padding: 5px 10px;
                     border-radius: 20px;
@@ -393,7 +419,7 @@ app.get("/", (req, res) => {
                 }
 
                 .status-connecting {
-                    background: #ffc107;
+                    background: #ffd54f;
                     color: #212529;
                     padding: 5px 10px;
                     border-radius: 20px;
@@ -404,7 +430,7 @@ app.get("/", (req, res) => {
                 }
 
                 .status-connection-failed {
-                    background: #dc3545;
+                    background: #ef5350;
                     color: #ffffff;
                     padding: 5px 10px;
                     border-radius: 20px;
@@ -415,7 +441,7 @@ app.get("/", (req, res) => {
                 }
 
                 .status-offline {
-                    background: #6c757d;
+                    background: #616161;
                     color: #ffffff;
                     padding: 5px 10px;
                     border-radius: 20px;
@@ -427,28 +453,70 @@ app.get("/", (req, res) => {
 
                 /* ปรับแต่ง Footer */
                 .footer {
-                    background: var(--primary-color);
-                    border-top: 2px solid var(--accent-color);
+                    background: rgba(198, 40, 40, 0.9);
+                    border-top: 2px solid rgba(255, 213, 79, 0.5);
                     padding: 20px 0;
                     font-size: 0.9rem;
                     color: #ffffff;
                 }
 
-                /* ปรับแต่ง Text */
+                /* ปุ่ม */
+                .btn-primary {
+                    background: #ffd54f;
+                    border: none;
+                    padding: 10px 20px;
+                    font-size: 1rem;
+                    border-radius: 8px;
+                    transition: background 0.3s ease, transform 0.2s ease;
+                    color: #212529;
+                    font-weight: 600;
+                }
+
+                .btn-primary:hover {
+                    background: #ffca28;
+                }
+
+                .btn-warning, .btn-danger, .btn-secondary {
+                    transition: transform 0.2s ease;
+                }
+
+                .btn-warning:hover, .btn-danger:hover, .btn-secondary:hover {
+                    transform: scale(1.05);
+                }
+
+                /* Toast */
+                .toast-container {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 1055;
+                }
+
+                /* ข้อความ / Text */
                 .bot-name {
                     font-family: 'Press Start 2P', cursive;
-                    color: #ff5722;
+                    color: #ffd54f;
                     font-size: 1.1rem;
                 }
 
                 .runtime {
                     font-weight: 500;
-                    color: var(--accent-color);
+                    color: #ffd54f;
                 }
 
                 .ping {
                     font-weight: 500;
-                    color: #198754;
+                    color: #2e7d32;
+                }
+
+                /* Animation ลอยเบาๆ */
+                .animate-float {
+                    animation: float 3s ease-in-out infinite;
+                }
+
+                @keyframes float {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-10px); }
                 }
 
                 /* Responsive */
@@ -464,66 +532,16 @@ app.get("/", (req, res) => {
                         padding: 8px 10px;
                     }
                 }
-
-                /* เพิ่มแอนิเมชัน */
-                .animate-float {
-                    animation: float 3s ease-in-out infinite;
-                }
-
-                @keyframes float {
-                    0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-10px); }
-                }
-
-                /* เพิ่มข้อความคริสต์มาส */
-                .christmas-alert {
-                    background: rgba(255, 255, 255, 0.2);
-                    border: 1px solid var(--accent-color);
-                    border-radius: 8px;
-                    padding: 15px;
-                    margin-bottom: 20px;
-                    text-align: center;
-                    font-size: 1.2rem;
-                }
-
-                /* เพิ่มหิมะตก */
-                #snow {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    pointer-events: none;
-                    z-index: 9999;
-                }
-
-                .snowflake {
-                    position: absolute;
-                    top: -10px;
-                    width: 10px;
-                    height: 10px;
-                    background: white;
-                    border-radius: 50%;
-                    opacity: 0.8;
-                    animation: snow 10s linear infinite;
-                }
-
-                @keyframes snow {
-                    0% { transform: translateY(0); opacity: 1; }
-                    100% { transform: translateY(100vh); opacity: 0; }
-                }
             </style>
         </head>
         <body>
-            <!-- เพิ่มหิมะตก -->
-            <div id="snow"></div>
-
             <div class="overlay"></div>
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
-                        <i class="fas fa-robot fa-lg me-2 animate-float" style="color: var(--accent-color);"></i>
-                        ระบบจัดการบอท
+                        <!-- ไอคอนต้นคริสต์มาสสไตล์ Snowflake แทน Robot ก็ได้ -->
+                        <i class="fas fa-snowflake fa-lg me-2 animate-float" style="color: #fff;"></i>
+                        Merry Christmas 2025
                     </a>
                     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                         <span class="navbar-toggler-icon"></span>
@@ -549,37 +567,32 @@ app.get("/", (req, res) => {
 
             <main class="flex-grow-1">
                 <div class="container">
-                    <!-- เพิ่มข้อความคริสต์มาส -->
-                    <div class="christmas-alert">
-                        🎄 สุขสันต์วันคริสต์มาส2025! ขอให้คุณมีความสุขมากๆ 🎅
-                    </div>
-
                     <!-- สถิติ -->
                     <div class="row mb-4">
                         <div class="col-md-3 col-sm-6 mb-3">
                             <div class="stats-card">
-                                <i class="fas fa-robot fa-2x mb-3" style="color: var(--accent-color);"></i>
+                                <i class="fas fa-robot fa-2x mb-3" style="color: #ffd54f;"></i>
                                 <div class="stats-number" id="totalBots">${data.totalBots}</div>
                                 <div class="stats-label">บอททั้งหมด</div>
                             </div>
                         </div>
                         <div class="col-md-3 col-sm-6 mb-3">
                             <div class="stats-card">
-                                <i class="fas fa-signal fa-2x mb-3" style="color: #198754;"></i>
+                                <i class="fas fa-signal fa-2x mb-3" style="color: #2e7d32;"></i>
                                 <div class="stats-number" id="onlineBots">${data.onlineBots}</div>
                                 <div class="stats-label">บอทออนไลน์</div>
                             </div>
                         </div>
                         <div class="col-md-3 col-sm-6 mb-3">
                             <div class="stats-card">
-                                <i class="fas fa-clock fa-2x mb-3" style="color: var(--accent-color);"></i>
+                                <i class="fas fa-clock fa-2x mb-3" style="color: #ffd54f;"></i>
                                 <div class="stats-number" id="activeBots">${data.activeBots}</div>
                                 <div class="stats-label">บอททำงานแล้ว</div>
                             </div>
                         </div>
                         <div class="col-md-3 col-sm-6 mb-3">
                             <div class="stats-card">
-                                <i class="fas fa-tachometer-alt fa-2x mb-3" style="color: #198754;"></i>
+                                <i class="fas fa-tachometer-alt fa-2x mb-3" style="color: #2e7d32;"></i>
                                 <div class="stats-number" id="websitePing">${data.websitePing} ms</div>
                                 <div class="stats-label">Ping เว็บไซต์</div>
                             </div>
@@ -591,7 +604,7 @@ app.get("/", (req, res) => {
                         <div class="col-12">
                             <div class="glass-card">
                                 <h5 class="mb-4">
-                                    <i class="fas fa-robot me-2" style="color: var(--accent-color);"></i>
+                                    <i class="fas fa-robot me-2" style="color: #ffd54f;"></i>
                                     บอทที่กำลังทำงาน
                                 </h5>
                                 <div class="table-responsive">
@@ -618,12 +631,9 @@ app.get("/", (req, res) => {
 
             <footer class="footer text-center">
                 <div class="container">
-                    <p class="mb-0">© ${new Date().getFullYear()} ระบบจัดการบอท | พัฒนาด้วย ❤️</p>
+                    <p class="mb-0">© ${new Date().getFullYear()} Merry Christmas 2025 | Powered with ❤️</p>
                 </div>
             </footer>
-
-            <!-- Toast Container -->
-            <div class="toast-container"></div>
 
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
             <script src="/socket.io/socket.io.js"></script>
@@ -660,7 +670,7 @@ app.get("/", (req, res) => {
                 // ส่งปิงทันทีเมื่อโหลดหน้า
                 sendPing();
 
-                // ฟังก์ชันแสดง Toast
+                // แสดง Toast
                 function showToast(message, type = 'info') {
                     const toastContainer = document.querySelector('.toast-container');
                     const toastEl = document.createElement('div');
@@ -701,17 +711,14 @@ app.get("/", (req, res) => {
                     updateRuntime();
                 });
 
-                // รับเหตุการณ์เฉพาะเมื่อบอทถูกลบ
                 socket.on('botDeleted', (botName) => {
                     showToast(\`บอท "\${botName}" ถูกลบเรียบร้อยแล้ว\`, 'success');
                 });
 
-                // รับเหตุการณ์เฉพาะเมื่อบอทไปออฟไลน์
                 socket.on('botOffline', (botName) => {
                     showToast(\`บอท "\${botName}" กำลังจะถูกลบภายใน 60 วินาที เนื่องจากออฟไลน์\`, 'warning');
                 });
 
-                // รับเหตุการณ์เฉพาะเมื่อบอทถูกรีสตาร์ท
                 socket.on('botRestarted', (botName) => {
                     showToast(\`บอท "\${botName}" ถูกรีสตาร์ทเรียบร้อยแล้ว\`, 'success');
                 });
@@ -720,7 +727,7 @@ app.get("/", (req, res) => {
                 setInterval(updateRuntime, 1000);
                 document.addEventListener('DOMContentLoaded', updateRuntime);
 
-                // Event Delegation สำหรับปุ่มลบ, แก้ไข, และรีสตาร์ท
+                // จัดการลบ, แก้ไข, และรีสตาร์ทบอทผ่าน Fetch
                 document.addEventListener('click', function(event) {
                     if (event.target.closest('.delete-btn')) {
                         const token = decodeURIComponent(event.target.closest('.delete-btn').getAttribute('data-token'));
@@ -777,7 +784,6 @@ app.get("/", (req, res) => {
                         }
                     }
 
-                    // การจัดการปุ่มรีสตาร์ท
                     if (event.target.closest('.restart-btn')) {
                         const token = decodeURIComponent(event.target.closest('.restart-btn').getAttribute('data-token'));
                         const restartCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการรีสตาร์ทบอท:');
@@ -793,7 +799,7 @@ app.get("/", (req, res) => {
                             .then(data => {
                                 if (data.success) {
                                     showToast('รีสตาร์ทบอทสำเร็จ', 'success');
-                                    socket.emit('botRestarted', data.botName); // ส่งเหตุการณ์รีสตาร์ทบอท
+                                    socket.emit('botRestarted', data.botName);
                                 } else {
                                     showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
                                 }
@@ -811,22 +817,1275 @@ app.get("/", (req, res) => {
     `);
 });
 
-// หน้าเพิ่มบอท (POST /start)
+// หน้าเพิ่มบอท
+app.get("/start", (req, res) => {
+    const error = req.query.error;
+
+    let errorMessage = "";
+    if (error === 'already-running') {
+        errorMessage = `<div class="alert alert-warning" role="alert">
+                            บอทนี้กำลังทำงานอยู่แล้ว
+                        </div>`;
+    } else if (error === 'invalid-token') {
+        errorMessage = `<div class="alert alert-danger" role="alert">
+                            โทเค็นไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง
+                        </div>`;
+    } else if (error === 'missing-fields') {
+        errorMessage = `<div class="alert alert-danger" role="alert">
+                            กรุณากรอกทั้งโทเค็น, รหัสผ่าน, ID แอดมิน, ชื่อบอท และคำนำหน้าบอท
+                        </div>`;
+    } else if (error === 'invalid-password') {
+        errorMessage = `<div class="alert alert-danger" role="alert">
+                            รหัสผ่านไม่ถูกต้อง กรุณากรอกรหัสผ่าน 6 หลัก
+                        </div>`;
+    } else if (error === 'invalid-name') {
+        errorMessage = `<div class="alert alert-danger" role="alert">
+                            ชื่อบอทไม่ถูกต้อง กรุณากรอกชื่อบอทที่มีความยาว 3-20 ตัวอักษร และประกอบด้วย a-z, A-Z, 0-9, -, _
+                        </div>`;
+    }
+
+    // เปลี่ยนเฉพาะธีมให้เป็นคริสต์มาส 2025
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="th">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>เพิ่มบอท | Merry Christmas 2025</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <style>
+                /* ========= ธีมคริสต์มาส 2025 ========= */
+                :root {
+                    --primary-color: #c62828;
+                    --secondary-color: #2e7d32;
+                }
+
+                body {
+                    background: url('https://i.postimg.cc/VLN0PsTk/christmas-background.jpg') no-repeat center center fixed;
+                    background-size: cover;
+                    color: #ffffff;
+                    font-family: 'Roboto', sans-serif;
+                    position: relative;
+                    overflow-x: hidden;
+                }
+
+                html, body {
+                    height: 100%;
+                    margin: 0;
+                    padding: 0;
+                }
+
+                body {
+                    display: flex;
+                    flex-direction: column;
+                    min-height: 100vh;
+                }
+
+                main.flex-grow-1 {
+                    flex: 1;
+                }
+
+                .overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.6);
+                    z-index: -1;
+                }
+
+                .navbar {
+                    background: rgba(198, 40, 40, 0.9) !important;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+                }
+
+                .navbar-brand {
+                    font-family: 'Kanit', sans-serif;
+                    font-weight: 600;
+                    color: #fff !important;
+                }
+
+                .navbar-nav .nav-link {
+                    color: #fff !important;
+                    transition: color 0.3s ease;
+                }
+                .navbar-nav .nav-link:hover {
+                    color: #ffd54f !important;
+                }
+
+                .glass-card {
+                    background: rgba(255, 255, 255, 0.15);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 16px;
+                    padding: 24px;
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                }
+
+                .glass-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
+                }
+
+                .add-bot-form .form-label {
+                    font-weight: 500;
+                    color: #ffffff;
+                }
+
+                .form-control {
+                    background: rgba(255, 255, 255, 0.2);
+                    border: 1px solid rgba(255, 255, 255, 0.3);
+                    border-radius: 8px;
+                    padding: 10px 12px;
+                    font-size: 1rem;
+                    transition: border-color 0.3s ease, background 0.3s ease;
+                    color: #ffffff;
+                }
+
+                .form-control::placeholder {
+                    color: #e0e0e0;
+                }
+
+                .form-control:focus {
+                    border-color: #ffd54f;
+                    box-shadow: 0 0 0 0.2rem rgba(255, 213, 79, 0.25);
+                    background: rgba(255, 255, 255, 0.3);
+                    color: #ffffff;
+                }
+
+                .btn-primary {
+                    background: #ffd54f;
+                    border: none;
+                    padding: 10px 20px;
+                    font-size: 1rem;
+                    border-radius: 8px;
+                    transition: background 0.3s ease, transform 0.2s ease;
+                    color: #212529;
+                    font-weight: 600;
+                }
+
+                .btn-primary:hover {
+                    background: #ffca28;
+                }
+
+                .footer {
+                    background: rgba(198, 40, 40, 0.9);
+                    border-top: 2px solid rgba(255, 213, 79, 0.5);
+                    padding: 20px 0;
+                    font-size: 0.9rem;
+                    color: #ffffff;
+                }
+
+                .animate-float {
+                    animation: float 3s ease-in-out infinite;
+                }
+
+                @keyframes float {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-10px); }
+                }
+
+                .toast-container {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 1055;
+                }
+
+                @media (max-width: 768px) {
+                    .glass-card {
+                        margin-bottom: 20px;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="overlay"></div>
+            <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+                <div class="container">
+                    <a class="navbar-brand d-flex align-items-center" href="/">
+                        <i class="fas fa-snowflake fa-lg me-2 animate-float" style="color: #fff;"></i>
+                        Merry Christmas 2025
+                    </a>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav ms-auto">
+                            <li class="nav-item">
+                                <a class="nav-link active" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/how-to-make-bot"><i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <main class="flex-grow-1">
+                <div class="container">
+                    <div class="glass-card">
+                        <h5 class="mb-4">
+                            <i class="fas fa-plus-circle me-2" style="color: #ffd54f;"></i>
+                            เพิ่มบอทใหม่
+                        </h5>
+                        ${errorMessage}
+                        <form class="add-bot-form" method="POST" action="/start">
+                            <div class="mb-3">
+                                <label for="token" class="form-label">โทเค็นของคุณ</label>
+                                <textarea 
+                                    id="token" 
+                                    name="token" 
+                                    class="form-control" 
+                                    rows="4" 
+                                    placeholder='{"appState": "YOUR_APP_STATE"}'
+                                    required
+                                ></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="prefix" class="form-label">คำนำหน้าบอท</label>
+                                <input 
+                                    type="text" 
+                                    id="prefix" 
+                                    name="prefix" 
+                                    class="form-control" 
+                                    placeholder="/" 
+                                    required
+                                    pattern="^.{1,10}$" 
+                                    title="กรุณากรอกคำนำหน้าที่มีความยาว 1-10 ตัวอักษร"
+                                />
+                            </div>
+                            <div class="mb-3">
+                                <label for="name" class="form-label">ชื่อบอท</label>
+                                <input 
+                                    type="text" 
+                                    id="name" 
+                                    name="name" 
+                                    class="form-control" 
+                                    placeholder="MyBot" 
+                                    required
+                                    pattern="^[a-zA-Z0-9_-]{3,20}$" 
+                                    title="กรุณากรอกชื่อบอทที่มีความยาว 3-20 ตัวอักษร และประกอบด้วย a-z, A-Z, 0-9, -, _"
+                                />
+                            </div>
+                            <div class="mb-3">
+                                <label for="password" class="form-label">ตั้งรหัสผ่าน 6 หลักสำหรับการจัดการบอท</label>
+                                <input 
+                                    type="password" 
+                                    id="password" 
+                                    name="password" 
+                                    class="form-control" 
+                                    pattern="\\d{6}" 
+                                    placeholder="123456" 
+                                    required
+                                    title="กรุณากรอกรหัสผ่าน 6 หลัก"
+                                />
+                            </div>
+                            <div class="mb-3">
+                                <label for="adminID" class="form-label">ID แอดมินของบอท</label>
+                                <input 
+                                    type="text" 
+                                    id="adminID" 
+                                    name="adminID" 
+                                    class="form-control" 
+                                    placeholder="61555184860915" 
+                                    required
+                                    title="กรุณากรอก ID แอดมินของบอท"
+                                />
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-play me-2"></i>
+                                เริ่มบอท
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </main>
+
+            <footer class="footer text-center">
+                <div class="container">
+                    <p class="mb-0">© ${new Date().getFullYear()} Merry Christmas 2025 | Powered with ❤️</p>
+                </div>
+            </footer>
+
+            <div class="toast-container"></div>
+
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+            <script>
+                function showToast(message, type = 'info') {
+                    const toastContainer = document.querySelector('.toast-container');
+                    const toastEl = document.createElement('div');
+                    toastEl.className = \`toast align-items-center text-bg-\${type} border-0\`;
+                    toastEl.setAttribute('role', 'alert');
+                    toastEl.setAttribute('aria-live', 'assertive');
+                    toastEl.setAttribute('aria-atomic', 'true');
+                    toastEl.innerHTML = \`
+                        <div class="d-flex">
+                            <div class="toast-body">
+                                \${message}
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                    \`;
+                    toastContainer.appendChild(toastEl);
+                    const toast = new bootstrap.Toast(toastEl);
+                    toast.show();
+
+                    toastEl.addEventListener('hidden.bs.toast', () => {
+                        toastEl.remove();
+                    });
+                }
+
+                document.addEventListener('click', function(event) {
+                    if (event.target.closest('.delete-btn')) {
+                        const token = decodeURIComponent(event.target.closest('.delete-btn').getAttribute('data-token'));
+                        const deleteCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการลบบอท:');
+                        if (deleteCode) {
+                            fetch('/delete', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ token, code: deleteCode })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    showToast('ลบบอทสำเร็จ', 'success');
+                                } else {
+                                    showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
+                                }
+                            })
+                            .catch(err => {
+                                console.error(err);
+                                showToast('เกิดข้อผิดพลาดในการลบบอท', 'danger');
+                            });
+                        }
+                    }
+
+                    if (event.target.closest('.edit-btn')) {
+                        const token = decodeURIComponent(event.target.closest('.edit-btn').getAttribute('data-token'));
+                        const editCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการแก้ไขโทเค่น:');
+                        if (editCode) {
+                            const newToken = prompt('กรุณากรอกโทเค่นใหม่:');
+                            if (newToken) {
+                                fetch('/edit', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({ token, code: editCode, newToken })
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        showToast('แก้ไขโทเค่นสำเร็จ', 'success');
+                                    } else {
+                                        showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
+                                    }
+                                })
+                                .catch(err => {
+                                    console.error(err);
+                                    showToast('เกิดข้อผิดพลาดในการแก้ไขโทเค่น', 'danger');
+                                });
+                            }
+                        }
+                    }
+
+                    if (event.target.closest('.restart-btn')) {
+                        const token = decodeURIComponent(event.target.closest('.restart-btn').getAttribute('data-token'));
+                        const restartCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการรีสตาร์ทบอท:');
+                        if (restartCode) {
+                            fetch('/restart', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ token, code: restartCode })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    showToast('รีสตาร์ทบอทสำเร็จ', 'success');
+                                    // socket.emit('botRestarted', data.botName); <-- หน้า /start ยังไม่มี socket.io เชื่อม
+                                } else {
+                                    showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
+                                }
+                            })
+                            .catch(err => {
+                                console.error(err);
+                                showToast('เกิดข้อผิดพลาดในการรีสตาร์ทบอท', 'danger');
+                            });
+                        }
+                    }
+                });
+            </script>
+        </body>
+        </html>
+    `);
+});
+
+// หน้าแสดงบอทรัน
+app.get("/bots", (req, res) => {
+    const data = generateBotData(); 
+
+    // เปลี่ยนเฉพาะธีมเป็นคริสต์มาส 2025
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="th">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>ดูบอทรัน | Merry Christmas 2025</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <style>
+                /* ========= ธีมคริสต์มาส 2025 ========= */
+                :root {
+                    --primary-color: #c62828;
+                    --secondary-color: #2e7d32;
+                }
+
+                body {
+                    background: url('https://i.postimg.cc/VLN0PsTk/christmas-background.jpg') no-repeat center center fixed;
+                    background-size: cover;
+                    color: #ffffff;
+                    font-family: 'Roboto', sans-serif;
+                    position: relative;
+                    overflow-x: hidden;
+                }
+
+                html, body {
+                    height: 100%;
+                    margin: 0;
+                    padding: 0;
+                }
+
+                body {
+                    display: flex;
+                    flex-direction: column;
+                    min-height: 100vh;
+                }
+
+                main.flex-grow-1 {
+                    flex: 1;
+                }
+
+                .overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.6);
+                    z-index: -1;
+                }
+
+                .navbar {
+                    background: rgba(198, 40, 40, 0.9) !important;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+                }
+
+                .navbar-brand {
+                    font-family: 'Kanit', sans-serif;
+                    font-weight: 600;
+                    color: #fff !important;
+                }
+
+                .navbar-nav .nav-link {
+                    color: #fff !important;
+                    transition: color 0.3s ease;
+                }
+                .navbar-nav .nav-link:hover {
+                    color: #ffd54f !important;
+                }
+
+                .glass-card {
+                    background: rgba(255, 255, 255, 0.15);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 16px;
+                    padding: 24px;
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                }
+
+                .glass-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
+                }
+
+                .bot-table, .command-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 20px;
+                }
+
+                .bot-table th, .bot-table td,
+                .command-table th, .command-table td {
+                    padding: 12px 15px;
+                    text-align: left;
+                }
+
+                .bot-table th, .command-table th {
+                    background-color: rgba(198, 40, 40, 0.9);
+                    color: #fff;
+                    font-weight: 600;
+                }
+
+                .bot-table tr:nth-child(even),
+                .command-table tr:nth-child(even) {
+                    background-color: rgba(255, 255, 255, 0.1);
+                }
+
+                .status-online {
+                    background: #2e7d32;
+                    color: #ffffff;
+                    padding: 5px 10px;
+                    border-radius: 20px;
+                    font-size: 0.9rem;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                }
+
+                .status-active {
+                    background: #43a047;
+                    color: #ffffff;
+                    padding: 5px 10px;
+                    border-radius: 20px;
+                    font-size: 0.9rem;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                }
+
+                .status-connecting {
+                    background: #ffd54f;
+                    color: #212529;
+                    padding: 5px 10px;
+                    border-radius: 20px;
+                    font-size: 0.9rem;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                }
+
+                .status-connection-failed {
+                    background: #ef5350;
+                    color: #ffffff;
+                    padding: 5px 10px;
+                    border-radius: 20px;
+                    font-size: 0.9rem;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                }
+
+                .status-offline {
+                    background: #616161;
+                    color: #ffffff;
+                    padding: 5px 10px;
+                    border-radius: 20px;
+                    font-size: 0.9rem;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                }
+
+                .footer {
+                    background: rgba(198, 40, 40, 0.9);
+                    border-top: 2px solid rgba(255, 213, 79, 0.5);
+                    padding: 20px 0;
+                    font-size: 0.9rem;
+                    color: #ffffff;
+                }
+
+                .btn-warning, .btn-danger, .btn-secondary {
+                    transition: transform 0.2s ease;
+                }
+                .btn-warning:hover, .btn-danger:hover, .btn-secondary:hover {
+                    transform: scale(1.05);
+                }
+
+                .bot-name {
+                    font-family: 'Press Start 2P', cursive;
+                    color: #ffd54f;
+                    font-size: 1.1rem;
+                }
+
+                .runtime {
+                    font-weight: 500;
+                    color: #ffd54f;
+                }
+                .ping {
+                    font-weight: 500;
+                    color: #2e7d32;
+                }
+
+                .animate-float {
+                    animation: float 3s ease-in-out infinite;
+                }
+                @keyframes float {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-10px); }
+                }
+
+                @media (max-width: 768px) {
+                    .glass-card {
+                        margin-bottom: 20px;
+                    }
+                    .bot-table th, .bot-table td,
+                    .command-table th, .command-table td {
+                        padding: 8px 10px;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="overlay"></div>
+            <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+                <div class="container">
+                    <a class="navbar-brand d-flex align-items-center" href="/">
+                        <i class="fas fa-snowflake fa-lg me-2 animate-float" style="color: #fff;"></i>
+                        Merry Christmas 2025
+                    </a>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav ms-auto">
+                            <li class="nav-item">
+                                <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link active" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/how-to-make-bot"><i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <main class="flex-grow-1">
+                <div class="container">
+                    <div class="glass-card">
+                        <h5 class="mb-4">
+                            <i class="fas fa-list me-2" style="color: #2e7d32;"></i>
+                            บอทที่กำลังทำงาน
+                        </h5>
+                        <div class="table-responsive">
+                            <table class="table bot-table">
+                                <thead>
+                                    <tr>
+                                        <th>ชื่อบอท</th>
+                                        <th>สถานะ</th>
+                                        <th>เวลารัน</th>
+                                        <th>ปิง</th>
+                                        <th>การจัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="botTableBody">
+                                    ${data.botRows}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <footer class="footer text-center">
+                <div class="container">
+                    <p class="mb-0">© ${new Date().getFullYear()} Merry Christmas 2025 | Powered with ❤️</p>
+                </div>
+            </footer>
+
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+            <script src="/socket.io/socket.io.js"></script>
+            <script>
+                const socket = io();
+
+                function updateRuntime() {
+                    const runtimeElements = document.querySelectorAll('.runtime');
+                    const now = Date.now();
+                    runtimeElements.forEach(el => {
+                        const startTime = parseInt(el.getAttribute('data-start-time'));
+                        if (!startTime) return;
+                        const elapsed = now - startTime;
+                        const seconds = Math.floor((elapsed / 1000) % 60);
+                        const minutes = Math.floor((elapsed / (1000 * 60)) % 60);
+                        const hours = Math.floor((elapsed / (1000 * 60 * 60)) % 24);
+                        const days = Math.floor(elapsed / (1000 * 60 * 60 * 24));
+                        el.textContent = \`\${days} วัน \${hours} ชั่วโมง \${minutes} นาที \${seconds} วินาที\`;
+                    });
+                }
+
+                function sendPing() {
+                    const timestamp = Date.now();
+                    socket.emit('ping', timestamp);
+                }
+                setInterval(sendPing, 5000);
+                sendPing();
+
+                function showToast(message, type = 'info') {
+                    // หน้า /bots ยังไม่มี .toast-container? ถ้าต้องการ toast ให้เพิ่มเอง
+                    console.log(\`[\${type}] \${message}\`);
+                }
+
+                socket.on('updateBots', (data) => {
+                    const totalBotsEl = document.getElementById('totalBots');
+                    const onlineBotsEl = document.getElementById('onlineBots');
+                    const activeBotsEl = document.getElementById('activeBots');
+                    const websitePingEl = document.getElementById('websitePing');
+                    
+                    // หน้า /bots อาจไม่มี 4 id ข้างบน หากต้องการอัปเดต ก็สร้าง element เอง
+                    const botTableBody = document.getElementById('botTableBody');
+                    if (botTableBody) {
+                        botTableBody.innerHTML = data.botRows;
+                    }
+                    updateRuntime();
+                });
+
+                socket.on('botDeleted', (botName) => {
+                    showToast(\`บอท "\${botName}" ถูกลบเรียบร้อยแล้ว\`, 'success');
+                });
+                socket.on('botOffline', (botName) => {
+                    showToast(\`บอท "\${botName}" กำลังจะถูกลบภายใน 60 วินาที\`, 'warning');
+                });
+                socket.on('botRestarted', (botName) => {
+                    showToast(\`บอท "\${botName}" ถูกรีสตาร์ทเรียบร้อยแล้ว\`, 'success');
+                });
+
+                setInterval(updateRuntime, 1000);
+                document.addEventListener('DOMContentLoaded', updateRuntime);
+
+                document.addEventListener('click', function(event) {
+                    if (event.target.closest('.delete-btn')) {
+                        const token = decodeURIComponent(event.target.closest('.delete-btn').getAttribute('data-token'));
+                        const deleteCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการลบบอท:');
+                        if (deleteCode) {
+                            fetch('/delete', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ token, code: deleteCode })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    showToast('ลบบอทสำเร็จ', 'success');
+                                } else {
+                                    showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
+                                }
+                            })
+                            .catch(err => {
+                                console.error(err);
+                                showToast('เกิดข้อผิดพลาดในการลบบอท', 'danger');
+                            });
+                        }
+                    }
+                    if (event.target.closest('.edit-btn')) {
+                        const token = decodeURIComponent(event.target.closest('.edit-btn').getAttribute('data-token'));
+                        const editCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการแก้ไขโทเค่น:');
+                        if (editCode) {
+                            const newToken = prompt('กรุณากรอกโทเค่นใหม่:');
+                            if (newToken) {
+                                fetch('/edit', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({ token, code: editCode, newToken })
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        showToast('แก้ไขโทเค่นสำเร็จ', 'success');
+                                    } else {
+                                        showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
+                                    }
+                                })
+                                .catch(err => {
+                                    console.error(err);
+                                    showToast('เกิดข้อผิดพลาดในการแก้ไขโทเค่น', 'danger');
+                                });
+                            }
+                        }
+                    }
+                    if (event.target.closest('.restart-btn')) {
+                        const token = decodeURIComponent(event.target.closest('.restart-btn').getAttribute('data-token'));
+                        const restartCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการรีสตาร์ทบอท:');
+                        if (restartCode) {
+                            fetch('/restart', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ token, code: restartCode })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    showToast('รีสตาร์ทบอทสำเร็จ', 'success');
+                                    socket.emit('botRestarted', data.botName);
+                                } else {
+                                    showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
+                                }
+                            })
+                            .catch(err => {
+                                console.error(err);
+                                showToast('เกิดข้อผิดพลาดในการรีสตาร์ทบอท', 'danger');
+                            });
+                        }
+                    }
+                });
+            </script>
+        </body>
+        </html>
+    `);
+});
+
+// หน้าแสดงคำสั่งที่ใช้
+app.get("/commands", (req, res) => {
+    const commandsData = generateCommandData();
+    // เปลี่ยนเฉพาะธีมเป็นคริสต์มาส 2025
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="th">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>คำสั่งที่ใช้ | Merry Christmas 2025</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <style>
+                /* ========= ธีมคริสต์มาส 2025 ========= */
+                :root {
+                    --primary-color: #c62828;
+                    --secondary-color: #2e7d32;
+                }
+
+                body {
+                    background: url('https://i.postimg.cc/VLN0PsTk/christmas-background.jpg') no-repeat center center fixed;
+                    background-size: cover;
+                    color: #ffffff;
+                    font-family: 'Roboto', sans-serif;
+                    position: relative;
+                    overflow-x: hidden;
+                }
+
+                html, body {
+                    height: 100%;
+                    margin: 0;
+                    padding: 0;
+                }
+
+                body {
+                    display: flex;
+                    flex-direction: column;
+                    min-height: 100vh;
+                }
+
+                main.flex-grow-1 {
+                    flex: 1;
+                }
+
+                .overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.6);
+                    z-index: -1;
+                }
+
+                .navbar {
+                    background: rgba(198, 40, 40, 0.9) !important;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+                }
+
+                .navbar-brand {
+                    font-family: 'Kanit', sans-serif;
+                    font-weight: 600;
+                    color: #fff !important;
+                }
+
+                .navbar-nav .nav-link {
+                    color: #fff !important;
+                    transition: color 0.3s ease;
+                }
+                .navbar-nav .nav-link:hover {
+                    color: #ffd54f !important;
+                }
+
+                .glass-card {
+                    background: rgba(255, 255, 255, 0.15);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 16px;
+                    padding: 24px;
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                }
+
+                .glass-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
+                }
+
+                .command-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 20px;
+                }
+
+                .command-table th, .command-table td {
+                    padding: 12px 15px;
+                    text-align: left;
+                }
+
+                .command-table th {
+                    background-color: rgba(198, 40, 40, 0.9);
+                    color: #fff;
+                    font-weight: 600;
+                }
+
+                .command-table tr:nth-child(even) {
+                    background-color: rgba(255, 255, 255, 0.1);
+                }
+
+                .footer {
+                    background: rgba(198, 40, 40, 0.9);
+                    border-top: 2px solid rgba(255, 213, 79, 0.5);
+                    padding: 20px 0;
+                    font-size: 0.9rem;
+                    color: #ffffff;
+                }
+
+                .btn-warning, .btn-danger, .btn-secondary {
+                    transition: transform 0.2s ease;
+                }
+                .btn-warning:hover, .btn-danger:hover, .btn-secondary:hover {
+                    transform: scale(1.05);
+                }
+
+                .bot-name {
+                    font-family: 'Press Start 2P', cursive;
+                    color: #ffd54f;
+                    font-size: 1.1rem;
+                }
+                .runtime {
+                    font-weight: 500;
+                    color: #ffd54f;
+                }
+                .ping {
+                    font-weight: 500;
+                    color: #2e7d32;
+                }
+                .animate-float {
+                    animation: float 3s ease-in-out infinite;
+                }
+                @keyframes float {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-10px); }
+                }
+                @media (max-width: 768px) {
+                    .glass-card {
+                        margin-bottom: 20px;
+                    }
+                    .command-table th, .command-table td {
+                        padding: 8px 10px;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="overlay"></div>
+            <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+                <div class="container">
+                    <a class="navbar-brand d-flex align-items-center" href="/">
+                        <i class="fas fa-snowflake fa-lg me-2 animate-float" style="color: #fff;"></i>
+                        Merry Christmas 2025
+                    </a>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav ms-auto">
+                            <li class="nav-item">
+                                <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link active" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/how-to-make-bot"><i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <main class="flex-grow-1">
+                <div class="container">
+                    <div class="glass-card">
+                        <h5 class="mb-4">
+                            <i class="fas fa-terminal me-2" style="color: #2e7d32;"></i>
+                            คำสั่งที่ใช้
+                        </h5>
+                        <div class="table-responsive">
+                            <table class="table command-table">
+                                <thead>
+                                    <tr>
+                                        <th>ชื่อคำสั่ง</th>
+                                        <th>จำนวนที่ใช้</th>
+                                        <th>คำอธิบาย</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="commandTableBody">
+                                    ${commandsData}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <footer class="footer text-center">
+                <div class="container">
+                    <p class="mb-0">© ${new Date().getFullYear()} Merry Christmas 2025 | Powered with ❤️</p>
+                </div>
+            </footer>
+
+            <div class="toast-container"></div>
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        </body>
+        </html>
+    `);
+});
+
+// หน้า "วิธีทำบอทของคุณเอง"
+app.get("/how-to-make-bot", (req, res) => {
+    // เปลี่ยนเฉพาะธีมเป็นคริสต์มาส 2025
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="th">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>วิธีทำบอทของคุณเอง | Merry Christmas 2025</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <style>
+                :root {
+                    --primary-color: #c62828;
+                    --secondary-color: #2e7d32;
+                }
+
+                body {
+                    background: url('https://i.postimg.cc/VLN0PsTk/christmas-background.jpg') no-repeat center center fixed;
+                    background-size: cover;
+                    color: #ffffff;
+                    font-family: 'Roboto', sans-serif;
+                    position: relative;
+                    overflow-x: hidden;
+                }
+
+                html, body {
+                    height: 100%;
+                    margin: 0;
+                    padding: 0;
+                }
+
+                body {
+                    display: flex;
+                    flex-direction: column;
+                    min-height: 100vh;
+                }
+
+                main.flex-grow-1 {
+                    flex: 1;
+                }
+
+                .overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.6);
+                    z-index: -1;
+                }
+
+                .navbar {
+                    background: rgba(198, 40, 40, 0.9) !important;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+                }
+
+                .navbar-brand {
+                    font-family: 'Kanit', sans-serif;
+                    font-weight: 600;
+                    color: #fff !important;
+                }
+
+                .navbar-nav .nav-link {
+                    color: #fff !important;
+                    transition: color 0.3s ease;
+                }
+                .navbar-nav .nav-link:hover {
+                    color: #ffd54f !important;
+                }
+
+                .glass-card {
+                    background: rgba(255, 255, 255, 0.15);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 16px;
+                    padding: 24px;
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                }
+
+                .glass-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
+                }
+
+                .footer {
+                    background: rgba(198, 40, 40, 0.9);
+                    border-top: 2px solid rgba(255, 213, 79, 0.5);
+                    padding: 20px 0;
+                    font-size: 0.9rem;
+                    color: #ffffff;
+                }
+
+                .animate-float {
+                    animation: float 3s ease-in-out infinite;
+                }
+
+                @keyframes float {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-10px); }
+                }
+
+                @media (max-width: 768px) {
+                    .glass-card {
+                        margin-bottom: 20px;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="overlay"></div>
+            <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+                <div class="container">
+                    <a class="navbar-brand d-flex align-items-center" href="/">
+                        <i class="fas fa-snowflake fa-lg me-2 animate-float" style="color: #fff;"></i>
+                        Merry Christmas 2025
+                    </a>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav ms-auto">
+                            <li class="nav-item">
+                                <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link active" href="/how-to-make-bot"><i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <main class="flex-grow-1">
+                <div class="container">
+                    <div class="glass-card">
+                        <h5 class="mb-4">
+                            <i class="fas fa-video me-2" style="color: #ffd54f;"></i>
+                            วิธีทำบอทของคุณเอง
+                        </h5>
+                        <p>ขอแนะนำวิธีการทำบอทของคุณเองโดยดูจากคลิปวิดีโอต่อไปนี้:</p>
+                        <div class="ratio ratio-16x9">
+                            <iframe src="https://firebasestorage.googleapis.com/v0/b/goak-71ac8.appspot.com/o/XRecorder_18122024_114720.mp4?alt=media&token=1f243d3d-91ed-448f-83c7-3ee01d0407e4" allowfullscreen></iframe>
+                        </div>
+                        <hr>
+                        <h6>ขั้นตอนเบื้องต้น:</h6>
+                        <ol>
+                            <li>ดาวน์โหลดซอฟต์แวร์ที่จำเป็นจาก <a href="https://github.com/c3cbot/c3c-ufc-utility/archive/refs/tags/1.5.zip" target="_blank" class="text-decoration-none text-warning">GitHub</a>.</li>
+                            <li>แตกไฟล์ ZIP ที่ดาวน์โหลดมาและเปิดโปรเจกต์ในโปรแกรมแก้ไขโค้ดของคุณ.</li>
+                            <li>ตั้งค่าการเชื่อมต่อกับ API และปรับแต่งการตั้งค่าตามความต้องการของคุณ.</li>
+                            <li>รันเซิร์ฟเวอร์และตรวจสอบบอทของคุณผ่านหน้าแดชบอร์ด.</li>
+                            <li>ปรับแต่งคำสั่งและอีเวนต์เพิ่มเติมเพื่อเพิ่มความสามารถให้กับบอทของคุณ.</li>
+                        </ol>
+                        <p>สำหรับรายละเอียดเพิ่มเติม โปรดดูวิดีโอที่แนบมาด้านบน.</p>
+                    </div>
+                </div>
+            </main>
+
+            <footer class="footer text-center">
+                <div class="container">
+                    <p class="mb-0">© ${new Date().getFullYear()} Merry Christmas 2025 | Powered with ❤️</p>
+                </div>
+            </footer>
+
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        </body>
+        </html>
+    `);
+});
+
+// debug/bots
+app.get("/debug/bots", (req, res) => {
+    const bots = Object.entries(botSessions).map(([token, bot]) => ({
+        token,
+        name: bot.name,
+        status: bot.status,
+        password: bot.password,
+        adminID: bot.adminID,
+        ping: bot.ping || 'N/A',
+        prefix: bot.prefix
+    }));
+    res.json(bots);
+});
+
+// POST /start
 app.post('/start', async (req, res) => {
     const { token, prefix, name, password, adminID } = req.body;
-
-    // ตรวจสอบว่ามีการกรอกโทเค็น, รหัสผ่าน, ID แอดมิน, ชื่อบอท และคำนำหน้าบอท
     if (!token || !prefix || !name || !password || !adminID) {
         return res.redirect('/start?error=missing-fields');
     }
-
-    // ตรวจสอบรูปแบบของรหัสผ่าน (ต้องเป็นเลข 6 หลัก)
     const passwordRegex = /^\d{6}$/;
     if (!passwordRegex.test(password)) {
         return res.redirect('/start?error=invalid-password');
     }
-
-    // ตรวจสอบรูปแบบของชื่อบอท
     const nameRegex = /^[a-zA-Z0-9_-]{3,20}$/;
     if (!nameRegex.test(name)) {
         return res.redirect('/start?error=invalid-name');
@@ -838,12 +2097,10 @@ app.post('/start', async (req, res) => {
         if (botSessions[tokenKey]) {
             return res.redirect('/start?error=already-running');
         }
-
         const botName = name.trim();
         const botPrefix = prefix.trim();
         const startTime = Date.now();
 
-        // ปรับจำนวนครั้งในการลองเชื่อมต่อเป็น 5 ครั้ง
         await startBotWithRetry(appState, tokenKey, botName, botPrefix, startTime, password, adminID, 5);
         res.redirect('/bots');
         io.emit('updateBots', generateBotData());
@@ -853,7 +2110,6 @@ app.post('/start', async (req, res) => {
     }
 });
 
-// ฟังก์ชันเริ่มต้นบอทด้วยการลองล็อกอินซ้ำ
 async function startBotWithRetry(appState, token, name, prefix, startTime, password, adminID, retries) {
     let attempt = 0;
     while (attempt < retries) {
@@ -866,75 +2122,67 @@ async function startBotWithRetry(appState, token, name, prefix, startTime, passw
             console.error(chalk.red(`❌ ลองเริ่มบอทครั้งที่ ${attempt} ล้มเหลว: ${err.message}`));
             if (attempt >= retries) {
                 console.error(chalk.red(`❌ บอท ${name} ล้มเหลวในการล็อกอินหลังจากลอง ${retries} ครั้ง`));
-                await deleteBot(token, false); // ลบบอทโดยไม่ต้อง emit 'botDeleted' อีกครั้ง
+                await deleteBot(token, false);
                 throw new Error(`บอท ${name} ล้มเหลวในการล็อกอิน`);
             }
-            // รอ 2 วินาทีก่อนลองใหม่
             await new Promise(resolve => setTimeout(resolve, 2000));
         }
     }
 }
 
-// ฟังก์ชันเริ่มต้นบอท
 async function startBot(appState, token, name, prefix, startTime, password, adminID, saveToFile = true) {
     return new Promise((resolve, reject) => {
-        // ตั้งสถานะเป็น 'connecting' ก่อนเริ่มเชื่อมต่อ
         botSessions[token] = { 
             api: null, 
             name, 
             prefix,
             startTime, 
-            status: 'connecting', // ตั้งสถานะเริ่มต้นเป็น 'connecting'
-            password: password.toString(), // แปลงเป็น string เพื่อความแน่ใจ
-            adminID: adminID.trim(), // เก็บ ID แอดมิน
-            ping: 'N/A', // เริ่มต้นปิงเป็น N/A
-            deletionTimeout: null, // เพิ่มตัวแปรสำหรับการลบอัตโนมัติ
-            retryCount: 0 // เพิ่มตัวนับการลองล็อกอิน
+            status: 'connecting',
+            password: password.toString(),
+            adminID: adminID.trim(),
+            ping: 'N/A',
+            deletionTimeout: null,
+            retryCount: 0
         };
 
         login({ appState }, (err, api) => {
             if (err) {
                 console.error(chalk.red(`❌ การเข้าสู่ระบบล้มเหลวสำหรับโทเค็น: ${token}`));
-                botSessions[token].status = 'connection_failed'; // เปลี่ยนสถานะเป็น 'connection_failed'
+                botSessions[token].status = 'connection_failed';
                 io.emit('updateBots', generateBotData());
                 return reject(err);
             }
 
             botSessions[token].api = api;
-            botSessions[token].status = 'online'; // เปลี่ยนสถานะเป็น 'online'
-            botCount = Math.max(botCount, parseInt(name.replace(/✨/g, '').replace('Bot ', '') || '0')); // ปรับ botCount ให้สูงสุด
+            botSessions[token].status = 'online';
+            botCount = Math.max(botCount, parseInt(name.replace(/✨/g, '').replace('Bot ', '') || '0'));
 
             console.log(chalk.green(figlet.textSync("Bot Started!", { horizontalLayout: "full" })));
             console.log(chalk.green(`✅ ${name} กำลังทำงานด้วยโทเค็น: ${token}`));
-            console.log(chalk.green(`🔑 รหัสผ่านสำหรับลบ/แก้ไขโทเค่น: ${password}`)); // แสดงรหัสผ่านใน console
-            console.log(chalk.green(`🔑 ID แอดมิน: ${adminID}`)); // แสดง ID แอดมินใน console
+            console.log(chalk.green(`🔑 รหัสผ่านสำหรับลบ/แก้ไขโทเค่น: ${password}`));
+            console.log(chalk.green(`🔑 ID แอดมิน: ${adminID}`));
 
             api.setOptions({ listenEvents: true });
 
-            // Capture the token in the callback to ensure it's correctly mapped
             api.listenMqtt(async (err, event) => {
                 if (err) {
                     console.error(chalk.red(`❌ เกิดข้อผิดพลาด: ${err}`));
                     botSessions[token].status = 'offline';
                     io.emit('updateBots', generateBotData());
 
-                    // แจ้งเตือนว่า บอทจะถูกลบภายใน 60 วินาที
                     io.emit('botOffline', botSessions[token].name);
 
-                    // ตั้งเวลา 60 วินาทีสำหรับการลบบอทเมื่อออฟไลน์
                     if (!botSessions[token].deletionTimeout) {
                         botSessions[token].deletionTimeout = setTimeout(() => {
                             deleteBot(token, true);
-                        }, 60000); // 60,000 มิลลิวินาที = 60 วินาที
+                        }, 60000);
                         console.log(chalk.yellow(`⌛ บอท ${name} จะถูกลบในอีก 60 วินาที`));
                     }
                     return;
                 }
 
-                // เพิ่มล็อกเมื่อได้รับอีเวนต์
                 console.log(chalk.blue(`📩 รับอีเวนต์: ${event.type}`));
 
-                // จัดการอีเวนต์
                 if (event.logMessageType && events[event.logMessageType]) {
                     for (const eventHandler of events[event.logMessageType]) {
                         try {
@@ -946,12 +2194,9 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
                     }
                 }
 
-                // จัดการข้อความ
                 if (event.type === "message") {
                     const message = event.body ? event.body.trim() : "";
-
                     if (!message.startsWith(botSessions[token].prefix)) return;
-
                     const args = message.slice(botSessions[token].prefix.length).trim().split(/ +/);
                     const commandName = args.shift().toLowerCase();
                     const command = commands[commandName];
@@ -960,10 +2205,8 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
                         try {
                             await command.run({ api, event, args });
                             console.log(chalk.green(`✅ รันคำสั่ง: ${commandName}`));
-                            // เพิ่มตัวนับการใช้คำสั่ง
                             commandUsage[commandName] = (commandUsage[commandName] || 0) + 1;
-                            saveCommandUsage(); // บันทึกการใช้งานคำสั่งลงไฟล์
-
+                            saveCommandUsage();
                             io.emit('updateBots', generateBotData());
                             io.emit('updateCommands', generateCommandData());
                         } catch (error) {
@@ -975,7 +2218,6 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
                     }
                 }
 
-                // หากบอทกลับมาทำงานใหม่ขณะนับถอยหลังให้ยกเลิกการลบ
                 if (botSessions[token].status === 'online') {
                     if (botSessions[token].deletionTimeout) {
                         clearTimeout(botSessions[token].deletionTimeout);
@@ -985,7 +2227,6 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
                 }
             });
 
-            // บันทึกข้อมูลบอทลงไฟล์
             if (saveToFile) {
                 const botData = { appState, token, name, prefix, startTime, password, adminID };
                 const botFilePath = path.join(botsDir, `${name.replace(/ /g, '_')}.json`);
@@ -998,7 +2239,6 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
     });
 }
 
-// ฟังก์ชันสำหรับลบบอท
 function deleteBot(token, emitDeleted = true) {
     const bot = botSessions[token];
     if (!bot) {
@@ -1007,15 +2247,12 @@ function deleteBot(token, emitDeleted = true) {
     }
 
     const { name } = bot;
-
-    // ลบไฟล์บอท
     const botFilePath = path.join(botsDir, `${name.replace(/ /g, '_')}.json`);
     if (fs.existsSync(botFilePath)) {
         fs.unlinkSync(botFilePath);
         console.log(chalk.green(`✅ ลบไฟล์บอท: ${botFilePath}`));
     }
 
-    // ลบจาก botSessions
     delete botSessions[token];
     console.log(chalk.green(`✅ ลบบอทจากระบบ: ${token}`));
 
@@ -1025,10 +2262,9 @@ function deleteBot(token, emitDeleted = true) {
     }
 }
 
-// Route สำหรับลบบอท
+// POST /delete
 app.post('/delete', async (req, res) => {
     const { token, code } = req.body;
-
     console.log(`ได้รับคำขอลบบอท: token=${token}, code=${code}`);
 
     if (!token || !code) {
@@ -1036,7 +2272,7 @@ app.post('/delete', async (req, res) => {
         return res.json({ success: false, message: 'ข้อมูลไม่ครบถ้วน' });
     }
 
-    const trimmedToken = token.trim(); // ทำการ trim โทเค็นก่อนค้นหา
+    const trimmedToken = token.trim();
     const bot = botSessions[trimmedToken];
     if (!bot) {
         console.log('ไม่พบบอทที่ต้องการลบ');
@@ -1045,14 +2281,12 @@ app.post('/delete', async (req, res) => {
 
     console.log(`ตรวจสอบรหัสผ่าน: bot.password=${bot.password}, code=${code}`);
 
-    if (bot.password.toString() !== code.toString()) { // ตรวจสอบรหัสผ่าน
+    if (bot.password.toString() !== code.toString()) {
         console.log('รหัสผ่านไม่ถูกต้อง');
         return res.json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
     }
 
-    // หยุดการทำงานของบอทและลบทันที
     try {
-        // ไม่พึ่งพาเมธอด logout เพื่อลบบอทอย่างถูกต้อง
         deleteBot(trimmedToken, true);
         res.json({ success: true, message: 'ลบบอทสำเร็จ' });
     } catch (err) {
@@ -1061,10 +2295,9 @@ app.post('/delete', async (req, res) => {
     }
 });
 
-// Route สำหรับแก้ไขโทเค่น
+// POST /edit
 app.post('/edit', async (req, res) => {
     const { token, code, newToken } = req.body;
-
     if (!token || !code || !newToken) {
         return res.json({ success: false, message: 'ข้อมูลไม่ครบถ้วน' });
     }
@@ -1075,7 +2308,7 @@ app.post('/edit', async (req, res) => {
         return res.json({ success: false, message: 'ไม่พบบอทที่ต้องการแก้ไข' });
     }
 
-    if (bot.password.toString() !== code.toString()) { // ตรวจสอบรหัสผ่าน
+    if (bot.password.toString() !== code.toString()) {
         return res.json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
     }
 
@@ -1085,14 +2318,11 @@ app.post('/edit', async (req, res) => {
     }
 
     try {
-        // ลบบอทเก่า
         deleteBot(trimmedToken, false);
-
-        // เริ่มต้นบอทใหม่ด้วยโทเค่นใหม่และรหัสผ่านใหม่
-        const newAppState = JSON.parse(newToken); // ตรวจสอบว่า newToken เป็น JSON string
+        const newAppState = JSON.parse(newToken); 
         const newPassword = generate6DigitCode();
         const startTime = Date.now();
-        await startBotWithRetry(newAppState, trimmedNewToken, bot.name, bot.prefix, startTime, newPassword, bot.adminID, 5); // ปรับ retries เป็น 5
+        await startBotWithRetry(newAppState, trimmedNewToken, bot.name, bot.prefix, startTime, newPassword, bot.adminID, 5);
 
         console.log(chalk.green(`✅ แก้ไขโทเค่นของบอท: ${bot.name} เป็น ${trimmedNewToken}`));
         io.emit('updateBots', generateBotData());
@@ -1103,10 +2333,9 @@ app.post('/edit', async (req, res) => {
     }
 });
 
-// Route สำหรับรีสตาร์ทบอท
+// POST /restart
 app.post('/restart', async (req, res) => {
     const { token, code } = req.body;
-
     console.log(`ได้รับคำขอรีสตาร์ทบอท: token=${token}, code=${code}`);
 
     if (!token || !code) {
@@ -1123,15 +2352,13 @@ app.post('/restart', async (req, res) => {
 
     console.log(`ตรวจสอบรหัสผ่านสำหรับรีสตาร์ท: bot.password=${bot.password}, code=${code}`);
 
-    if (bot.password.toString() !== code.toString()) { // ตรวจสอบรหัสผ่าน
+    if (bot.password.toString() !== code.toString()) {
         console.log('รหัสผ่านไม่ถูกต้องสำหรับการรีสตาร์ท');
         return res.json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
     }
 
     try {
         const { appState, name, prefix, startTime, password, adminID } = bot;
-
-        // รีสตาร์ทบอทโดยการลบและเริ่มต้นใหม่
         deleteBot(trimmedToken, false);
         await startBotWithRetry(appState, trimmedToken, name, prefix, Date.now(), password, adminID, 5);
 
@@ -1144,11 +2371,10 @@ app.post('/restart', async (req, res) => {
     }
 });
 
-// Socket.io สำหรับหน้าแดชบอร์ดหลักและดูบอทรัน
+// Socket.io 
 io.on('connection', (socket) => {
     console.log(chalk.blue('🔌 Socket.io client connected'));
 
-    // Handle 'ping' event from client
     socket.on('ping', (timestamp) => {
         const latency = Date.now() - timestamp;
         const ping = Math.min(latency, 200);
@@ -1163,39 +2389,37 @@ io.on('connection', (socket) => {
     });
 });
 
-// ฟังก์ชันช่วยเหลือในการสร้างชื่อบอทที่สวยงาม
 function generateBotName() {
     const adjectives = ["Super", "Mega", "Ultra", "Hyper", "Turbo", "Alpha", "Beta", "Gamma", "Delta"];
     const nouns = ["Dragon", "Phoenix", "Falcon", "Tiger", "Lion", "Eagle", "Shark", "Wolf", "Leopard"];
     const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
     const noun = nouns[Math.floor(Math.random() * nouns.length)];
-    return `${adjective}${noun}`;
+    return \`\${adjective}\${noun}\`;
 }
 
-// เริ่มต้นเซิร์ฟเวอร์และโหลดบอทจากไฟล์ที่เก็บไว้
+// เริ่มต้นเซิร์ฟเวอร์
 server.listen(PORT, () => {
-    console.log(chalk.blue(`🌐 เซิร์ฟเวอร์กำลังทำงานที่ http://localhost:${PORT}`));
-    console.log(chalk.green(figlet.textSync("Bot Management", { horizontalLayout: "full" })));
+    console.log(chalk.blue(\`🌐 เซิร์ฟเวอร์กำลังทำงานที่ http://localhost:\${PORT}\`));
+    console.log(chalk.green(figlet.textSync("Merry XMas 2025", { horizontalLayout: "full" })));
     loadBotsFromFiles();
 });
 
-// ฟังก์ชันช่วยเหลือในการอัปเดตปิงของบอททุกๆ 5 วินาที
+// อัปเดตปิงของบอททุกๆ 5 วินาที
 setInterval(() => {
     Object.values(botSessions).forEach(bot => {
-        // จำลองการปิงด้วยการสุ่มค่าระหว่าง 1-200 ms
         bot.ping = Math.floor(Math.random() * 200) + 1;
     });
     io.emit('updateBots', generateBotData());
-}, 5000); // อัปเดตทุก 5 วินาที
+}, 5000);
 
-// ฟังก์ชันระบบอัตโนมัติทุก ๆ 5 นาที เพื่อลบบอทที่ยังล้มเหลว
+// ลบบอทที่ล้มเหลวอัตโนมัติทุก 5 นาที
 setInterval(() => {
     console.log(chalk.yellow('🔍 กำลังตรวจสอบบอททั้งหมดสำหรับการลบอัตโนมัติ...'));
     let botsToDelete = 0;
     Object.keys(botSessions).forEach(token => {
         const bot = botSessions[token];
-        if (bot.status === 'connection_failed' || bot.status === 'offline') { // ตรวจสอบทั้งสองสถานะ
-            console.log(chalk.yellow(`⌛ บอท "${bot.name}" จะถูกลบออกเนื่องจากสถานะ "${bot.status}"`));
+        if (bot.status === 'connection_failed' || bot.status === 'offline') {
+            console.log(chalk.yellow(\`⌛ บอท "\${bot.name}" จะถูกลบออกเนื่องจากสถานะ "\${bot.status}"\`));
             deleteBot(token, true);
             botsToDelete++;
         }
@@ -1203,4 +2427,4 @@ setInterval(() => {
     if (botsToDelete === 0) {
         console.log(chalk.green('✅ ไม่มีบอทที่ต้องการลบในครั้งนี้'));
     }
-}, 300000); // 300,000 มิลลิวินาที = 5 นาที
+}, 300000);
