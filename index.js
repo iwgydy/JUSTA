@@ -2422,7 +2422,7 @@ function generateBotName() {
 
 // เริ่มต้นเซิร์ฟเวอร์
 server.listen(PORT, () => {
-    console.log(chalk.blue(\`🌐 เซิร์ฟเวอร์กำลังทำงานที่ http://localhost:\${PORT}\`));
+    console.log(chalk.blue(`Server is running at http://localhost:${PORT}`));
     console.log(chalk.green(figlet.textSync("Merry XMas 2025", { horizontalLayout: "full" })));
     loadBotsFromFiles();
 });
