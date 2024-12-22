@@ -6,8 +6,8 @@ const path = require("path");
 module.exports = {
     config: {
         name: "สร้างภาพสมจริง",
-        version: "1.7.0",
-        description: "สร้างภาพสมจริงจาก AI API โดยคิดค่าบริการ 1 บาทต่อภาพ",
+        version: "1.8.0",
+        description: "สร้างภาพสมจริงจาก AI API พร้อมการจัดการข้อผิดพลาด",
         commandCategory: "image",
         usages: "<คำอธิบายภาพ>",
         cooldowns: 5
@@ -50,14 +50,25 @@ module.exports = {
         try {
             // เรียก API เพื่อสร้างภาพ
             const apiUrl = `https://kaiz-apis.gleeze.com/api/flux-1.1-pro?prompt=${encodeURIComponent(prompt)}`;
+            console.log("Requesting API:", apiUrl);
+
             const response = await axios.get(apiUrl);
 
             if (!response || !response.data) {
-                throw new Error("❌ API ไม่ได้ส่งข้อมูลภาพกลับมา");
+                throw new Error("API ไม่ได้ส่งข้อมูลกลับมา");
+            }
+            if (typeof response.data !== "string" || !response.data.startsWith("http")) {
+                throw new Error("API ส่งข้อมูลไม่ถูกต้อง (ไม่ได้ส่ง URL)");
             }
 
-            // ดาวน์โหลดภาพจาก URL ที่ส่งกลับ
+            console.log("API Response Data:", response.data);
+
+            // ดาวน์โหลดภาพจาก URL
             const imageResponse = await axios.get(response.data, { responseType: "arraybuffer" });
+            if (!imageResponse || !imageResponse.data) {
+                throw new Error("ไม่สามารถดาวน์โหลดภาพจาก URL ได้");
+            }
+
             const imageBuffer = Buffer.from(imageResponse.data, "binary");
             const readableStream = new stream.PassThrough();
             readableStream.end(imageBuffer);
@@ -78,7 +89,7 @@ module.exports = {
                 () => api.unsendMessage(statusMessage.messageID)
             );
         } catch (error) {
-            console.error(error);
+            console.error("Error:", error.message);
 
             // แจ้งข้อผิดพลาดและลบข้อความสถานะ
             api.sendMessage(
