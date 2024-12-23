@@ -1,26 +1,47 @@
-// ตัวอย่างไฟล์ commands/autoreply.js
+const axios = require("axios");
+
 module.exports.config = {
-    name: "autoreply",
-    description: "เปิดหรือปิดโหมดตอบกลับอัตโนมัติ"
+    name: "คุยกับลูฟี่",
+    version: "1.0.0",
+    hasPermssion: 0,
+    credits: "ต้นสุดหล่อ",
+    description: "พูดคุยกับลูฟี่ พร้อมแสดงเวลาในการประมวลผล!",
+    commandCategory: "ทั่วไป",
+    usages: "[คำถาม]",
+    cooldowns: 0
 };
 
-module.exports.run = async ({ api, event, args }) => {
-    // ถ้าใช้ /autoreply on
-    if (args[0] === "on") {
-        global.autoReplyThreads[event.threadID] = true;
-        return api.sendMessage("เปิดโหมดตอบกลับอัตโนมัติในห้องนี้แล้ว", event.threadID, event.messageID);
+module.exports.run = async function({ api, event, args }) {
+    const startTime = Date.now(); // เริ่มจับเวลา
+    const question = args.join(" ");
+    const userID = event.senderID;
+
+    if (!question) {
+        return api.sendMessage("💬 กรุณาพิมพ์คำถามที่ต้องการถามลูฟี่!", event.threadID, event.messageID);
     }
-    // ถ้าใช้ /autoreply off
-    else if (args[0] === "off") {
-        global.autoReplyThreads[event.threadID] = false;
-        return api.sendMessage("ปิดโหมดตอบกลับอัตโนมัติในห้องนี้แล้ว", event.threadID, event.messageID);
-    }
-    // ถ้าไม่ได้พิมพ์ on/off
-    else {
-        return api.sendMessage(
-            "โปรดพิมพ์: autoreply on หรือ autoreply off",
-            event.threadID,
-            event.messageID
-        );
+
+    try {
+        // ดึงคำตอบจาก API
+        const response = await axios.get(`https://kaiz-apis.gleeze.com/api/luffy-ai`, {
+            params: {
+                question: question,
+                uid: userID
+            }
+        });
+
+        // คำนวณเวลาในการประมวลผล
+        const processingTime = ((Date.now() - startTime) / 1000).toFixed(2); // แปลงเป็นวินาที
+
+        // ข้อความตอบกลับกระชับ
+        const replyMessage = `
+⏰ ${processingTime}
+💬 ${response.data.response}
+        `;
+
+        // ส่งข้อความกลับไป
+        api.sendMessage(replyMessage.trim(), event.threadID, event.messageID);
+    } catch (error) {
+        console.error("เกิดข้อผิดพลาดในการคุยกับลูฟี่:", error);
+        api.sendMessage("⏰ เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่!", event.threadID, event.messageID);
     }
 };
