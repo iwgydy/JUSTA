@@ -247,7 +247,7 @@ function loadBotsFromFiles() {
 app.get("/", (req, res) => {
     const data = generateBotData(); 
 
-    // เปลี่ยนเฉพาะธีมให้เป็นคริสต์มาส 2025 + เพิ่มเอฟเฟกต์หิมะตก
+    // เปลี่ยนเฉพาะธีมให้เป็นคริสต์มาส 2025 + เพิ่มเอฟเฟกต์หิมะตกให้สมจริง
     res.send(`
         <!DOCTYPE html>
         <html lang="th">
@@ -275,13 +275,13 @@ app.get("/", (req, res) => {
                     font-family: 'Roboto', sans-serif;
                     position: relative;
                     overflow-x: hidden;
-                }
-
-                /* เพิ่ม Flexbox Layout */
-                html, body {
-                    height: 100%;
                     margin: 0;
                     padding: 0;
+                }
+
+                /* Flex Layout */
+                html, body {
+                    height: 100%;
                 }
                 body {
                     display: flex;
@@ -498,27 +498,23 @@ app.get("/", (req, res) => {
                     50% { transform: translateY(-10px); }
                 }
 
-                /* =========== หิมะตก =========== */
+                /* =========== หิมะตกแบบสมจริง =========== */
                 .snowflake {
                     position: fixed;
-                    top: -10px;
+                    top: -10%;
+                    /* ใช้ top เป็น -10% เพื่อกันไม่ให้หิมะโผล่มาเห็นก่อนจะเริ่มแอนิเมชัน */
                     z-index: 9999;
                     pointer-events: none;
-                    animation-name: snowflakes-fall, snowflakes-shake;
-                    animation-duration: 10s, 3s;
-                    animation-timing-function: linear, ease-in-out;
-                    animation-iteration-count: infinite, infinite;
                     color: #fff;
-                    font-size: 1rem;
+                    opacity: 0.8;
+                    /* animation จะถูกกำหนดแบบสุ่มผ่าน JS */
                 }
-                @keyframes snowflakes-fall {
-                    0% { top: -10%; }
-                    100% { top: 100%; }
-                }
-                @keyframes snowflakes-shake {
-                    0% { transform: translateX(0px); }
-                    50% { transform: translateX(80px); }
-                    100% { transform: translateX(0px); }
+
+                /* ตั้งค่า keyframes เพื่อให้หิมะร่วงลงมาพร้อมการหมุนและการส่าย (drift) */
+                @keyframes snowfall {
+                    0% { transform: translateX(0) translateY(0) rotate(0deg); }
+                    50% { transform: translateX(30px) translateY(50vh) rotate(180deg); }
+                    100% { transform: translateX(-30px) translateY(100vh) rotate(360deg); }
                 }
 
                 /* Responsive */
@@ -637,6 +633,7 @@ app.get("/", (req, res) => {
                 </div>
             </footer>
 
+            <!-- สคริปต์หลัก -->
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
             <script src="/socket.io/socket.io.js"></script>
             <script>
@@ -811,21 +808,42 @@ app.get("/", (req, res) => {
                     }
                 });
 
-                // ========== สคริปต์สร้างหิมะตก ==========
+                // ========== สคริปต์สร้างหิมะตกสมจริง ==========
                 document.addEventListener('DOMContentLoaded', function() {
-                    let snowflakesCount = 40; // จำนวนหิมะที่ต้องการ
+                    // จำนวนหิมะที่ต้องการ
+                    const snowflakesCount = 60;
 
+                    // ตัวเลือกสัญลักษณ์หิมะ เพื่อให้ดูหลากหลาย
+                    const snowSymbols = ['❄', '❅', '❆', '✻', '✼'];
+
+                    // ฟังก์ชันสุ่มตัวเลขระหว่าง min กับ max
                     function randomIntBetween(min, max) {
                         return Math.floor(Math.random() * (max - min + 1) + min);
                     }
 
+                    // ฟังก์ชันสุ่มเลือกสัญลักษณ์หิมะ
+                    function randomSnowSymbol() {
+                        return snowSymbols[Math.floor(Math.random() * snowSymbols.length)];
+                    }
+
                     for (let i = 0; i < snowflakesCount; i++) {
-                        let snowflake = document.createElement('div');
+                        const snowflake = document.createElement('div');
                         snowflake.classList.add('snowflake');
-                        snowflake.style.left = randomIntBetween(0, window.innerWidth) + 'px';
-                        snowflake.style.opacity = Math.random();
-                        snowflake.style.fontSize = randomIntBetween(10, 20) + 'px';
-                        snowflake.textContent = '❄';
+
+                        // กำหนดค่าแบบสุ่ม
+                        const size = randomIntBetween(15, 30); // ขนาดตัวอักษร (px)
+                        const leftPos = Math.random() * 100;   // ตำแหน่ง left เป็นเปอร์เซ็นต์
+                        const delay = Math.random() * 5;       // หน่วงเวลาเริ่มต้น (s)
+                        const duration = randomIntBetween(10, 20); // ระยะเวลาที่หิมะร่วง (s)
+                        const rotateStart = randomIntBetween(0, 360);
+
+                        snowflake.style.left = leftPos + '%';
+                        snowflake.style.fontSize = size + 'px';
+                        snowflake.style.animation = \`snowfall \${duration}s linear \${delay}s infinite\`;
+                        snowflake.style.transform = \`rotate(\${rotateStart}deg)\`; 
+                        snowflake.style.opacity = Math.random() * 0.6 + 0.4; // ให้ความโปร่งใสหลากหลาย
+                        snowflake.textContent = randomSnowSymbol();
+
                         document.body.appendChild(snowflake);
                     }
                 });
