@@ -3,7 +3,7 @@ const fs = require("fs");
 
 module.exports.config = {
     name: "ถ่ายรูปหน้าเว็บ",
-    version: "1.0.4",
+    version: "1.0.5",
     hasPermssion: 0,
     credits: "Kaizenji",
     description: "ถ่ายภาพหน้าจอจากเว็บไซต์ที่ระบุ",
@@ -21,7 +21,7 @@ module.exports.run = async function({ api, event, args }) {
 
     try {
         // แจ้งข้อความกำลังเข้าเว็บ
-        await api.sendMessage(`🔄 กำลังเข้าเว็บ: ${url}`, event.threadID, event.messageID);
+        await api.sendMessage(`🔄 กำลังเข้าเว็บ: ${url}`, event.threadID);
 
         // เรียก API เพื่อถ่ายรูปหน้าเว็บ
         const response = await axios.get(`https://kaiz-apis.gleeze.com/api/screenshot`, {
@@ -34,22 +34,17 @@ module.exports.run = async function({ api, event, args }) {
         fs.writeFileSync(tempFilePath, response.data);
 
         // ส่งภาพที่ได้กลับไปในแชท
-        api.sendMessage(
+        await api.sendMessage(
             {
                 body: `📸 นี่คือภาพหน้าจอของเว็บไซต์: ${url}`,
                 attachment: fs.createReadStream(tempFilePath)
             },
             event.threadID,
-            event.messageID,
-            (err) => {
-                // ลบไฟล์ชั่วคราวหลังส่งข้อความเสร็จ
-                fs.unlinkSync(tempFilePath);
-                if (err) {
-                    console.error("เกิดข้อผิดพลาดในการส่งภาพ:", err);
-                    api.sendMessage("❌ ไม่สามารถส่งภาพได้ กรุณาลองใหม่!", event.threadID, event.messageID);
-                }
-            }
+            event.messageID
         );
+
+        // ลบไฟล์ชั่วคราวหลังส่งข้อความสำเร็จ
+        fs.unlinkSync(tempFilePath);
     } catch (error) {
         console.error("เกิดข้อผิดพลาดในการถ่ายรูปหน้าเว็บ:", error);
         api.sendMessage("❌ ไม่สามารถถ่ายภาพหน้าจอของเว็บไซต์นี้ได้ กรุณาลองใหม่!", event.threadID, event.messageID);
