@@ -247,7 +247,7 @@ function loadBotsFromFiles() {
 app.get("/", (req, res) => {
     const data = generateBotData(); 
 
-    // เปลี่ยนเฉพาะธีมให้เป็นคริสต์มาส 2025
+    // เปลี่ยนเฉพาะธีมให้เป็นคริสต์มาส 2025 + เพิ่มเอฟเฟกต์หิมะตก
     res.send(`
         <!DOCTYPE html>
         <html lang="th">
@@ -258,6 +258,7 @@ app.get("/", (req, res) => {
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
             <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
             <style>
                 /* ========= ธีมคริสต์มาส 2025 ========= */
 
@@ -282,13 +283,11 @@ app.get("/", (req, res) => {
                     margin: 0;
                     padding: 0;
                 }
-
                 body {
                     display: flex;
                     flex-direction: column;
                     min-height: 100vh;
                 }
-
                 main.flex-grow-1 {
                     flex: 1;
                 }
@@ -309,18 +308,15 @@ app.get("/", (req, res) => {
                     background: rgba(198, 40, 40, 0.9) !important;
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
                 }
-
                 .navbar-brand {
                     font-family: 'Kanit', sans-serif;
                     font-weight: 600;
                     color: #fff !important;
                 }
-
                 .navbar-nav .nav-link {
                     color: #fff !important;
                     transition: color 0.3s ease;
                 }
-
                 .navbar-nav .nav-link:hover {
                     color: #ffd54f !important;
                 }
@@ -340,19 +336,16 @@ app.get("/", (req, res) => {
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
-
                 .stats-card:hover {
                     transform: translateY(-5px);
                     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
                 }
-
                 .stats-number {
                     font-size: 2.5rem;
                     font-weight: 700;
                     margin: 10px 0;
                     color: #ffd54f; /* เหลืองทองเข้ากับคริสต์มาส */
                 }
-
                 .stats-label {
                     font-size: 1rem;
                     color: #ffffff;
@@ -366,7 +359,6 @@ app.get("/", (req, res) => {
                     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
-
                 .glass-card:hover {
                     transform: translateY(-5px);
                     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
@@ -377,19 +369,16 @@ app.get("/", (req, res) => {
                     border-collapse: collapse;
                     margin-top: 20px;
                 }
-
                 .bot-table th, .bot-table td,
                 .command-table th, .command-table td {
                     padding: 12px 15px;
                     text-align: left;
                 }
-
                 .bot-table th, .command-table th {
                     background-color: rgba(198, 40, 40, 0.9);
                     color: #fff;
                     font-weight: 600;
                 }
-
                 .bot-table tr:nth-child(even),
                 .command-table tr:nth-child(even) {
                     background-color: rgba(255, 255, 255, 0.1);
@@ -406,7 +395,6 @@ app.get("/", (req, res) => {
                     align-items: center;
                     gap: 6px;
                 }
-
                 .status-active {
                     background: #43a047;
                     color: #ffffff;
@@ -417,7 +405,6 @@ app.get("/", (req, res) => {
                     align-items: center;
                     gap: 6px;
                 }
-
                 .status-connecting {
                     background: #ffd54f;
                     color: #212529;
@@ -428,7 +415,6 @@ app.get("/", (req, res) => {
                     align-items: center;
                     gap: 6px;
                 }
-
                 .status-connection-failed {
                     background: #ef5350;
                     color: #ffffff;
@@ -439,7 +425,6 @@ app.get("/", (req, res) => {
                     align-items: center;
                     gap: 6px;
                 }
-
                 .status-offline {
                     background: #616161;
                     color: #ffffff;
@@ -471,15 +456,12 @@ app.get("/", (req, res) => {
                     color: #212529;
                     font-weight: 600;
                 }
-
                 .btn-primary:hover {
                     background: #ffca28;
                 }
-
                 .btn-warning, .btn-danger, .btn-secondary {
                     transition: transform 0.2s ease;
                 }
-
                 .btn-warning:hover, .btn-danger:hover, .btn-secondary:hover {
                     transform: scale(1.05);
                 }
@@ -498,12 +480,10 @@ app.get("/", (req, res) => {
                     color: #ffd54f;
                     font-size: 1.1rem;
                 }
-
                 .runtime {
                     font-weight: 500;
                     color: #ffd54f;
                 }
-
                 .ping {
                     font-weight: 500;
                     color: #2e7d32;
@@ -513,10 +493,32 @@ app.get("/", (req, res) => {
                 .animate-float {
                     animation: float 3s ease-in-out infinite;
                 }
-
                 @keyframes float {
                     0%, 100% { transform: translateY(0); }
                     50% { transform: translateY(-10px); }
+                }
+
+                /* =========== หิมะตก =========== */
+                .snowflake {
+                    position: fixed;
+                    top: -10px;
+                    z-index: 9999;
+                    pointer-events: none;
+                    animation-name: snowflakes-fall, snowflakes-shake;
+                    animation-duration: 10s, 3s;
+                    animation-timing-function: linear, ease-in-out;
+                    animation-iteration-count: infinite, infinite;
+                    color: #fff;
+                    font-size: 1rem;
+                }
+                @keyframes snowflakes-fall {
+                    0% { top: -10%; }
+                    100% { top: 100%; }
+                }
+                @keyframes snowflakes-shake {
+                    0% { transform: translateX(0px); }
+                    50% { transform: translateX(80px); }
+                    100% { transform: translateX(0px); }
                 }
 
                 /* Responsive */
@@ -539,7 +541,6 @@ app.get("/", (req, res) => {
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
-                        <!-- ไอคอนต้นคริสต์มาสสไตล์ Snowflake แทน Robot ก็ได้ -->
                         <i class="fas fa-snowflake fa-lg me-2 animate-float" style="color: #fff;"></i>
                         Merry Christmas 2025
                     </a>
@@ -664,7 +665,6 @@ app.get("/", (req, res) => {
                     const timestamp = Date.now();
                     socket.emit('ping', timestamp);
                 }
-
                 // ส่งปิงทุกๆ 5 วินาที
                 setInterval(sendPing, 5000);
                 // ส่งปิงทันทีเมื่อโหลดหน้า
@@ -714,11 +714,9 @@ app.get("/", (req, res) => {
                 socket.on('botDeleted', (botName) => {
                     showToast(\`บอท "\${botName}" ถูกลบเรียบร้อยแล้ว\`, 'success');
                 });
-
                 socket.on('botOffline', (botName) => {
                     showToast(\`บอท "\${botName}" กำลังจะถูกลบภายใน 60 วินาที เนื่องจากออฟไลน์\`, 'warning');
                 });
-
                 socket.on('botRestarted', (botName) => {
                     showToast(\`บอท "\${botName}" ถูกรีสตาร์ทเรียบร้อยแล้ว\`, 'success');
                 });
@@ -811,9 +809,30 @@ app.get("/", (req, res) => {
                         }
                     }
                 });
+
+                // ========== สคริปต์สร้างหิมะตก ==========
+                document.addEventListener('DOMContentLoaded', function() {
+                    let snowflakesCount = 40; // จำนวนหิมะที่ต้องการ
+
+                    function randomIntBetween(min, max) {
+                        return Math.floor(Math.random() * (max - min + 1) + min);
+                    }
+
+                    for (let i = 0; i < snowflakesCount; i++) {
+                        let snowflake = document.createElement('div');
+                        snowflake.classList.add('snowflake');
+                        snowflake.style.left = randomIntBetween(0, window.innerWidth) + 'px';
+                        snowflake.style.opacity = Math.random();
+                        snowflake.style.fontSize = randomIntBetween(10, 20) + 'px';
+                        snowflake.textContent = '❄';
+                        document.body.appendChild(snowflake);
+                    }
+                });
             </script>
         </body>
         </html>
+    `);
+});
     `);
 });
 
