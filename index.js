@@ -1747,7 +1747,8 @@ app.get("/bots", (req, res) => {
 // หน้าแสดงคำสั่งที่ใช้
 app.get("/commands", (req, res) => {
     const commandsData = generateCommandData();
-    // เปลี่ยนเฉพาะธีมเป็นคริสต์มาส 2025
+
+    // เปลี่ยนเฉพาะธีมเป็นคริสต์มาส 2025 + เพิ่มหิมะตก
     res.send(`
         <!DOCTYPE html>
         <html lang="th">
@@ -1766,18 +1767,19 @@ app.get("/commands", (req, res) => {
                 }
 
                 body {
-                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png') no-repeat center center fixed;
+                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png')
+                        no-repeat center center fixed;
                     background-size: cover;
                     color: #ffffff;
                     font-family: 'Roboto', sans-serif;
                     position: relative;
                     overflow-x: hidden;
+                    margin: 0;
+                    padding: 0;
                 }
 
                 html, body {
                     height: 100%;
-                    margin: 0;
-                    padding: 0;
                 }
 
                 body {
@@ -1804,13 +1806,11 @@ app.get("/commands", (req, res) => {
                     background: rgba(198, 40, 40, 0.9) !important;
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
                 }
-
                 .navbar-brand {
                     font-family: 'Kanit', sans-serif;
                     font-weight: 600;
                     color: #fff !important;
                 }
-
                 .navbar-nav .nav-link {
                     color: #fff !important;
                     transition: color 0.3s ease;
@@ -1827,7 +1827,6 @@ app.get("/commands", (req, res) => {
                     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
-
                 .glass-card:hover {
                     transform: translateY(-5px);
                     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
@@ -1838,18 +1837,15 @@ app.get("/commands", (req, res) => {
                     border-collapse: collapse;
                     margin-top: 20px;
                 }
-
                 .command-table th, .command-table td {
                     padding: 12px 15px;
                     text-align: left;
                 }
-
                 .command-table th {
                     background-color: rgba(198, 40, 40, 0.9);
                     color: #fff;
                     font-weight: 600;
                 }
-
                 .command-table tr:nth-child(even) {
                     background-color: rgba(255, 255, 255, 0.1);
                 }
@@ -1889,12 +1885,46 @@ app.get("/commands", (req, res) => {
                     0%, 100% { transform: translateY(0); }
                     50% { transform: translateY(-10px); }
                 }
+
                 @media (max-width: 768px) {
                     .glass-card {
                         margin-bottom: 20px;
                     }
                     .command-table th, .command-table td {
                         padding: 8px 10px;
+                    }
+                }
+
+                /* ===== ใส่เอฟเฟกต์หิมะ ===== */
+                #snow-container {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    pointer-events: none; 
+                    overflow: hidden;
+                    z-index: 9999; /* บนสุด */
+                }
+                .snowflake {
+                    position: absolute;
+                    top: -2em; 
+                    color: #fff;
+                    font-size: 1.2em;
+                    pointer-events: none;
+                    user-select: none;
+                    animation-name: fall;
+                    animation-timing-function: linear;
+                    animation-iteration-count: 1;
+                }
+                @keyframes fall {
+                    0% {
+                        transform: translateY(-100%);
+                        opacity: 1;
+                    }
+                    100% {
+                        transform: translateY(120vh);
+                        opacity: 0;
                     }
                 }
             </style>
@@ -1907,22 +1937,31 @@ app.get("/commands", (req, res) => {
                         <i class="fas fa-snowflake fa-lg me-2 animate-float" style="color: #fff;"></i>
                         Merry Christmas 2025
                     </a>
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
+                            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                         <span class="navbar-toggler-icon"></span>
                     </button>
                     <div class="collapse navbar-collapse" id="navbarNav">
                         <ul class="navbar-nav ms-auto">
                             <li class="nav-item">
-                                <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
+                                <a class="nav-link" href="/start">
+                                    <i class="fas fa-plus-circle me-1"></i> เพิ่มบอท
+                                </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
+                                <a class="nav-link" href="/bots">
+                                    <i class="fas fa-list me-1"></i> ดูบอทรัน
+                                </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link active" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
+                                <a class="nav-link active" href="/commands">
+                                    <i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้
+                                </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="/how-to-make-bot"><i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง</a>
+                                <a class="nav-link" href="/how-to-make-bot">
+                                    <i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง
+                                </a>
                             </li>
                         </ul>
                     </div>
@@ -1960,8 +1999,42 @@ app.get("/commands", (req, res) => {
                 </div>
             </footer>
 
+            <!-- Container สำหรับหิมะ -->
+            <div id="snow-container"></div>
+
             <div class="toast-container"></div>
+
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+            <script>
+                // ========= สคริปต์หิมะตก =========
+                function createSnowflake() {
+                    const snowflakeText = "❄";
+                    const snowflake = document.createElement("span");
+                    snowflake.classList.add("snowflake");
+                    snowflake.textContent = snowflakeText;
+
+                    // สุ่มตำแหน่ง X
+                    snowflake.style.left = Math.random() * 100 + "%";
+
+                    // สุ่มขนาด + ระยะเวลาตก
+                    const size = (Math.random() * 1.2 + 0.5) + "em";
+                    const duration = (Math.random() * 5 + 5) + "s"; // 5-10 วินาที
+                    snowflake.style.fontSize = size;
+                    snowflake.style.animationDuration = duration;
+
+                    // ใส่ลงใน #snow-container
+                    const snowContainer = document.getElementById("snow-container");
+                    snowContainer.appendChild(snowflake);
+
+                    // ลบเมื่อแอนิเมชันจบ
+                    snowflake.addEventListener("animationend", () => {
+                        snowflake.remove();
+                    });
+                }
+
+                // สร้างหิมะทุก 300ms (ปรับได้)
+                setInterval(createSnowflake, 300);
+            </script>
         </body>
         </html>
     `);
