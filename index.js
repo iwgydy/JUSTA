@@ -541,6 +541,7 @@ app.get("/", (req, res) => {
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
+                        <!-- ไอคอนต้นคริสต์มาสสไตล์ Snowflake แทน Robot ก็ได้ -->
                         <i class="fas fa-snowflake fa-lg me-2 animate-float" style="color: #fff;"></i>
                         Merry Christmas 2025
                     </a>
@@ -831,8 +832,6 @@ app.get("/", (req, res) => {
             </script>
         </body>
         </html>
-    `);
-});
     `);
 });
 
