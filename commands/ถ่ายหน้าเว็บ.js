@@ -3,7 +3,7 @@ const fs = require("fs");
 
 module.exports.config = {
     name: "ถ่ายรูปหน้าเว็บ",
-    version: "1.0.2",
+    version: "1.0.4",
     hasPermssion: 0,
     credits: "Kaizenji",
     description: "ถ่ายภาพหน้าจอจากเว็บไซต์ที่ระบุ",
