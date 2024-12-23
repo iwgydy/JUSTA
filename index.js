@@ -1275,7 +1275,7 @@ app.get("/start", (req, res) => {
 app.get("/bots", (req, res) => {
     const data = generateBotData(); 
 
-    // เปลี่ยนเฉพาะธีมเป็นคริสต์มาส 2025
+    // เปลี่ยนเฉพาะธีมเป็นคริสต์มาส 2025 + หิมะตก
     res.send(`
         <!DOCTYPE html>
         <html lang="th">
@@ -1300,12 +1300,12 @@ app.get("/bots", (req, res) => {
                     font-family: 'Roboto', sans-serif;
                     position: relative;
                     overflow-x: hidden;
+                    margin: 0;
+                    padding: 0;
                 }
 
                 html, body {
                     height: 100%;
-                    margin: 0;
-                    padding: 0;
                 }
 
                 body {
@@ -1338,7 +1338,6 @@ app.get("/bots", (req, res) => {
                     font-weight: 600;
                     color: #fff !important;
                 }
-
                 .navbar-nav .nav-link {
                     color: #fff !important;
                     transition: color 0.3s ease;
@@ -1355,7 +1354,6 @@ app.get("/bots", (req, res) => {
                     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
-
                 .glass-card:hover {
                     transform: translateY(-5px);
                     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
@@ -1366,19 +1364,16 @@ app.get("/bots", (req, res) => {
                     border-collapse: collapse;
                     margin-top: 20px;
                 }
-
                 .bot-table th, .bot-table td,
                 .command-table th, .command-table td {
                     padding: 12px 15px;
                     text-align: left;
                 }
-
                 .bot-table th, .command-table th {
                     background-color: rgba(198, 40, 40, 0.9);
                     color: #fff;
                     font-weight: 600;
                 }
-
                 .bot-table tr:nth-child(even),
                 .command-table tr:nth-child(even) {
                     background-color: rgba(255, 255, 255, 0.1);
@@ -1394,7 +1389,6 @@ app.get("/bots", (req, res) => {
                     align-items: center;
                     gap: 6px;
                 }
-
                 .status-active {
                     background: #43a047;
                     color: #ffffff;
@@ -1405,7 +1399,6 @@ app.get("/bots", (req, res) => {
                     align-items: center;
                     gap: 6px;
                 }
-
                 .status-connecting {
                     background: #ffd54f;
                     color: #212529;
@@ -1416,7 +1409,6 @@ app.get("/bots", (req, res) => {
                     align-items: center;
                     gap: 6px;
                 }
-
                 .status-connection-failed {
                     background: #ef5350;
                     color: #ffffff;
@@ -1427,7 +1419,6 @@ app.get("/bots", (req, res) => {
                     align-items: center;
                     gap: 6px;
                 }
-
                 .status-offline {
                     background: #616161;
                     color: #ffffff;
@@ -1459,7 +1450,6 @@ app.get("/bots", (req, res) => {
                     color: #ffd54f;
                     font-size: 1.1rem;
                 }
-
                 .runtime {
                     font-weight: 500;
                     color: #ffd54f;
@@ -1484,6 +1474,39 @@ app.get("/bots", (req, res) => {
                     .bot-table th, .bot-table td,
                     .command-table th, .command-table td {
                         padding: 8px 10px;
+                    }
+                }
+
+                /* ===== เพิ่มเอฟเฟกต์หิมะ ===== */
+                #snow-container {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    pointer-events: none; /* ไม่ให้เมาส์คลิกโดน */
+                    overflow: hidden;
+                    z-index: 9999; /* บนสุด */
+                }
+                .snowflake {
+                    position: absolute;
+                    top: -2em; /* เริ่มเหนือจอ */
+                    color: #fff; /* สีขาว */
+                    font-size: 1.2em;
+                    pointer-events: none;
+                    user-select: none;
+                    animation-name: fall;
+                    animation-timing-function: linear;
+                    animation-iteration-count: 1;
+                }
+                @keyframes fall {
+                    0% {
+                        transform: translateY(-100%);
+                        opacity: 1;
+                    }
+                    100% {
+                        transform: translateY(120vh);
+                        opacity: 0;
                     }
                 }
             </style>
@@ -1551,6 +1574,9 @@ app.get("/bots", (req, res) => {
                 </div>
             </footer>
 
+            <!-- Container สำหรับหิมะ -->
+            <div id="snow-container"></div>
+
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
             <script src="/socket.io/socket.io.js"></script>
             <script>
@@ -1579,17 +1605,12 @@ app.get("/bots", (req, res) => {
                 sendPing();
 
                 function showToast(message, type = 'info') {
-                    // หน้า /bots ยังไม่มี .toast-container? ถ้าต้องการ toast ให้เพิ่มเอง
+                    // หน้า /bots ยังไม่มี .toast-container? ถ้าต้องการ toast ให้เพิ่มได้
                     console.log(\`[\${type}] \${message}\`);
                 }
 
                 socket.on('updateBots', (data) => {
-                    const totalBotsEl = document.getElementById('totalBots');
-                    const onlineBotsEl = document.getElementById('onlineBots');
-                    const activeBotsEl = document.getElementById('activeBots');
-                    const websitePingEl = document.getElementById('websitePing');
-                    
-                    // หน้า /bots อาจไม่มี 4 id ข้างบน หากต้องการอัปเดต ก็สร้าง element เอง
+                    // ถ้าต้องการอัปเดต element อื่น เช่น totalBots, onlineBots, ฯลฯ ก็เพิ่มเองได้
                     const botTableBody = document.getElementById('botTableBody');
                     if (botTableBody) {
                         botTableBody.innerHTML = data.botRows;
@@ -1610,6 +1631,7 @@ app.get("/bots", (req, res) => {
                 setInterval(updateRuntime, 1000);
                 document.addEventListener('DOMContentLoaded', updateRuntime);
 
+                // จัดการปุ่ม ลบ / แก้ไข / รีสตาร์ท
                 document.addEventListener('click', function(event) {
                     if (event.target.closest('.delete-btn')) {
                         const token = decodeURIComponent(event.target.closest('.delete-btn').getAttribute('data-token'));
@@ -1617,9 +1639,7 @@ app.get("/bots", (req, res) => {
                         if (deleteCode) {
                             fetch('/delete', {
                                 method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
+                                headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ token, code: deleteCode })
                             })
                             .then(response => response.json())
@@ -1636,6 +1656,7 @@ app.get("/bots", (req, res) => {
                             });
                         }
                     }
+
                     if (event.target.closest('.edit-btn')) {
                         const token = decodeURIComponent(event.target.closest('.edit-btn').getAttribute('data-token'));
                         const editCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการแก้ไขโทเค่น:');
@@ -1644,9 +1665,7 @@ app.get("/bots", (req, res) => {
                             if (newToken) {
                                 fetch('/edit', {
                                     method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json'
-                                    },
+                                    headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ token, code: editCode, newToken })
                                 })
                                 .then(response => response.json())
@@ -1664,15 +1683,14 @@ app.get("/bots", (req, res) => {
                             }
                         }
                     }
+
                     if (event.target.closest('.restart-btn')) {
                         const token = decodeURIComponent(event.target.closest('.restart-btn').getAttribute('data-token'));
                         const restartCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการรีสตาร์ทบอท:');
                         if (restartCode) {
                             fetch('/restart', {
                                 method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
+                                headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ token, code: restartCode })
                             })
                             .then(response => response.json())
@@ -1691,6 +1709,35 @@ app.get("/bots", (req, res) => {
                         }
                     }
                 });
+
+                // ========= สคริปต์หิมะตก =========
+                function createSnowflake() {
+                    const snowflakeText = "❄"; // หรือจะ random หลาย ๆ ตัวก็ได้
+                    const snowflake = document.createElement("span");
+                    snowflake.classList.add("snowflake");
+                    snowflake.textContent = snowflakeText;
+
+                    // สุ่มตำแหน่ง X
+                    snowflake.style.left = Math.random() * 100 + "%";
+
+                    // สุ่มขนาด + ระยะเวลาตก
+                    const size = (Math.random() * 1.2 + 0.5) + "em";
+                    const duration = (Math.random() * 5 + 5) + "s"; // 5-10 วินาที
+                    snowflake.style.fontSize = size;
+                    snowflake.style.animationDuration = duration;
+
+                    // เพิ่มเข้าใน #snow-container
+                    const snowContainer = document.getElementById("snow-container");
+                    snowContainer.appendChild(snowflake);
+
+                    // ลบเมื่อแอนิเมชันจบ
+                    snowflake.addEventListener("animationend", () => {
+                        snowflake.remove();
+                    });
+                }
+
+                // สร้างหิมะทุก 300ms
+                setInterval(createSnowflake, 300);
             </script>
         </body>
         </html>
