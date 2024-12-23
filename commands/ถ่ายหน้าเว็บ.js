@@ -1,8 +1,9 @@
 const axios = require("axios");
+const fs = require("fs");
 
 module.exports.config = {
     name: "ถ่ายรูปหน้าเว็บ",
-    version: "1.0.0",
+    version: "1.0.1",
     hasPermssion: 0,
     credits: "Kaizenji",
     description: "ถ่ายภาพหน้าจอจากเว็บไซต์ที่ระบุ",
@@ -25,17 +26,25 @@ module.exports.run = async function({ api, event, args }) {
         // เรียก API เพื่อถ่ายรูปหน้าเว็บ
         const response = await axios.get(`https://kaiz-apis.gleeze.com/api/screenshot`, {
             params: { url: url },
-            responseType: "arraybuffer" // รับข้อมูลภาพเป็นบัฟเฟอร์
+            responseType: "arraybuffer" // รับข้อมูลภาพเป็น buffer
         });
+
+        // สร้างไฟล์ภาพชั่วคราว
+        const tempFilePath = `${__dirname}/screenshot.png`;
+        fs.writeFileSync(tempFilePath, response.data);
 
         // ส่งภาพที่ได้กลับไปในแชท
         api.sendMessage(
             {
                 body: `📸 นี่คือภาพหน้าจอของเว็บไซต์: ${url}`,
-                attachment: Buffer.from(response.data, "binary")
+                attachment: fs.createReadStream(tempFilePath)
             },
             event.threadID,
-            event.messageID
+            event.messageID,
+            () => {
+                // ลบไฟล์ชั่วคราวหลังส่งข้อความเสร็จ
+                fs.unlinkSync(tempFilePath);
+            }
         );
     } catch (error) {
         console.error("เกิดข้อผิดพลาดในการถ่ายรูปหน้าเว็บ:", error);
