@@ -1,11 +1,11 @@
 const axios = require("axios");
 const fs = require("fs");
 
-let lastImage = null; // เก็บภาพล่าสุดที่ส่งมา
+let lastImage = null; // ตัวแปรสำหรับเก็บข้อมูลภาพล่าสุด
 
 module.exports.config = {
     name: "เปลี่ยนภาพเป็นลิงค์",
-    version: "1.1.0",
+    version: "1.1.1",
     hasPermssion: 0,
     credits: "Sumiproject API",
     description: "แปลงภาพล่าสุดที่ส่งให้กลายเป็นลิงก์",
@@ -15,13 +15,15 @@ module.exports.config = {
 };
 
 module.exports.handleEvent = function({ event }) {
+    // ตรวจสอบว่ามีการแนบไฟล์ภาพหรือไม่
     if (event.attachments && event.attachments.length > 0) {
-        // บันทึกภาพล่าสุดเมื่อผู้ใช้ส่งภาพ
+        // เก็บ URL ของภาพล่าสุดไว้ในตัวแปร lastImage
         lastImage = event.attachments[0];
     }
 };
 
 module.exports.run = async function({ api, event }) {
+    // ตรวจสอบว่ามีภาพล่าสุดถูกเก็บไว้หรือไม่
     if (!lastImage) {
         return api.sendMessage(
             "❌ กรุณาส่งภาพก่อนแล้วพิมพ์คำสั่ง `/เปลี่ยนภาพเป็นลิงค์` อีกครั้ง!",
