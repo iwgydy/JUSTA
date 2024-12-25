@@ -92,6 +92,7 @@ loadCommandUsage();
 // โหลดอีเวนต์จากโฟลเดอร์ events
 const events = {};
 const eventsPath = path.join(__dirname, 'events');
+
 if (fs.existsSync(eventsPath)) {
     fs.readdirSync(eventsPath).forEach((file) => {
         if (file.endsWith(".js")) {
@@ -101,7 +102,7 @@ if (fs.existsSync(eventsPath)) {
                     if (!events[type]) events[type] = [];
                     events[type].push(event);
                 });
-                console.log(🔔 โหลดอีเวนต์: ${file});
+                console.log(`🔔 โหลดอีเวนต์: ${file}`); // แก้ไขที่นี่: ใช้ Template Literals ด้วยเครื่องหมาย ``
             }
         }
     });
