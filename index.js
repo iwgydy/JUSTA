@@ -1814,7 +1814,7 @@ app.get("/bots", (req, res) => {
 
 // หน้าแสดงคำสั่งที่ใช้
 app.get("/commands", (req, res) => {
-    const commandsData = generateCommandData();
+    const commandsData = generateCommandData(); // คำสั่งต้องถูกจัดเรียงจากมากไปน้อยแล้ว
 
     // เปลี่ยนเฉพาะธีมเป็นคริสต์มาส 2025 + เพิ่มหิมะตก พร้อมฟีเจอร์เพิ่มเติม
     res.send(`
@@ -1832,11 +1832,14 @@ app.get("/commands", (req, res) => {
                 :root {
                     --primary-color: #c62828;
                     --secondary-color: #2e7d32;
+                    --accent-color: #ffd54f;
+                    --background-overlay: rgba(0, 0, 0, 0.6);
+                    --card-background: rgba(255, 255, 255, 0.15);
+                    --card-border: rgba(255, 255, 255, 0.2);
                 }
 
                 body {
-                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png')
-                        no-repeat center center fixed;
+                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png') no-repeat center center fixed;
                     background-size: cover;
                     color: #ffffff;
                     font-family: 'Roboto', sans-serif;
@@ -1866,7 +1869,7 @@ app.get("/commands", (req, res) => {
                     left: 0;
                     width: 100%;
                     height: 100%;
-                    background: rgba(0, 0, 0, 0.6);
+                    background: var(--background-overlay);
                     z-index: -1;
                 }
 
@@ -1884,12 +1887,12 @@ app.get("/commands", (req, res) => {
                     transition: color 0.3s ease;
                 }
                 .navbar-nav .nav-link:hover {
-                    color: #ffd54f !important;
+                    color: var(--accent-color) !important;
                 }
 
                 .glass-card {
-                    background: rgba(255, 255, 255, 0.15);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    background: var(--card-background);
+                    border: 1px solid var(--card-border);
                     border-radius: 16px;
                     padding: 24px;
                     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
@@ -1920,7 +1923,7 @@ app.get("/commands", (req, res) => {
 
                 .footer {
                     background: rgba(198, 40, 40, 0.9);
-                    border-top: 2px solid rgba(255, 213, 79, 0.5);
+                    border-top: 2px solid var(--accent-color);
                     padding: 20px 0;
                     font-size: 0.9rem;
                     color: #ffffff;
@@ -1935,16 +1938,16 @@ app.get("/commands", (req, res) => {
 
                 .bot-name {
                     font-family: 'Press Start 2P', cursive;
-                    color: #ffd54f;
+                    color: var(--accent-color);
                     font-size: 1.1rem;
                 }
                 .runtime {
                     font-weight: 500;
-                    color: #ffd54f;
+                    color: var(--accent-color);
                 }
                 .ping {
                     font-weight: 500;
-                    color: #2e7d32;
+                    color: var(--secondary-color);
                 }
                 .animate-float {
                     animation: float 3s ease-in-out infinite;
@@ -2006,28 +2009,14 @@ app.get("/commands", (req, res) => {
                 }
                 #searchInput:focus {
                     outline: none;
-                    border-color: #ffd54f;
+                    border-color: var(--accent-color);
                     box-shadow: 0 0 5px rgba(255, 213, 79, 0.5);
-                }
-
-                /* ต้นคริสต์มาสเคลื่อนไหว */
-                .christmas-tree {
-                    position: fixed;
-                    bottom: 20px;
-                    left: 20px;
-                    width: 100px;
-                    animation: float-tree 6s ease-in-out infinite;
-                }
-
-                @keyframes float-tree {
-                    0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-10px); }
                 }
 
                 /* สไตล์สำหรับข้อความต้อนรับพิเศษ */
                 .festive-title {
                     font-family: 'Kanit', sans-serif;
-                    color: #ffd54f;
+                    color: var(--accent-color);
                     font-size: 2rem;
                     text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
                     animation: bounce 2s infinite;
@@ -2037,15 +2026,35 @@ app.get("/commands", (req, res) => {
                     0%, 100% { transform: translateY(0); }
                     50% { transform: translateY(-15px); }
                 }
+
+                /* สไตล์สำหรับอันดับ */
+                .rank-badge {
+                    font-size: 1rem;
+                    font-weight: bold;
+                    border-radius: 50%;
+                    width: 30px;
+                    height: 30px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: #fff;
+                }
+                .rank-1 {
+                    background-color: #ffd700; /* ทอง */
+                }
+                .rank-2 {
+                    background-color: #c0c0c0; /* เงิน */
+                }
+                .rank-3 {
+                    background-color: #cd7f32; /* ทองแดง */
+                }
+                .rank-4, .rank-5, .rank-6, .rank-7, .rank-8, .rank-9, .rank-10 {
+                    background-color: var(--secondary-color);
+                }
             </style>
         </head>
         <body>
             <div class="overlay"></div>
-
-            <!-- ต้นคริสต์มาสเคลื่อนไหว -->
-            <div class="christmas-tree">
-                <img src="https://i.postimg.cc/8zZx0gHk/christmas-tree.png" alt="Christmas Tree">
-            </div>
 
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
@@ -2099,13 +2108,14 @@ app.get("/commands", (req, res) => {
 
                     <div class="glass-card">
                         <h5 class="mb-4">
-                            <i class="fas fa-terminal me-2" style="color: #2e7d32;"></i>
+                            <i class="fas fa-terminal me-2" style="color: var(--secondary-color);"></i>
                             คำสั่งที่ใช้
                         </h5>
                         <div class="table-responsive">
                             <table class="table command-table">
                                 <thead>
                                     <tr>
+                                        <th>อันดับ</th>
                                         <th>ชื่อคำสั่ง</th>
                                         <th>จำนวนที่ใช้</th>
                                         <th>คำอธิบาย</th>
@@ -2167,12 +2177,30 @@ app.get("/commands", (req, res) => {
                     const query = this.value.toLowerCase();
                     const rows = document.querySelectorAll('#commandTableBody tr');
 
-                    rows.forEach(row => {
-                        const commandName = row.querySelector('td').textContent.toLowerCase();
+                    rows.forEach((row, index) => {
+                        const commandName = row.querySelectorAll('td')[1].textContent.toLowerCase();
                         if (commandName.includes(query)) {
                             row.style.display = '';
                         } else {
                             row.style.display = 'none';
+                        }
+                    });
+                });
+
+                // ========= สคริปต์เพิ่มอันดับ =========
+                window.addEventListener('DOMContentLoaded', () => {
+                    const rows = document.querySelectorAll('#commandTableBody tr');
+                    rows.forEach((row, index) => {
+                        const rankCell = row.querySelector('td');
+                        if (index === 0) {
+                            rankCell.innerHTML = '<span class="rank-badge rank-1"><i class="fas fa-crown"></i></span>';
+                        } else if (index === 1) {
+                            rankCell.innerHTML = '<span class="rank-badge rank-2"><i class="fas fa-medal"></i></span>';
+                        } else if (index === 2) {
+                            rankCell.innerHTML = '<span class="rank-badge rank-3"><i class="fas fa-award"></i></span>';
+                        } else {
+                            rankCell.textContent = index + 1;
+                            rankCell.style.textAlign = 'center';
                         }
                     });
                 });
