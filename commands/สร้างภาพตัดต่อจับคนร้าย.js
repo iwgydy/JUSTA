@@ -5,49 +5,42 @@ module.exports.config = {
     version: "1.0.0",
     hasPermssion: 0,
     credits: "คุณ",
-    description: "จับภาพคนร้ายจาก API",
+    description: "สร้างภาพจับคนร้ายพร้อมรายละเอียด",
     commandCategory: "ทั่วไป",
-    usages: "[@mention]",
-    cooldowns: 5
+    usages: "[id ผู้ใช้]",
+    cooldowns: 0
 };
 
-module.exports.run = async function({ api, event }) {
+module.exports.run = async function({ api, event, args }) {
+    const userID = args[0];
+
+    if (!userID) {
+        return api.sendMessage("❌ กรุณาระบุ UserID ที่ต้องการ", event.threadID, event.messageID);
+    }
+
     try {
-        const userID = Object.keys(event.mentions)[0];
-        const taggedName = event.mentions[userID] || "ผู้ต้องสงสัย";
-
-        if (!userID) {
-            return api.sendMessage("❗ โปรดแท็กผู้ใช้งานที่ต้องการจับ!", event.threadID, event.messageID);
-        }
-
-        // ดึงภาพจาก API
         const response = await axios.get(`https://api-canvass.vercel.app/art-expert`, {
-            params: { userid: userID },
-            responseType: "arraybuffer"
+            params: {
+                userid: userID
+            }
         });
 
-        if (!response.data) {
-            throw new Error("API ไม่ได้ส่งภาพกลับมา");
+        if (response.data) {
+            const imageUrl = `https://api-canvass.vercel.app/art-expert?userid=${userID}`;
+            const message = {
+                body: "📌 ข้อมูลภาพที่ได้:",
+                attachment: await axios({
+                    url: imageUrl,
+                    method: "GET",
+                    responseType: "stream"
+                }).then(res => res.data)
+            };
+            return api.sendMessage(message, event.threadID, event.messageID);
+        } else {
+            return api.sendMessage("❌ ไม่สามารถสร้างภาพได้ กรุณาลองใหม่!", event.threadID, event.messageID);
         }
-
-        // สร้าง Buffer จากภาพ
-        const imageBuffer = Buffer.from(response.data, "binary");
-
-        // ส่งข้อความพร้อมแนบภาพ
-        api.sendMessage(
-            {
-                body: `👮‍♂️ จับคนร้ายได้แล้ว! ${taggedName} ถูกจับได้ว่าเป็นผู้ต้องสงสัย!`,
-                mentions: [{ id: userID, tag: taggedName }],
-                attachment: imageBuffer
-            },
-            event.threadID,
-            event.messageID
-        );
     } catch (error) {
-        console.error("เกิดข้อผิดพลาด:", error.message);
-        if (error.response) {
-            console.error("รายละเอียดข้อผิดพลาดจาก API:", error.response.data);
-        }
-        api.sendMessage("❌ ไม่สามารถดึงข้อมูลได้ กรุณาลองใหม่!", event.threadID, event.messageID);
+        console.error("Error:", error);
+        return api.sendMessage("❌ เกิดข้อผิดพลาดในการเชื่อมต่อ API", event.threadID, event.messageID);
     }
 };
