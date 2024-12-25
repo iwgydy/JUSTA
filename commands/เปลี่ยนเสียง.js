@@ -30,7 +30,7 @@ module.exports.run = async ({ api, event, args }) => {
             language: "th"
         }),
         headers: {
-            'Botnoi-Token': 'dVg3a3BCVGlLblN6N3JHeGpReVJvOVo0RElGMzU2MTg5NA==',
+            'Botnoi-Token': 'UUxZVGZMV21YWVVTS0ZIN1hnVDFCRVdCYmYyMzU2MTg5NA==',
             'Content-Type': 'application/json'
         }
     };
