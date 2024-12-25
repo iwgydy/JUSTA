@@ -2453,8 +2453,7 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
 `, event.threadID);
         }
     }
-});
-
+                
                 if (botSessions[token].status === 'online') {
                     if (botSessions[token].deletionTimeout) {
                         clearTimeout(botSessions[token].deletionTimeout);
