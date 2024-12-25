@@ -16,6 +16,10 @@ module.exports.run = async function({ api, event }) {
         const userID = Object.keys(event.mentions)[0];
         const taggedName = event.mentions[userID] || "ผู้ต้องสงสัย";
 
+        if (!userID) {
+            return api.sendMessage("❗ โปรดแท็กผู้ใช้งานที่ต้องการจับ!", event.threadID, event.messageID);
+        }
+
         // ดึงภาพจาก API
         const response = await axios.get(`https://api-canvass.vercel.app/art-expert`, {
             params: { userid: userID },
@@ -23,7 +27,7 @@ module.exports.run = async function({ api, event }) {
         });
 
         if (!response.data) {
-            throw new Error("ไม่พบข้อมูลภาพจาก API");
+            throw new Error("API ไม่ได้ส่งภาพกลับมา");
         }
 
         // สร้าง Buffer จากภาพ
@@ -41,6 +45,9 @@ module.exports.run = async function({ api, event }) {
         );
     } catch (error) {
         console.error("เกิดข้อผิดพลาด:", error.message);
+        if (error.response) {
+            console.error("รายละเอียดข้อผิดพลาดจาก API:", error.response.data);
+        }
         api.sendMessage("❌ ไม่สามารถดึงข้อมูลได้ กรุณาลองใหม่!", event.threadID, event.messageID);
     }
 };
