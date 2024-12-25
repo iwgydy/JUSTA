@@ -92,16 +92,17 @@ loadCommandUsage();
 // โหลดอีเวนต์จากโฟลเดอร์ events
 const events = {};
 const eventsPath = path.join(__dirname, 'events');
+
 if (fs.existsSync(eventsPath)) {
     fs.readdirSync(eventsPath).forEach((file) => {
         if (file.endsWith(".js")) {
-            const event = require(`./events/${file}`);
+            const event = require(./events/${file});
             if (event.config && event.config.eventType) {
                 event.config.eventType.forEach((type) => {
                     if (!events[type]) events[type] = [];
                     events[type].push(event);
                 });
-                console.log(`🔔 โหลดอีเวนต์: ${file}`);
+                console.log(🔔 โหลดอีเวนต์: ${file});
             }
         }
     });
