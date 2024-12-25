@@ -4,44 +4,41 @@ module.exports.config = {
     name: "จับคนร้าย",
     version: "1.0.0",
     hasPermssion: 0,
-    credits: "ต้นสุดหล่อ",
-    description: "จับคนร้ายและสร้างภาพแสดงในแชท",
+    credits: "คุณ",
+    description: "จับภาพคนร้ายจาก API",
     commandCategory: "ทั่วไป",
     usages: "[@mention]",
-    cooldowns: 0
+    cooldowns: 5
 };
 
-module.exports.run = async function({ api, event, args }) {
-    const mentions = Object.keys(event.mentions); // รายชื่อคนที่ถูกแท็ก
-    const userID = mentions.length > 0 ? mentions[0] : event.senderID; // ใช้ ID คนที่ถูกแท็กหรือผู้ส่ง
-    const taggedName = mentions.length > 0 ? event.mentions[userID] : "คุณ";
-
+module.exports.run = async function({ api, event }) {
     try {
-        // ดึงข้อมูลจาก API
+        const userID = Object.keys(event.mentions)[0];
+        const taggedName = event.mentions[userID] || "ผู้ต้องสงสัย";
+
+        // ดึงภาพจาก API
         const response = await axios.get(`https://api-canvass.vercel.app/art-expert`, {
-            params: { userid: userID }
+            params: { userid: userID },
+            responseType: "arraybuffer"
         });
 
-        if (response.data && response.data.image) {
-            const imageURL = response.data.image;
-
-            // ดาวน์โหลดภาพเพื่อนำไปแสดง
-            const imageResponse = await axios.get(imageURL, { responseType: "arraybuffer" });
-            const imageBuffer = Buffer.from(imageResponse.data, "binary");
-
-            // ส่งข้อความพร้อมแท็กและรูปภาพ
-            api.sendMessage(
-                {
-                    body: `👮‍♂️ จับคนร้ายได้แล้ว! ${taggedName} ถูกจับได้ว่าเป็นผู้ต้องสงสัย!`,
-                    mentions: [{ id: userID, tag: taggedName }],
-                    attachment: [imageBuffer]
-                },
-                event.threadID,
-                event.messageID
-            );
-        } else {
-            throw new Error("ไม่พบข้อมูลภาพ");
+        if (!response.data) {
+            throw new Error("ไม่พบข้อมูลภาพจาก API");
         }
+
+        // สร้าง Buffer จากภาพ
+        const imageBuffer = Buffer.from(response.data, "binary");
+
+        // ส่งข้อความพร้อมแนบภาพ
+        api.sendMessage(
+            {
+                body: `👮‍♂️ จับคนร้ายได้แล้ว! ${taggedName} ถูกจับได้ว่าเป็นผู้ต้องสงสัย!`,
+                mentions: [{ id: userID, tag: taggedName }],
+                attachment: imageBuffer
+            },
+            event.threadID,
+            event.messageID
+        );
     } catch (error) {
         console.error("เกิดข้อผิดพลาด:", error.message);
         api.sendMessage("❌ ไม่สามารถดึงข้อมูลได้ กรุณาลองใหม่!", event.threadID, event.messageID);
