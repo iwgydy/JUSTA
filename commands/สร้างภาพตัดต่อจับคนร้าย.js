@@ -18,26 +18,16 @@ module.exports.run = async function({ api, event }) {
 
     try {
         // เรียก API เพื่อสร้างภาพ
-        const response = await axios.get(`https://api-canvass.vercel.app/art-expert`, {
-            params: {
-                userid: userID
-            }
-        });
+        const imageUrl = `https://api-canvass.vercel.app/art-expert?userid=${userID}`;
+        
+        const attachment = await axios({
+            url: imageUrl,
+            method: "GET",
+            responseType: "stream"
+        }).then(res => res.data);
 
-        if (response.data) {
-            const imageUrl = `https://api-canvass.vercel.app/art-expert?userid=${userID}`;
-            const message = {
-                body: `📌 สร้างภาพสำหรับ UserID: ${userID}`,
-                attachment: await axios({
-                    url: imageUrl,
-                    method: "GET",
-                    responseType: "stream"
-                }).then(res => res.data)
-            };
-            return api.sendMessage(message, event.threadID, event.messageID);
-        } else {
-            return api.sendMessage("❌ ไม่สามารถสร้างภาพได้ กรุณาลองใหม่!", event.threadID, event.messageID);
-        }
+        // ส่งเฉพาะรูปภาพกลับไป
+        return api.sendMessage({ attachment }, event.threadID, event.messageID);
     } catch (error) {
         console.error("Error:", error);
         return api.sendMessage("❌ เกิดข้อผิดพลาดในการเชื่อมต่อ API", event.threadID, event.messageID);
