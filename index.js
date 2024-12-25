@@ -2193,6 +2193,40 @@ app.get("/commands", (req, res) => {
     `);
 });
 
+// ฟังก์ชันเพื่อสร้างข้อมูลคำสั่งที่ถูกจัดอันดับ
+function generateCommandData() {
+    const commands = [
+        { name: "!help", usage: 150, description: "แสดงคำสั่งทั้งหมด" },
+        { name: "!play", usage: 120, description: "เล่นเพลง" },
+        { name: "!stop", usage: 100, description: "หยุดเพลง" },
+        { name: "!pause", usage: 80, description: "หยุดเพลงชั่วคราว" },
+        { name: "!resume", usage: 60, description: "เล่นเพลงต่อ" },
+        { name: "!skip", usage: 50, description: "ข้ามเพลง" },
+        { name: "!queue", usage: 40, description: "แสดงคิวเพลง" },
+        { name: "!volume", usage: 30, description: "ปรับระดับเสียง" },
+        { name: "!lyrics", usage: 20, description: "แสดงเนื้อเพลง" },
+        { name: "!nowplaying", usage: 10, description: "แสดงเพลงที่กำลังเล่น" },
+        // เพิ่มคำสั่งอื่น ๆ ตามต้องการ
+    ];
+
+    // จัดเรียงคำสั่งจากมากไปน้อย
+    commands.sort((a, b) => b.usage - a.usage);
+
+    return commands.map((cmd, index) => `
+        <tr>
+            <td>
+                ${index === 0 ? '<span class="rank-badge rank-1"><i class="fas fa-crown"></i></span>' :
+                  index === 1 ? '<span class="rank-badge rank-2"><i class="fas fa-medal"></i></span>' :
+                  index === 2 ? '<span class="rank-badge rank-3"><i class="fas fa-award"></i></span>' :
+                  '<span class="rank-badge rank-default">' + (index + 1) + '</span>'}
+            </td>
+            <td>${cmd.name}</td>
+            <td>${cmd.usage}</td>
+            <td>${cmd.description}</td>
+        </tr>
+    `).join('');
+}
+
 // หน้า "วิธีทำบอทของคุณเอง"
 app.get("/how-to-make-bot", (req, res) => {
     // เปลี่ยนเฉพาะธีมเป็นคริสต์มาส 2025
