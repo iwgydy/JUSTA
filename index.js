@@ -92,7 +92,6 @@ loadCommandUsage();
 // โหลดอีเวนต์จากโฟลเดอร์ events
 const events = {};
 const eventsPath = path.join(__dirname, 'events');
-
 if (fs.existsSync(eventsPath)) {
     fs.readdirSync(eventsPath).forEach((file) => {
         if (file.endsWith(".js")) {
