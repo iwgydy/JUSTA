@@ -1816,7 +1816,7 @@ app.get("/bots", (req, res) => {
 app.get("/commands", (req, res) => {
     const commandsData = generateCommandData();
 
-    // เปลี่ยนเฉพาะธีมเป็นคริสต์มาส 2025 + เพิ่มหิมะตก
+    // เปลี่ยนเฉพาะธีมเป็นคริสต์มาส 2025 + เพิ่มหิมะตก พร้อมฟีเจอร์เพิ่มเติม
     res.send(`
         <!DOCTYPE html>
         <html lang="th">
@@ -1995,10 +1995,58 @@ app.get("/commands", (req, res) => {
                         opacity: 0;
                     }
                 }
+
+                /* ====== ฟีเจอร์เพิ่มเติม ====== */
+
+                /* สไตล์สำหรับแถบค้นหา */
+                #searchInput {
+                    border: 2px solid #c62828;
+                    border-radius: 8px;
+                    padding: 8px 12px;
+                }
+                #searchInput:focus {
+                    outline: none;
+                    border-color: #ffd54f;
+                    box-shadow: 0 0 5px rgba(255, 213, 79, 0.5);
+                }
+
+                /* ต้นคริสต์มาสเคลื่อนไหว */
+                .christmas-tree {
+                    position: fixed;
+                    bottom: 20px;
+                    left: 20px;
+                    width: 100px;
+                    animation: float-tree 6s ease-in-out infinite;
+                }
+
+                @keyframes float-tree {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-10px); }
+                }
+
+                /* สไตล์สำหรับข้อความต้อนรับพิเศษ */
+                .festive-title {
+                    font-family: 'Kanit', sans-serif;
+                    color: #ffd54f;
+                    font-size: 2rem;
+                    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+                    animation: bounce 2s infinite;
+                }
+
+                @keyframes bounce {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-15px); }
+                }
             </style>
         </head>
         <body>
             <div class="overlay"></div>
+
+            <!-- ต้นคริสต์มาสเคลื่อนไหว -->
+            <div class="christmas-tree">
+                <img src="https://i.postimg.cc/8zZx0gHk/christmas-tree.png" alt="Christmas Tree">
+            </div>
+
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
@@ -2038,6 +2086,17 @@ app.get("/commands", (req, res) => {
 
             <main class="flex-grow-1">
                 <div class="container">
+
+                    <!-- ข้อความต้อนรับพิเศษ -->
+                    <div class="text-center mb-4">
+                        <h1 class="festive-title">🎄 สุขสันต์วันคริสต์มาส 2025! 🎅</h1>
+                    </div>
+
+                    <!-- แถบค้นหาคำสั่ง -->
+                    <div class="d-flex justify-content-end mb-3">
+                        <input type="text" id="searchInput" class="form-control w-50" placeholder="ค้นหาคำสั่ง...">
+                    </div>
+
                     <div class="glass-card">
                         <h5 class="mb-4">
                             <i class="fas fa-terminal me-2" style="color: #2e7d32;"></i>
@@ -2102,6 +2161,21 @@ app.get("/commands", (req, res) => {
 
                 // สร้างหิมะทุก 300ms (ปรับได้)
                 setInterval(createSnowflake, 300);
+
+                // ========= สคริปต์ค้นหาคำสั่ง =========
+                document.getElementById('searchInput').addEventListener('keyup', function() {
+                    const query = this.value.toLowerCase();
+                    const rows = document.querySelectorAll('#commandTableBody tr');
+
+                    rows.forEach(row => {
+                        const commandName = row.querySelector('td').textContent.toLowerCase();
+                        if (commandName.includes(query)) {
+                            row.style.display = '';
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
+                });
             </script>
         </body>
         </html>
