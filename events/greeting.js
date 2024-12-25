@@ -1,19 +1,15 @@
-// events/greeting.js
-
 module.exports = {
     config: {
-        name: "Greeting",
-        eventType: ["1"], // ปรับให้ตรงกับ logMessageType ที่พบ
+        name: 'Greet',
+        eventType: ['message'], // ระบุประเภทของเหตุการณ์ที่ต้องการฟัง
     },
     run: async ({ api, event }) => {
-        const message = event.body ? event.body.trim() : "";
+        const message = event.body ? event.body.trim() : '';
 
-        // เพิ่มการล็อกเพื่อยืนยันว่าอีเวนต์นี้ถูกเรียกใช้งาน
-        console.log(`💬 [Greeting] รับข้อความ: "${message}" จาก threadID: ${event.threadID}`);
-
-        if (message === "สวัสดี") {
-            api.sendMessage("สวัสดีครับ! Merry Christmas 2025 🎄", event.threadID);
-            console.log(`💬 [Greeting] ส่งข้อความตอบกลับให้ threadID: ${event.threadID}`);
+        // ตรวจสอบว่าข้อความเป็น "สวัสดี" หรือไม่
+        if (message === 'สวัสดี') {
+            const replyMessage = 'สวัสดีครับ! 🎄 Merry Christmas 2025! ขอให้มีความสุขในช่วงเทศกาลนี้นะครับ 🎁';
+            api.sendMessage(replyMessage, event.threadID);
         }
     }
 };
