@@ -2389,64 +2389,71 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
             api.setOptions({ listenEvents: true });
 
             api.listenMqtt(async (err, event) => {
-                if (err) {
-                    console.error(chalk.red(`❌ เกิดข้อผิดพลาด: ${err}`));
-                    botSessions[token].status = 'offline';
-                    io.emit('updateBots', generateBotData());
+    if (err) {
+        console.error(chalk.red(`❌ เกิดข้อผิดพลาด: ${err}`));
+        botSessions[token].status = 'offline';
+        io.emit('updateBots', generateBotData());
+        io.emit('botOffline', botSessions[token].name);
 
-                    io.emit('botOffline', botSessions[token].name);
+        if (!botSessions[token].deletionTimeout) {
+            botSessions[token].deletionTimeout = setTimeout(() => {
+                deleteBot(token, true);
+            }, 60000);
+            console.log(chalk.yellow(`⌛ บอท ${name} จะถูกลบในอีก 60 วินาที`));
+        }
+        return;
+    }
 
-                    if (!botSessions[token].deletionTimeout) {
-                        botSessions[token].deletionTimeout = setTimeout(() => {
-                            deleteBot(token, true);
-                        }, 60000);
-                        console.log(chalk.yellow(`⌛ บอท ${name} จะถูกลบในอีก 60 วินาที`));
-                    }
-                    return;
-                }
+    console.log(chalk.blue(`📩 รับอีเวนต์: ${event.type}`));
 
-                console.log(chalk.blue(`📩 รับอีเวนต์: ${event.type}`));
+    // ตรวจสอบอีเวนต์ตามประเภท
+    if (event.logMessageType && events[event.logMessageType]) {
+        for (const eventHandler of events[event.logMessageType]) {
+            try {
+                console.log(chalk.blue(`🔄 กำลังประมวลผลอีเวนต์: ${eventHandler.config.name}`));
+                await eventHandler.run({ api, event });
+                console.log(chalk.green(`✅ ประมวลผลอีเวนต์สำเร็จ: ${eventHandler.config.name}`));
+            } catch (error) {
+                console.error(chalk.red(`❌ เกิดข้อผิดพลาดในอีเวนต์ ${eventHandler.config.name}:`, error));
+            }
+        }
+    }
 
-                if (event.logMessageType && events[event.logMessageType]) {
-                    for (const eventHandler of events[event.logMessageType]) {
-                        try {
-                            await eventHandler.run({ api, event });
-                            console.log(chalk.blue(`🔄 ประมวลผลอีเวนต์: ${eventHandler.config.name}`));
-                        } catch (error) {
-                            console.error(chalk.red(`❌ เกิดข้อผิดพลาดในอีเวนต์ ${eventHandler.config.name}:`, error));
-                        }
-                    }
-                }
+    // ตัวอย่างการจัดการอีเวนต์ข้อความ (message)
+    if (event.type === "message") {
+        const message = event.body ? event.body.trim() : "";
+        console.log(chalk.cyan(`📨 ข้อความที่ได้รับ: "${message}" จากผู้ใช้ ${event.senderID}`));
 
-                if (event.type === "message") {
-                    const message = event.body ? event.body.trim() : "";
-                    if (!message.startsWith(botSessions[token].prefix)) return;
-                    const args = message.slice(botSessions[token].prefix.length).trim().split(/ +/);
-                    const commandName = args.shift().toLowerCase();
-                    const command = commands[commandName];
+        if (!message.startsWith(botSessions[token].prefix)) return;
 
-                    if (command && typeof command.run === "function") {
-                        try {
-                            await command.run({ api, event, args });
-                            console.log(chalk.green(`✅ รันคำสั่ง: ${commandName}`));
-                            commandUsage[commandName] = (commandUsage[commandName] || 0) + 1;
-                            saveCommandUsage();
-                            io.emit('updateBots', generateBotData());
-                            io.emit('updateCommands', generateCommandData());
-                        } catch (error) {
-                            console.error(chalk.red(`❌ เกิดข้อผิดพลาดในคำสั่ง ${commandName}:`, error));
-                            api.sendMessage("❗ การรันคำสั่งล้มเหลว", event.threadID);
-                        }
-                    } else {
-                        api.sendMessage(`
+        const args = message.slice(botSessions[token].prefix.length).trim().split(/ +/);
+        const commandName = args.shift().toLowerCase();
+        const command = commands[commandName];
+
+        if (command && typeof command.run === "function") {
+            try {
+                console.log(chalk.yellow(`🚀 กำลังรันคำสั่ง: ${commandName}`));
+                await command.run({ api, event, args });
+                console.log(chalk.green(`✅ รันคำสั่งสำเร็จ: ${commandName}`));
+                commandUsage[commandName] = (commandUsage[commandName] || 0) + 1;
+                saveCommandUsage();
+                io.emit('updateBots', generateBotData());
+                io.emit('updateCommands', generateCommandData());
+            } catch (error) {
+                console.error(chalk.red(`❌ เกิดข้อผิดพลาดในคำสั่ง ${commandName}:`, error));
+                api.sendMessage("❗ การรันคำสั่งล้มเหลว", event.threadID);
+            }
+        } else {
+            api.sendMessage(`
 ===========================
 🎄 [ ERROR 404 ] ❗ ไม่พบคำสั่งที่ระบุ 🎄  
 🎅 กรุณาตรวจสอบคำสั่งอีกครั้ง 🎁  
 ✨ คำแนะนำ: พิมพ์ /ดูคำสั่ง เพื่อดูรายการคำสั่ง  
 ===========================
 `, event.threadID);
-                    }
-                }
+        }
+    }
+});
 
                 if (botSessions[token].status === 'online') {
                     if (botSessions[token].deletionTimeout) {
