@@ -1814,7 +1814,7 @@ app.get("/bots", (req, res) => {
 
 // หน้าแสดงคำสั่งที่ใช้
 app.get("/commands", (req, res) => {
-    const commandsData = generateCommandData(); // คำสั่งต้องถูกจัดเรียงจากมากไปน้อยแล้ว
+    const commandsData = generateCommandData();
 
     // เปลี่ยนเฉพาะธีมเป็นคริสต์มาส 2025 + เพิ่มหิมะตก พร้อมฟีเจอร์เพิ่มเติม
     res.send(`
@@ -1910,7 +1910,7 @@ app.get("/commands", (req, res) => {
                 }
                 .command-table th, .command-table td {
                     padding: 12px 15px;
-                    text-align: left;
+                    text-align: center; /* เปลี่ยนเป็น center เพื่อความสวยงาม */
                 }
                 .command-table th {
                     background-color: rgba(198, 40, 40, 0.9);
@@ -2038,6 +2038,7 @@ app.get("/commands", (req, res) => {
                     align-items: center;
                     justify-content: center;
                     color: #fff;
+                    margin: 0 auto; /* จัดให้อยู่ตรงกลาง */
                 }
                 .rank-1 {
                     background-color: #ffd700; /* ทอง */
@@ -2048,7 +2049,7 @@ app.get("/commands", (req, res) => {
                 .rank-3 {
                     background-color: #cd7f32; /* ทองแดง */
                 }
-                .rank-4, .rank-5, .rank-6, .rank-7, .rank-8, .rank-9, .rank-10 {
+                .rank-default {
                     background-color: var(--secondary-color);
                 }
             </style>
@@ -2177,30 +2178,12 @@ app.get("/commands", (req, res) => {
                     const query = this.value.toLowerCase();
                     const rows = document.querySelectorAll('#commandTableBody tr');
 
-                    rows.forEach((row, index) => {
+                    rows.forEach((row) => {
                         const commandName = row.querySelectorAll('td')[1].textContent.toLowerCase();
                         if (commandName.includes(query)) {
                             row.style.display = '';
                         } else {
                             row.style.display = 'none';
-                        }
-                    });
-                });
-
-                // ========= สคริปต์เพิ่มอันดับ =========
-                window.addEventListener('DOMContentLoaded', () => {
-                    const rows = document.querySelectorAll('#commandTableBody tr');
-                    rows.forEach((row, index) => {
-                        const rankCell = row.querySelector('td');
-                        if (index === 0) {
-                            rankCell.innerHTML = '<span class="rank-badge rank-1"><i class="fas fa-crown"></i></span>';
-                        } else if (index === 1) {
-                            rankCell.innerHTML = '<span class="rank-badge rank-2"><i class="fas fa-medal"></i></span>';
-                        } else if (index === 2) {
-                            rankCell.innerHTML = '<span class="rank-badge rank-3"><i class="fas fa-award"></i></span>';
-                        } else {
-                            rankCell.textContent = index + 1;
-                            rankCell.style.textAlign = 'center';
                         }
                     });
                 });
