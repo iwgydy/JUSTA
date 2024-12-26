@@ -1816,6 +1816,7 @@ app.get("/bots", (req, res) => {
 app.get("/commands", (req, res) => {
     const commandsData = generateCommandData();
 
+    // เปลี่ยนเฉพาะธีมเป็นคริสต์มาส 2025 + เพิ่มหิมะตก
     res.send(`
         <!DOCTYPE html>
         <html lang="th">
@@ -1831,18 +1832,22 @@ app.get("/commands", (req, res) => {
                 :root {
                     --primary-color: #c62828;
                     --secondary-color: #2e7d32;
+                    --background-gradient: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+                    --card-bg: rgba(255, 255, 255, 0.1);
+                    --card-border: rgba(255, 255, 255, 0.2);
+                    --text-color: #ffffff;
+                    --hover-color: #ffd54f;
                 }
 
                 body {
-                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png')
-                        no-repeat center center fixed;
-                    background-size: cover;
-                    color: #ffffff;
+                    background: var(--background-gradient);
+                    color: var(--text-color);
                     font-family: 'Roboto', sans-serif;
                     position: relative;
                     overflow-x: hidden;
                     margin: 0;
                     padding: 0;
+                    transition: background 0.5s ease;
                 }
 
                 html, body {
@@ -1872,26 +1877,33 @@ app.get("/commands", (req, res) => {
                 .navbar {
                     background: rgba(198, 40, 40, 0.9) !important;
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+                    backdrop-filter: blur(10px);
                 }
                 .navbar-brand {
                     font-family: 'Kanit', sans-serif;
                     font-weight: 600;
                     color: #fff !important;
+                    transition: transform 0.3s ease;
+                }
+                .navbar-brand:hover {
+                    transform: scale(1.05);
                 }
                 .navbar-nav .nav-link {
                     color: #fff !important;
-                    transition: color 0.3s ease;
+                    transition: color 0.3s ease, transform 0.3s ease;
                 }
                 .navbar-nav .nav-link:hover {
-                    color: #ffd54f !important;
+                    color: var(--hover-color) !important;
+                    transform: translateY(-2px);
                 }
 
                 .glass-card {
-                    background: rgba(255, 255, 255, 0.15);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    background: var(--card-bg);
+                    border: 1px solid var(--card-border);
                     border-radius: 16px;
                     padding: 24px;
                     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+                    backdrop-filter: blur(10px);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
                 .glass-card:hover {
@@ -1912,6 +1924,8 @@ app.get("/commands", (req, res) => {
                     background-color: rgba(198, 40, 40, 0.9);
                     color: #fff;
                     font-weight: 600;
+                    position: sticky;
+                    top: 0;
                 }
                 .command-table tr:nth-child(even) {
                     background-color: rgba(255, 255, 255, 0.1);
@@ -1923,13 +1937,15 @@ app.get("/commands", (req, res) => {
                     padding: 20px 0;
                     font-size: 0.9rem;
                     color: #ffffff;
+                    backdrop-filter: blur(10px);
                 }
 
                 .btn-warning, .btn-danger, .btn-secondary {
-                    transition: transform 0.2s ease;
+                    transition: transform 0.2s ease, box-shadow 0.2s ease;
                 }
                 .btn-warning:hover, .btn-danger:hover, .btn-secondary:hover {
                     transform: scale(1.05);
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
                 }
 
                 .bot-name {
@@ -1982,68 +1998,91 @@ app.get("/commands", (req, res) => {
                     user-select: none;
                     animation-name: fall;
                     animation-timing-function: linear;
-                    animation-iteration-count: 1;
+                    animation-iteration-count: infinite;
+                    opacity: 0.8;
                 }
                 @keyframes fall {
                     0% {
-                        transform: translateY(-100%);
+                        transform: translateY(-100%) rotate(0deg);
                         opacity: 1;
                     }
                     100% {
-                        transform: translateY(120vh);
+                        transform: translateY(120vh) rotate(360deg);
                         opacity: 0;
                     }
                 }
 
-                /* ====== ฟีเจอร์เพิ่มเติม ====== */
-
-                /* กล่องค้นหา */
-                #commandSearch {
-                    margin-bottom: 20px;
+                /* ===== เพิ่ม Gradient ให้กับปุ่ม ===== */
+                .btn-gradient {
+                    background: linear-gradient(45deg, #ff6b6b, #f06595);
+                    border: none;
+                    color: #fff;
+                    transition: background 0.3s ease;
+                }
+                .btn-gradient:hover {
+                    background: linear-gradient(45deg, #f06595, #ff6b6b);
                 }
 
-                /* นับจำนวนหิมะ */
-                #snowCounter {
-                    font-size: 1rem;
-                }
-
-                /* แอนิเมชันโหลด */
-                #loading {
+                /* ===== Dark Mode Toggle ===== */
+                .toggle-switch {
                     position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: rgba(0, 0, 0, 0.9);
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
+                    top: 20px;
+                    right: 20px;
                     z-index: 10000;
                 }
-
-                /* ดวงไฟกระพริบ */
-                #christmas-lights i {
-                    font-size: 1.5rem;
-                    margin: 0 5px;
-                    transition: color 0.5s ease;
+                .toggle-switch input[type="checkbox"] {
+                    height: 0;
+                    width: 0;
+                    visibility: hidden;
                 }
-                .blinking {
-                    color: #fff !important;
+                .toggle-switch label {
+                    cursor: pointer;
+                    text-indent: -9999px;
+                    width: 50px;
+                    height: 25px;
+                    background: #fff;
+                    display: block;
+                    border-radius: 100px;
+                    position: relative;
+                }
+                .toggle-switch label:after {
+                    content: '';
+                    position: absolute;
+                    top: 2px;
+                    left: 2px;
+                    width: 21px;
+                    height: 21px;
+                    background: #2e7d32;
+                    border-radius: 90px;
+                    transition: 0.3s;
+                }
+                .toggle-switch input:checked + label {
+                    background: #2e7d32;
+                }
+                .toggle-switch input:checked + label:after {
+                    left: calc(100% - 2px);
+                    transform: translateX(-100%);
+                    background: #c62828;
                 }
 
-                /* ปุ่มกลับไปด้านบน */
-                #backToTop {
-                    display: none;
+                /* ===== Dark Mode Styles ===== */
+                body.dark-mode {
+                    --background-gradient: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+                    --card-bg: rgba(0, 0, 0, 0.7);
+                    --card-border: rgba(255, 255, 255, 0.2);
+                    --text-color: #e0e0e0;
                 }
             </style>
         </head>
         <body>
-            <!-- แอนิเมชันโหลด -->
-            <div id="loading">
-                <span class="spinner-border text-light" role="status"></span>
+            <div class="overlay"></div>
+            
+            <!-- Dark Mode Toggle -->
+            <div class="toggle-switch">
+                <input type="checkbox" id="darkModeToggle">
+                <label for="darkModeToggle">Toggle</label>
             </div>
 
-            <div class="overlay"></div>
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
@@ -2057,22 +2096,22 @@ app.get("/commands", (req, res) => {
                     <div class="collapse navbar-collapse" id="navbarNav">
                         <ul class="navbar-nav ms-auto">
                             <li class="nav-item">
-                                <a class="nav-link" href="/start" data-bs-toggle="tooltip" data-bs-placement="bottom" title="เพิ่มบอทใหม่">
+                                <a class="nav-link" href="/start">
                                     <i class="fas fa-plus-circle me-1"></i> เพิ่มบอท
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="/bots" data-bs-toggle="tooltip" data-bs-placement="bottom" title="ดูบอทรันทั้งหมด">
+                                <a class="nav-link" href="/bots">
                                     <i class="fas fa-list me-1"></i> ดูบอทรัน
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link active" href="/commands" data-bs-toggle="tooltip" data-bs-placement="bottom" title="ดูรายการคำสั่งที่ใช้งาน">
+                                <a class="nav-link active" href="/commands">
                                     <i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="/how-to-make-bot" data-bs-toggle="tooltip" data-bs-placement="bottom" title="เรียนรู้วิธีสร้างบอทของคุณเอง">
+                                <a class="nav-link" href="/how-to-make-bot">
                                     <i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง
                                 </a>
                             </li>
@@ -2081,26 +2120,13 @@ app.get("/commands", (req, res) => {
                 </div>
             </nav>
 
-            <!-- ดวงไฟกระพริบ -->
-            <div id="christmas-lights" class="position-fixed top-0 start-50 translate-middle-x mt-2">
-                <i class="fas fa-lightbulb text-danger"></i>
-                <i class="fas fa-lightbulb text-warning"></i>
-                <i class="fas fa-lightbulb text-success"></i>
-            </div>
-
             <main class="flex-grow-1">
                 <div class="container">
                     <div class="glass-card">
                         <h5 class="mb-4">
-                            <i class="fas fa-terminal me-2" style="color: #2e7d32;"></i>
+                            <i class="fas fa-terminal me-2" style="color: var(--secondary-color);"></i>
                             คำสั่งที่ใช้
                         </h5>
-
-                        <!-- กล่องค้นหา -->
-                        <div class="mb-3">
-                            <input type="text" id="commandSearch" class="form-control" placeholder="ค้นหาคำสั่ง...">
-                        </div>
-
                         <div class="table-responsive">
                             <table class="table command-table">
                                 <thead>
@@ -2128,28 +2154,12 @@ app.get("/commands", (req, res) => {
             <!-- Container สำหรับหิมะ -->
             <div id="snow-container"></div>
 
-            <!-- นับจำนวนหิมะ -->
-            <div class="position-fixed top-0 end-0 p-3 text-white">
-                <span id="snowCounter">❄ หิมะ: 0</span>
-            </div>
-
-            <!-- ปุ่มกลับไปด้านบน -->
-            <button id="backToTop" class="btn btn-warning position-fixed bottom-0 end-0 mb-3 me-3">
-                <i class="fas fa-arrow-up"></i>
-            </button>
-
             <div class="toast-container"></div>
-
-            <audio id="snowSound" src="https://www.myinstants.com/media/sounds/snowfall.mp3" loop></audio> <!-- ใส่ URL ของเสียงหิมะตก -->
 
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
             <script>
                 // ========= สคริปต์หิมะตก =========
-                let snowCount = 0;
                 function createSnowflake() {
-                    snowCount++;
-                    document.getElementById("snowCounter").textContent = \`❄ หิมะ: \${snowCount}\`;
-
                     const snowflakeText = "❄";
                     const snowflake = document.createElement("span");
                     snowflake.classList.add("snowflake");
@@ -2164,6 +2174,9 @@ app.get("/commands", (req, res) => {
                     snowflake.style.fontSize = size;
                     snowflake.style.animationDuration = duration;
 
+                    // เพิ่มการหมุนแบบสุ่ม
+                    snowflake.style.transform = \`rotate(\${Math.random() * 360}deg)\`;
+
                     // ใส่ลงใน #snow-container
                     const snowContainer = document.getElementById("snow-container");
                     snowContainer.appendChild(snowflake);
@@ -2177,65 +2190,11 @@ app.get("/commands", (req, res) => {
                 // สร้างหิมะทุก 300ms (ปรับได้)
                 setInterval(createSnowflake, 300);
 
-                // ========= สคริปต์กล่องค้นหา =========
-                document.getElementById('commandSearch').addEventListener('input', function () {
-                    const searchValue = this.value.toLowerCase();
-                    const rows = document.querySelectorAll('#commandTableBody tr');
-                    rows.forEach(row => {
-                        const text = row.textContent.toLowerCase();
-                        row.style.display = text.includes(searchValue) ? '' : 'none';
-                    });
+                // ========= Dark Mode Toggle =========
+                const toggle = document.getElementById('darkModeToggle');
+                toggle.addEventListener('change', () => {
+                    document.body.classList.toggle('dark-mode', toggle.checked);
                 });
-
-                // ========= สคริปต์เสียงหิมะตก =========
-                const snowSound = document.getElementById('snowSound');
-                snowSound.volume = 0.2;
-                snowSound.play().catch(error => {
-                    // Handle autoplay restrictions
-                    console.log('Autoplay prevented. User interaction is required to play the sound.');
-                });
-
-                // ลองเล่นเสียงทุก 10 วินาที (ถ้าเสียงหยุด)
-                setInterval(() => {
-                    if (snowSound.paused) {
-                        snowSound.play().catch(error => {
-                            console.log('Unable to play snow sound.');
-                        });
-                    }
-                }, 10000);
-
-                // ========= สคริปต์ Tooltip =========
-                document.addEventListener('DOMContentLoaded', function () {
-                    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-                    tooltipTriggerList.map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
-                });
-
-                // ========= สคริปต์แอนิเมชันโหลด =========
-                window.addEventListener('load', () => {
-                    document.getElementById('loading').style.display = 'none';
-                });
-
-                // ========= สคริปต์ดวงไฟกระพริบ =========
-                setInterval(() => {
-                    const bulbs = document.querySelectorAll('#christmas-lights .fa-lightbulb');
-                    bulbs.forEach(bulb => bulb.classList.toggle('blinking'));
-                }, 500);
-
-                /* CSS สำหรับการเปลี่ยนสีเมื่อมีคลาส blinking */
-                const style = document.createElement('style');
-                style.innerHTML = \`
-                    .blinking {
-                        color: #fff !important;
-                    }
-                \`;
-                document.head.appendChild(style);
-
-                // ========= สคริปต์ปุ่มกลับไปด้านบน =========
-                const backToTopButton = document.getElementById('backToTop');
-                window.addEventListener('scroll', () => {
-                    backToTopButton.style.display = window.scrollY > 200 ? 'block' : 'none';
-                });
-                backToTopButton.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
             </script>
         </body>
         </html> 
