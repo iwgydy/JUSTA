@@ -1832,22 +1832,18 @@ app.get("/commands", (req, res) => {
                 :root {
                     --primary-color: #c62828;
                     --secondary-color: #2e7d32;
-                    --background-gradient: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-                    --card-bg: rgba(255, 255, 255, 0.1);
-                    --card-border: rgba(255, 255, 255, 0.2);
-                    --text-color: #ffffff;
-                    --hover-color: #ffd54f;
                 }
 
                 body {
-                    background: var(--background-gradient);
-                    color: var(--text-color);
+                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png')
+                        no-repeat center center fixed;
+                    background-size: cover;
+                    color: #ffffff;
                     font-family: 'Roboto', sans-serif;
                     position: relative;
                     overflow-x: hidden;
                     margin: 0;
                     padding: 0;
-                    transition: background 0.5s ease;
                 }
 
                 html, body {
@@ -1877,33 +1873,26 @@ app.get("/commands", (req, res) => {
                 .navbar {
                     background: rgba(198, 40, 40, 0.9) !important;
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-                    backdrop-filter: blur(10px);
                 }
                 .navbar-brand {
                     font-family: 'Kanit', sans-serif;
                     font-weight: 600;
                     color: #fff !important;
-                    transition: transform 0.3s ease;
-                }
-                .navbar-brand:hover {
-                    transform: scale(1.05);
                 }
                 .navbar-nav .nav-link {
                     color: #fff !important;
-                    transition: color 0.3s ease, transform 0.3s ease;
+                    transition: color 0.3s ease;
                 }
                 .navbar-nav .nav-link:hover {
-                    color: var(--hover-color) !important;
-                    transform: translateY(-2px);
+                    color: #ffd54f !important;
                 }
 
                 .glass-card {
-                    background: var(--card-bg);
-                    border: 1px solid var(--card-border);
+                    background: rgba(255, 255, 255, 0.15);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
                     border-radius: 16px;
                     padding: 24px;
                     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-                    backdrop-filter: blur(10px);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                 }
                 .glass-card:hover {
@@ -1924,8 +1913,6 @@ app.get("/commands", (req, res) => {
                     background-color: rgba(198, 40, 40, 0.9);
                     color: #fff;
                     font-weight: 600;
-                    position: sticky;
-                    top: 0;
                 }
                 .command-table tr:nth-child(even) {
                     background-color: rgba(255, 255, 255, 0.1);
@@ -1937,15 +1924,13 @@ app.get("/commands", (req, res) => {
                     padding: 20px 0;
                     font-size: 0.9rem;
                     color: #ffffff;
-                    backdrop-filter: blur(10px);
                 }
 
                 .btn-warning, .btn-danger, .btn-secondary {
-                    transition: transform 0.2s ease, box-shadow 0.2s ease;
+                    transition: transform 0.2s ease;
                 }
                 .btn-warning:hover, .btn-danger:hover, .btn-secondary:hover {
                     transform: scale(1.05);
-                    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
                 }
 
                 .bot-name {
@@ -1998,91 +1983,22 @@ app.get("/commands", (req, res) => {
                     user-select: none;
                     animation-name: fall;
                     animation-timing-function: linear;
-                    animation-iteration-count: infinite;
-                    opacity: 0.8;
+                    animation-iteration-count: 1;
                 }
                 @keyframes fall {
                     0% {
-                        transform: translateY(-100%) rotate(0deg);
+                        transform: translateY(-100%);
                         opacity: 1;
                     }
                     100% {
-                        transform: translateY(120vh) rotate(360deg);
+                        transform: translateY(120vh);
                         opacity: 0;
                     }
-                }
-
-                /* ===== เพิ่ม Gradient ให้กับปุ่ม ===== */
-                .btn-gradient {
-                    background: linear-gradient(45deg, #ff6b6b, #f06595);
-                    border: none;
-                    color: #fff;
-                    transition: background 0.3s ease;
-                }
-                .btn-gradient:hover {
-                    background: linear-gradient(45deg, #f06595, #ff6b6b);
-                }
-
-                /* ===== Dark Mode Toggle ===== */
-                .toggle-switch {
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    z-index: 10000;
-                }
-                .toggle-switch input[type="checkbox"] {
-                    height: 0;
-                    width: 0;
-                    visibility: hidden;
-                }
-                .toggle-switch label {
-                    cursor: pointer;
-                    text-indent: -9999px;
-                    width: 50px;
-                    height: 25px;
-                    background: #fff;
-                    display: block;
-                    border-radius: 100px;
-                    position: relative;
-                }
-                .toggle-switch label:after {
-                    content: '';
-                    position: absolute;
-                    top: 2px;
-                    left: 2px;
-                    width: 21px;
-                    height: 21px;
-                    background: #2e7d32;
-                    border-radius: 90px;
-                    transition: 0.3s;
-                }
-                .toggle-switch input:checked + label {
-                    background: #2e7d32;
-                }
-                .toggle-switch input:checked + label:after {
-                    left: calc(100% - 2px);
-                    transform: translateX(-100%);
-                    background: #c62828;
-                }
-
-                /* ===== Dark Mode Styles ===== */
-                body.dark-mode {
-                    --background-gradient: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-                    --card-bg: rgba(0, 0, 0, 0.7);
-                    --card-border: rgba(255, 255, 255, 0.2);
-                    --text-color: #e0e0e0;
                 }
             </style>
         </head>
         <body>
             <div class="overlay"></div>
-            
-            <!-- Dark Mode Toggle -->
-            <div class="toggle-switch">
-                <input type="checkbox" id="darkModeToggle">
-                <label for="darkModeToggle">Toggle</label>
-            </div>
-
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
@@ -2124,7 +2040,7 @@ app.get("/commands", (req, res) => {
                 <div class="container">
                     <div class="glass-card">
                         <h5 class="mb-4">
-                            <i class="fas fa-terminal me-2" style="color: var(--secondary-color);"></i>
+                            <i class="fas fa-terminal me-2" style="color: #2e7d32;"></i>
                             คำสั่งที่ใช้
                         </h5>
                         <div class="table-responsive">
@@ -2174,9 +2090,6 @@ app.get("/commands", (req, res) => {
                     snowflake.style.fontSize = size;
                     snowflake.style.animationDuration = duration;
 
-                    // เพิ่มการหมุนแบบสุ่ม
-                    snowflake.style.transform = \`rotate(\${Math.random() * 360}deg)\`;
-
                     // ใส่ลงใน #snow-container
                     const snowContainer = document.getElementById("snow-container");
                     snowContainer.appendChild(snowflake);
@@ -2189,51 +2102,11 @@ app.get("/commands", (req, res) => {
 
                 // สร้างหิมะทุก 300ms (ปรับได้)
                 setInterval(createSnowflake, 300);
-
-                // ========= Dark Mode Toggle =========
-                const toggle = document.getElementById('darkModeToggle');
-                toggle.addEventListener('change', () => {
-                    document.body.classList.toggle('dark-mode', toggle.checked);
-                });
             </script>
         </body>
-        </html> 
+        </html>
     `);
 });
-
-// ฟังก์ชันเพื่อสร้างข้อมูลคำสั่งที่ถูกจัดอันดับ
-function generateCommandData() {
-    const commands = [
-        { name: "!help", usage: 150, description: "แสดงคำสั่งทั้งหมด" },
-        { name: "!play", usage: 120, description: "เล่นเพลง" },
-        { name: "!stop", usage: 100, description: "หยุดเพลง" },
-        { name: "!pause", usage: 80, description: "หยุดเพลงชั่วคราว" },
-        { name: "!resume", usage: 60, description: "เล่นเพลงต่อ" },
-        { name: "!skip", usage: 50, description: "ข้ามเพลง" },
-        { name: "!queue", usage: 40, description: "แสดงคิวเพลง" },
-        { name: "!volume", usage: 30, description: "ปรับระดับเสียง" },
-        { name: "!lyrics", usage: 20, description: "แสดงเนื้อเพลง" },
-        { name: "!nowplaying", usage: 10, description: "แสดงเพลงที่กำลังเล่น" },
-        // เพิ่มคำสั่งอื่น ๆ ตามต้องการ
-    ];
-
-    // จัดเรียงคำสั่งจากมากไปน้อย
-    commands.sort((a, b) => b.usage - a.usage);
-
-    return commands.map((cmd, index) => `
-        <tr>
-            <td>
-                ${index === 0 ? '<span class="rank-badge rank-1"><i class="fas fa-crown"></i></span>' :
-                  index === 1 ? '<span class="rank-badge rank-2"><i class="fas fa-medal"></i></span>' :
-                  index === 2 ? '<span class="rank-badge rank-3"><i class="fas fa-award"></i></span>' :
-                  '<span class="rank-badge rank-default">' + (index + 1) + '</span>'}
-            </td>
-            <td>${cmd.name}</td>
-            <td>${cmd.usage}</td>
-            <td>${cmd.description}</td>
-        </tr>
-    `).join('');
-}
 
 // หน้า "วิธีทำบอทของคุณเอง"
 app.get("/how-to-make-bot", (req, res) => {
@@ -2813,4 +2686,4 @@ setInterval(() => {
     if (botsToDelete === 0) {
         console.log(chalk.green('✅ ไม่มีบอทที่ต้องการลบในครั้งนี้'));
     }
-}, 300000);
+}, 300000); 
