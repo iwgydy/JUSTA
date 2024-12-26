@@ -1816,7 +1816,6 @@ app.get("/bots", (req, res) => {
 app.get("/commands", (req, res) => {
     const commandsData = generateCommandData();
 
-    // เปลี่ยนเฉพาะธีมเป็นคริสต์มาส 2025 + เพิ่มหิมะตก พร้อมฟีเจอร์เพิ่มเติม
     res.send(`
         <!DOCTYPE html>
         <html lang="th">
@@ -1832,14 +1831,11 @@ app.get("/commands", (req, res) => {
                 :root {
                     --primary-color: #c62828;
                     --secondary-color: #2e7d32;
-                    --accent-color: #ffd54f;
-                    --background-overlay: rgba(0, 0, 0, 0.6);
-                    --card-background: rgba(255, 255, 255, 0.15);
-                    --card-border: rgba(255, 255, 255, 0.2);
                 }
 
                 body {
-                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png') no-repeat center center fixed;
+                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png')
+                        no-repeat center center fixed;
                     background-size: cover;
                     color: #ffffff;
                     font-family: 'Roboto', sans-serif;
@@ -1869,7 +1865,7 @@ app.get("/commands", (req, res) => {
                     left: 0;
                     width: 100%;
                     height: 100%;
-                    background: var(--background-overlay);
+                    background: rgba(0, 0, 0, 0.6);
                     z-index: -1;
                 }
 
@@ -1887,12 +1883,12 @@ app.get("/commands", (req, res) => {
                     transition: color 0.3s ease;
                 }
                 .navbar-nav .nav-link:hover {
-                    color: var(--accent-color) !important;
+                    color: #ffd54f !important;
                 }
 
                 .glass-card {
-                    background: var(--card-background);
-                    border: 1px solid var(--card-border);
+                    background: rgba(255, 255, 255, 0.15);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
                     border-radius: 16px;
                     padding: 24px;
                     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
@@ -1910,7 +1906,7 @@ app.get("/commands", (req, res) => {
                 }
                 .command-table th, .command-table td {
                     padding: 12px 15px;
-                    text-align: center; /* เปลี่ยนเป็น center เพื่อความสวยงาม */
+                    text-align: left;
                 }
                 .command-table th {
                     background-color: rgba(198, 40, 40, 0.9);
@@ -1923,7 +1919,7 @@ app.get("/commands", (req, res) => {
 
                 .footer {
                     background: rgba(198, 40, 40, 0.9);
-                    border-top: 2px solid var(--accent-color);
+                    border-top: 2px solid rgba(255, 213, 79, 0.5);
                     padding: 20px 0;
                     font-size: 0.9rem;
                     color: #ffffff;
@@ -1938,16 +1934,16 @@ app.get("/commands", (req, res) => {
 
                 .bot-name {
                     font-family: 'Press Start 2P', cursive;
-                    color: var(--accent-color);
+                    color: #ffd54f;
                     font-size: 1.1rem;
                 }
                 .runtime {
                     font-weight: 500;
-                    color: var(--accent-color);
+                    color: #ffd54f;
                 }
                 .ping {
                     font-weight: 500;
-                    color: var(--secondary-color);
+                    color: #2e7d32;
                 }
                 .animate-float {
                     animation: float 3s ease-in-out infinite;
@@ -2001,62 +1997,53 @@ app.get("/commands", (req, res) => {
 
                 /* ====== ฟีเจอร์เพิ่มเติม ====== */
 
-                /* สไตล์สำหรับแถบค้นหา */
-                #searchInput {
-                    border: 2px solid #c62828;
-                    border-radius: 8px;
-                    padding: 8px 12px;
-                }
-                #searchInput:focus {
-                    outline: none;
-                    border-color: var(--accent-color);
-                    box-shadow: 0 0 5px rgba(255, 213, 79, 0.5);
+                /* กล่องค้นหา */
+                #commandSearch {
+                    margin-bottom: 20px;
                 }
 
-                /* สไตล์สำหรับข้อความต้อนรับพิเศษ */
-                .festive-title {
-                    font-family: 'Kanit', sans-serif;
-                    color: var(--accent-color);
-                    font-size: 2rem;
-                    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-                    animation: bounce 2s infinite;
-                }
-
-                @keyframes bounce {
-                    0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-15px); }
-                }
-
-                /* สไตล์สำหรับอันดับ */
-                .rank-badge {
+                /* นับจำนวนหิมะ */
+                #snowCounter {
                     font-size: 1rem;
-                    font-weight: bold;
-                    border-radius: 50%;
-                    width: 30px;
-                    height: 30px;
+                }
+
+                /* แอนิเมชันโหลด */
+                #loading {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.9);
                     display: flex;
-                    align-items: center;
                     justify-content: center;
-                    color: #fff;
-                    margin: 0 auto; /* จัดให้อยู่ตรงกลาง */
+                    align-items: center;
+                    z-index: 10000;
                 }
-                .rank-1 {
-                    background-color: #ffd700; /* ทอง */
+
+                /* ดวงไฟกระพริบ */
+                #christmas-lights i {
+                    font-size: 1.5rem;
+                    margin: 0 5px;
+                    transition: color 0.5s ease;
                 }
-                .rank-2 {
-                    background-color: #c0c0c0; /* เงิน */
+                .blinking {
+                    color: #fff !important;
                 }
-                .rank-3 {
-                    background-color: #cd7f32; /* ทองแดง */
-                }
-                .rank-default {
-                    background-color: var(--secondary-color);
+
+                /* ปุ่มกลับไปด้านบน */
+                #backToTop {
+                    display: none;
                 }
             </style>
         </head>
         <body>
-            <div class="overlay"></div>
+            <!-- แอนิเมชันโหลด -->
+            <div id="loading">
+                <span class="spinner-border text-light" role="status"></span>
+            </div>
 
+            <div class="overlay"></div>
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
@@ -2070,22 +2057,22 @@ app.get("/commands", (req, res) => {
                     <div class="collapse navbar-collapse" id="navbarNav">
                         <ul class="navbar-nav ms-auto">
                             <li class="nav-item">
-                                <a class="nav-link" href="/start">
+                                <a class="nav-link" href="/start" data-bs-toggle="tooltip" data-bs-placement="bottom" title="เพิ่มบอทใหม่">
                                     <i class="fas fa-plus-circle me-1"></i> เพิ่มบอท
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="/bots">
+                                <a class="nav-link" href="/bots" data-bs-toggle="tooltip" data-bs-placement="bottom" title="ดูบอทรันทั้งหมด">
                                     <i class="fas fa-list me-1"></i> ดูบอทรัน
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link active" href="/commands">
+                                <a class="nav-link active" href="/commands" data-bs-toggle="tooltip" data-bs-placement="bottom" title="ดูรายการคำสั่งที่ใช้งาน">
                                     <i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="/how-to-make-bot">
+                                <a class="nav-link" href="/how-to-make-bot" data-bs-toggle="tooltip" data-bs-placement="bottom" title="เรียนรู้วิธีสร้างบอทของคุณเอง">
                                     <i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง
                                 </a>
                             </li>
@@ -2094,29 +2081,30 @@ app.get("/commands", (req, res) => {
                 </div>
             </nav>
 
+            <!-- ดวงไฟกระพริบ -->
+            <div id="christmas-lights" class="position-fixed top-0 start-50 translate-middle-x mt-2">
+                <i class="fas fa-lightbulb text-danger"></i>
+                <i class="fas fa-lightbulb text-warning"></i>
+                <i class="fas fa-lightbulb text-success"></i>
+            </div>
+
             <main class="flex-grow-1">
                 <div class="container">
-
-                    <!-- ข้อความต้อนรับพิเศษ -->
-                    <div class="text-center mb-4">
-                        <h1 class="festive-title">🎄 สุขสันต์วันคริสต์มาส 2025! 🎅</h1>
-                    </div>
-
-                    <!-- แถบค้นหาคำสั่ง -->
-                    <div class="d-flex justify-content-end mb-3">
-                        <input type="text" id="searchInput" class="form-control w-50" placeholder="ค้นหาคำสั่ง...">
-                    </div>
-
                     <div class="glass-card">
                         <h5 class="mb-4">
-                            <i class="fas fa-terminal me-2" style="color: var(--secondary-color);"></i>
+                            <i class="fas fa-terminal me-2" style="color: #2e7d32;"></i>
                             คำสั่งที่ใช้
                         </h5>
+
+                        <!-- กล่องค้นหา -->
+                        <div class="mb-3">
+                            <input type="text" id="commandSearch" class="form-control" placeholder="ค้นหาคำสั่ง...">
+                        </div>
+
                         <div class="table-responsive">
                             <table class="table command-table">
                                 <thead>
                                     <tr>
-                                        <th>อันดับ</th>
                                         <th>ชื่อคำสั่ง</th>
                                         <th>จำนวนที่ใช้</th>
                                         <th>คำอธิบาย</th>
@@ -2140,12 +2128,28 @@ app.get("/commands", (req, res) => {
             <!-- Container สำหรับหิมะ -->
             <div id="snow-container"></div>
 
+            <!-- นับจำนวนหิมะ -->
+            <div class="position-fixed top-0 end-0 p-3 text-white">
+                <span id="snowCounter">❄ หิมะ: 0</span>
+            </div>
+
+            <!-- ปุ่มกลับไปด้านบน -->
+            <button id="backToTop" class="btn btn-warning position-fixed bottom-0 end-0 mb-3 me-3">
+                <i class="fas fa-arrow-up"></i>
+            </button>
+
             <div class="toast-container"></div>
+
+            <audio id="snowSound" src="https://www.myinstants.com/media/sounds/snowfall.mp3" loop></audio> <!-- ใส่ URL ของเสียงหิมะตก -->
 
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
             <script>
                 // ========= สคริปต์หิมะตก =========
+                let snowCount = 0;
                 function createSnowflake() {
+                    snowCount++;
+                    document.getElementById("snowCounter").textContent = \`❄ หิมะ: \${snowCount}\`;
+
                     const snowflakeText = "❄";
                     const snowflake = document.createElement("span");
                     snowflake.classList.add("snowflake");
@@ -2173,23 +2177,68 @@ app.get("/commands", (req, res) => {
                 // สร้างหิมะทุก 300ms (ปรับได้)
                 setInterval(createSnowflake, 300);
 
-                // ========= สคริปต์ค้นหาคำสั่ง =========
-                document.getElementById('searchInput').addEventListener('keyup', function() {
-                    const query = this.value.toLowerCase();
+                // ========= สคริปต์กล่องค้นหา =========
+                document.getElementById('commandSearch').addEventListener('input', function () {
+                    const searchValue = this.value.toLowerCase();
                     const rows = document.querySelectorAll('#commandTableBody tr');
-
-                    rows.forEach((row) => {
-                        const commandName = row.querySelectorAll('td')[1].textContent.toLowerCase();
-                        if (commandName.includes(query)) {
-                            row.style.display = '';
-                        } else {
-                            row.style.display = 'none';
-                        }
+                    rows.forEach(row => {
+                        const text = row.textContent.toLowerCase();
+                        row.style.display = text.includes(searchValue) ? '' : 'none';
                     });
                 });
+
+                // ========= สคริปต์เสียงหิมะตก =========
+                const snowSound = document.getElementById('snowSound');
+                snowSound.volume = 0.2;
+                snowSound.play().catch(error => {
+                    // Handle autoplay restrictions
+                    console.log('Autoplay prevented. User interaction is required to play the sound.');
+                });
+
+                // ลองเล่นเสียงทุก 10 วินาที (ถ้าเสียงหยุด)
+                setInterval(() => {
+                    if (snowSound.paused) {
+                        snowSound.play().catch(error => {
+                            console.log('Unable to play snow sound.');
+                        });
+                    }
+                }, 10000);
+
+                // ========= สคริปต์ Tooltip =========
+                document.addEventListener('DOMContentLoaded', function () {
+                    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                    tooltipTriggerList.map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+                });
+
+                // ========= สคริปต์แอนิเมชันโหลด =========
+                window.addEventListener('load', () => {
+                    document.getElementById('loading').style.display = 'none';
+                });
+
+                // ========= สคริปต์ดวงไฟกระพริบ =========
+                setInterval(() => {
+                    const bulbs = document.querySelectorAll('#christmas-lights .fa-lightbulb');
+                    bulbs.forEach(bulb => bulb.classList.toggle('blinking'));
+                }, 500);
+
+                /* CSS สำหรับการเปลี่ยนสีเมื่อมีคลาส blinking */
+                const style = document.createElement('style');
+                style.innerHTML = \`
+                    .blinking {
+                        color: #fff !important;
+                    }
+                \`;
+                document.head.appendChild(style);
+
+                // ========= สคริปต์ปุ่มกลับไปด้านบน =========
+                const backToTopButton = document.getElementById('backToTop');
+                window.addEventListener('scroll', () => {
+                    backToTopButton.style.display = window.scrollY > 200 ? 'block' : 'none';
+                });
+                backToTopButton.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
             </script>
         </body>
-        </html>
+        </html> 
     `);
 });
 
