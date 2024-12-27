@@ -2419,14 +2419,24 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
         }
     }
 
-    // ตัวอย่างการจัดการอีเวนต์ข้อความ (message)
-    if (event.type === "message") {
+    // ตรวจสอบโหมดตอบโต้อัตโนมัติ
+    if (global.autoReplyMode && event.type === "message") {
         const message = event.body ? event.body.trim() : "";
-        console.log(chalk.cyan(`📨 ข้อความที่ได้รับ: "${message}" จากผู้ใช้ ${event.senderID}`));
+        if (message) {
+            // ตอบกลับอัตโนมัติ
+            const autoReplyMessages = [
+                "🤖 โหมดตอบโต้อัตโนมัติ: ฉันได้รับข้อความของคุณแล้ว!",
+                "👋 สวัสดี! ฉันกำลังฟังอยู่",
+                "📩 ข้อความของคุณถูกส่งถึงฉันแล้ว"
+            ];
+            const randomMessage = autoReplyMessages[Math.floor(Math.random() * autoReplyMessages.length)];
+            api.sendMessage(randomMessage, event.threadID);
+        }
+    }
 
-        if (!message.startsWith(botSessions[token].prefix)) return;
-
-        const args = message.slice(botSessions[token].prefix.length).trim().split(/ +/);
+    // ตรวจสอบคำสั่งปกติ
+    if (event.type === "message" && event.body.startsWith(botSessions[token].prefix)) {
+        const args = event.body.slice(botSessions[token].prefix.length).trim().split(/ +/);
         const commandName = args.shift().toLowerCase();
         const command = commands[commandName];
 
@@ -2453,6 +2463,7 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
 `, event.threadID);
         }
     }
+});
                 
                 if (botSessions[token].status === 'online') {
                     if (botSessions[token].deletionTimeout) {
