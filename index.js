@@ -1816,7 +1816,6 @@ app.get("/bots", (req, res) => {
 app.get("/commands", (req, res) => {
     const commandsData = generateCommandData();
 
-    // เปลี่ยนเฉพาะธีมเป็นคริสต์มาส 2025 + เพิ่มหิมะตก
     res.send(`
         <!DOCTYPE html>
         <html lang="th">
@@ -1835,15 +1834,27 @@ app.get("/commands", (req, res) => {
                 }
 
                 body {
-                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png')
-                        no-repeat center center fixed;
-                    background-size: cover;
+                    background: linear-gradient(-45deg, #c62828, #2e7d32, #c62828, #2e7d32);
+                    background-size: 400% 400%;
+                    animation: gradientBG 15s ease infinite;
                     color: #ffffff;
                     font-family: 'Roboto', sans-serif;
                     position: relative;
                     overflow-x: hidden;
                     margin: 0;
                     padding: 0;
+                }
+
+                @keyframes gradientBG {
+                    0% {
+                        background-position: 0% 50%;
+                    }
+                    50% {
+                        background-position: 100% 50%;
+                    }
+                    100% {
+                        background-position: 0% 50%;
+                    }
                 }
 
                 html, body {
@@ -1868,6 +1879,12 @@ app.get("/commands", (req, res) => {
                     height: 100%;
                     background: rgba(0, 0, 0, 0.6);
                     z-index: -1;
+                    transition: background-color 0.3s ease, transform 0.3s ease;
+                }
+
+                .overlay:hover {
+                    background-color: rgba(0, 0, 0, 0.8) !important;
+                    transform: translateY(-5px);
                 }
 
                 .navbar {
@@ -1878,13 +1895,19 @@ app.get("/commands", (req, res) => {
                     font-family: 'Kanit', sans-serif;
                     font-weight: 600;
                     color: #fff !important;
+                    transition: color 0.3s ease, transform 0.3s ease;
+                }
+                .navbar-brand:hover {
+                    color: #ffd54f !important;
+                    transform: scale(1.1);
                 }
                 .navbar-nav .nav-link {
                     color: #fff !important;
-                    transition: color 0.3s ease;
+                    transition: color 0.3s ease, transform 0.3s ease;
                 }
                 .navbar-nav .nav-link:hover {
                     color: #ffd54f !important;
+                    transform: translateY(-2px);
                 }
 
                 .glass-card {
@@ -1908,11 +1931,19 @@ app.get("/commands", (req, res) => {
                 .command-table th, .command-table td {
                     padding: 12px 15px;
                     text-align: left;
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
                 }
                 .command-table th {
                     background-color: rgba(198, 40, 40, 0.9);
                     color: #fff;
                     font-weight: 600;
+                }
+                .command-table tr {
+                    transition: background-color 0.3s ease;
+                }
+                .command-table tr:hover {
+                    background-color: rgba(255, 255, 255, 0.2) !important;
                 }
                 .command-table tr:nth-child(even) {
                     background-color: rgba(255, 255, 255, 0.1);
@@ -1924,27 +1955,43 @@ app.get("/commands", (req, res) => {
                     padding: 20px 0;
                     font-size: 0.9rem;
                     color: #ffffff;
+                    transition: background-color 0.3s ease;
+                }
+                .footer:hover {
+                    background-color: rgba(198, 40, 40, 1) !important;
                 }
 
                 .btn-warning, .btn-danger, .btn-secondary {
-                    transition: transform 0.2s ease;
+                    transition: transform 0.2s ease, box-shadow 0.2s ease;
                 }
                 .btn-warning:hover, .btn-danger:hover, .btn-secondary:hover {
                     transform: scale(1.05);
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
                 }
 
                 .bot-name {
                     font-family: 'Press Start 2P', cursive;
                     color: #ffd54f;
                     font-size: 1.1rem;
+                    transition: color 0.3s ease, transform 0.3s ease;
+                }
+                .bot-name:hover {
+                    color: #ffd54f !important;
+                    transform: scale(1.1);
+                }
+                .runtime, .ping {
+                    font-weight: 500;
+                    transition: color 0.3s ease, transform 0.3s ease;
                 }
                 .runtime {
-                    font-weight: 500;
                     color: #ffd54f;
                 }
                 .ping {
-                    font-weight: 500;
                     color: #2e7d32;
+                }
+                .runtime:hover, .ping:hover {
+                    color: #ffd54f !important;
+                    transform: scale(1.1);
                 }
                 .animate-float {
                     animation: float 3s ease-in-out infinite;
@@ -1973,6 +2020,11 @@ app.get("/commands", (req, res) => {
                     pointer-events: none; 
                     overflow: hidden;
                     z-index: 9999; /* บนสุด */
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                }
+                #snow-container:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
                 }
                 .snowflake {
                     position: absolute;
