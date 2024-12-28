@@ -1,3 +1,5 @@
+const { commands } = require('../index'); // นำเข้า commands จากไฟล์หลัก
+
 const spamInsultHardCommand = {
     config: {
         name: "สแปมด่าโหด",
@@ -51,4 +53,5 @@ const spamInsultHardCommand = {
         api.sendMessage(`✅ สแปมด่าโหดๆ สำเร็จ ${count} ครั้ง`, threadID);
     }
 };
+
 commands["สแปมด่าโหด"] = spamInsultHardCommand;
