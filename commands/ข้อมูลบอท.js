@@ -13,7 +13,7 @@ module.exports = {
         // ข้อมูลทั่วไปเกี่ยวกับบอท
         const botName = "เจอไนท์ 3S Bot 2025";
         const botVersion = "1.0.0";
-        const developer = "ต้น White hat hacker";
+        const developer = "https://www.facebook.com/profile.php?id=61555184860915";
         const githubRepo = "ไม่แจกเว้ย";
 
         // เวลาทำงานของบอท (uptime)
