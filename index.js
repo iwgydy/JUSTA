@@ -861,38 +861,36 @@ app.get("/", (req, res) => {
 // หน้าเพิ่มบอท
 app.get("/start", (req, res) => {
     const error = req.query.error;
-
-    let errorMessage = "";
-    if (error === 'already-running') {
-        errorMessage = `<div class="alert alert-warning" role="alert">
-                            บอทนี้กำลังทำงานอยู่แล้ว
-                        </div>`;
-    } else if (error === 'invalid-token') {
-        errorMessage = `<div class="alert alert-danger" role="alert">
-                            โทเค็นไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง
-                        </div>`;
-    } else if (error === 'missing-fields') {
-        errorMessage = `<div class="alert alert-danger" role="alert">
-                            กรุณากรอกทั้งโทเค็น, รหัสผ่าน, ID แอดมิน, ชื่อบอท และคำนำหน้าบอท
-                        </div>`;
-    } else if (error === 'invalid-password') {
-        errorMessage = `<div class="alert alert-danger" role="alert">
-                            รหัสผ่านไม่ถูกต้อง กรุณากรอกรหัสผ่าน 6 หลัก
-                        </div>`;
-    } else if (error === 'invalid-name') {
-        errorMessage = `<div class="alert alert-danger" role="alert">
-                            ชื่อบอทไม่ถูกต้อง กรุณากรอกชื่อบอทที่มีความยาว 3-20 ตัวอักษร และประกอบด้วย a-z, A-Z, 0-9, -, _
-                        </div>`;
+    let errorMessage = '';
+    if (error) {
+        switch(error) {
+            case 'missing-fields':
+                errorMessage = '<div class="alert alert-danger">กรุณากรอกข้อมูลให้ครบถ้วน</div>';
+                break;
+            case 'invalid-password':
+                errorMessage = '<div class="alert alert-danger">รหัสผ่านต้องเป็นตัวเลข 6 หลัก</div>';
+                break;
+            case 'invalid-name':
+                errorMessage = '<div class="alert alert-danger">ชื่อบอทต้องมีความยาว 3-20 ตัวอักษร และประกอบด้วย a-z, A-Z, 0-9, -, _</div>';
+                break;
+            case 'already-running':
+                errorMessage = '<div class="alert alert-warning">บอทนี้กำลังทำงานอยู่แล้ว</div>';
+                break;
+            case 'invalid-token':
+                errorMessage = '<div class="alert alert-danger">โทเค็นไม่ถูกต้อง</div>';
+                break;
+            default:
+                errorMessage = '<div class="alert alert-danger">เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ</div>';
+        }
     }
 
-    // เปลี่ยนเฉพาะธีมให้เป็นคริสต์มาส 2025 + เพิ่มหิมะตก
     res.send(`
         <!DOCTYPE html>
         <html lang="th">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>เพิ่มบอท | Merry Christmas 2025</title>
+            <title>เริ่มบอท | Merry Christmas 2025</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
             <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -1075,34 +1073,11 @@ app.get("/start", (req, res) => {
                     }
                 }
 
-                /* ====== โมดัลคำอธิบาย ====== */
-                .modal-header {
-                    border-bottom: none;
-                }
-                .modal-footer {
-                    border-top: none;
-                }
-
                 /* ====== ตัวอย่างชื่อบอท ====== */
                 #botNamePreview {
                     margin-top: 10px;
                     font-weight: 600;
                     color: #ffd54f;
-                }
-
-                /* ====== อินดิเคเตอร์การส่งข้อมูล ====== */
-                #loadingOverlay {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: rgba(0, 0, 0, 0.5);
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    z-index: 10000;
-                    display: none;
                 }
             </style>
         </head>
@@ -1121,7 +1096,7 @@ app.get("/start", (req, res) => {
                     <div class="collapse navbar-collapse" id="navbarNav">
                         <ul class="navbar-nav ms-auto">
                             <li class="nav-item">
-                                <a class="nav-link active" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
+                                <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
@@ -1142,64 +1117,81 @@ app.get("/start", (req, res) => {
 
             <main class="flex-grow-1">
                 <div class="container">
-                    <!-- สถิติ -->
-                    <div class="row mb-4">
-                        <div class="col-md-3 col-sm-6 mb-3">
-                            <div class="stats-card">
-                                <i class="fas fa-robot fa-2x mb-3" style="color: #ffd54f;"></i>
-                                <div class="stats-number" id="totalBots">${data.totalBots}</div>
-                                <div class="stats-label">บอททั้งหมด</div>
+                    <div class="glass-card">
+                        <h5 class="mb-4">
+                            <i class="fas fa-plus-circle me-2" style="color: #ffd54f;"></i>
+                            เพิ่มบอทใหม่
+                        </h5>
+                        ${errorMessage}
+                        <form class="add-bot-form" method="POST" action="/start" id="addBotForm">
+                            <div class="mb-3">
+                                <label for="token" class="form-label">โทเค็นของคุณ</label>
+                                <textarea 
+                                    id="token" 
+                                    name="token" 
+                                    class="form-control" 
+                                    rows="4" 
+                                    placeholder='{"appState": "YOUR_APP_STATE"}'
+                                    required
+                                ></textarea>
                             </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6 mb-3">
-                            <div class="stats-card">
-                                <i class="fas fa-signal fa-2x mb-3" style="color: #2e7d32;"></i>
-                                <div class="stats-number" id="onlineBots">${data.onlineBots}</div>
-                                <div class="stats-label">บอทออนไลน์</div>
+                            <div class="mb-3">
+                                <label for="prefix" class="form-label">คำนำหน้าบอท</label>
+                                <input 
+                                    type="text" 
+                                    id="prefix" 
+                                    name="prefix" 
+                                    class="form-control" 
+                                    placeholder="/" 
+                                    required
+                                    pattern="^.{1,10}$" 
+                                    title="กรุณากรอกคำนำหน้าที่มีความยาว 1-10 ตัวอักษร"
+                                />
                             </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6 mb-3">
-                            <div class="stats-card">
-                                <i class="fas fa-clock fa-2x mb-3" style="color: #ffd54f;"></i>
-                                <div class="stats-number" id="activeBots">${data.activeBots}</div>
-                                <div class="stats-label">บอททำงานแล้ว</div>
+                            <div class="mb-3">
+                                <label for="name" class="form-label">ชื่อบอท</label>
+                                <input 
+                                    type="text" 
+                                    id="name" 
+                                    name="name" 
+                                    class="form-control" 
+                                    placeholder="MyBot" 
+                                    required
+                                    pattern="^[a-zA-Z0-9_-]{3,20}$" 
+                                    title="กรุณากรอกชื่อบอทที่มีความยาว 3-20 ตัวอักษร และประกอบด้วย a-z, A-Z, 0-9, -, _"
+                                />
+                                <div id="botNamePreview">ตัวอย่าง: <span id="previewText">MyBot</span></div>
                             </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6 mb-3">
-                            <div class="stats-card">
-                                <i class="fas fa-tachometer-alt fa-2x mb-3" style="color: #2e7d32;"></i>
-                                <div class="stats-number" id="websitePing">${data.websitePing} ms</div>
-                                <div class="stats-label">Ping เว็บไซต์</div>
+                            <div class="mb-3">
+                                <label for="password" class="form-label">ตั้งรหัสผ่าน 6 หลักสำหรับการจัดการบอท</label>
+                                <input 
+                                    type="password" 
+                                    id="password" 
+                                    name="password" 
+                                    class="form-control" 
+                                    pattern="\\d{6}" 
+                                    placeholder="123456" 
+                                    required
+                                    title="กรุณากรอกรหัสผ่าน 6 หลัก"
+                                />
                             </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <!-- ตารางบอท -->
-                        <div class="col-12">
-                            <div class="glass-card">
-                                <h5 class="mb-4">
-                                    <i class="fas fa-robot me-2" style="color: #ffd54f;"></i>
-                                    บอทที่กำลังทำงาน
-                                </h5>
-                                <div class="table-responsive">
-                                    <table class="table bot-table">
-                                        <thead>
-                                            <tr>
-                                                <th>ชื่อบอท</th>
-                                                <th>สถานะ</th>
-                                                <th>เวลารัน</th>
-                                                <th>ปิง</th>
-                                                <th>การจัดการ</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="botTableBody">
-                                            ${data.botRows}
-                                        </tbody>
-                                    </table>
-                                </div>
+                            <div class="mb-3">
+                                <label for="adminID" class="form-label">ID แอดมินของบอท</label>
+                                <input 
+                                    type="text" 
+                                    id="adminID" 
+                                    name="adminID" 
+                                    class="form-control" 
+                                    placeholder="61555184860915" 
+                                    required
+                                    title="กรุณากรอก ID แอดมินของบอท"
+                                />
                             </div>
-                        </div>
+                            <button type="submit" class="btn btn-primary w-100" id="submitButton">
+                                <i class="fas fa-play me-2"></i>
+                                เริ่มบอท
+                            </button>
+                        </form>
                     </div>
                 </div>
             </main>
@@ -1213,220 +1205,38 @@ app.get("/start", (req, res) => {
             <!-- Container สำหรับหิมะ -->
             <div id="snow-container"></div>
 
-            <!-- สคริปต์หลัก -->
+            <div class="toast-container"></div>
+
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-            <script src="/socket.io/socket.io.js"></script>
             <script>
-                const socket = io();
+                // สคริปต์หิมะตก
+                function createSnowflake() {
+                    const snowflakeText = "❄";
+                    const snowflake = document.createElement("span");
+                    snowflake.classList.add("snowflake");
+                    snowflake.textContent = snowflakeText;
 
-                // ฟังก์ชันอัปเดตเวลารัน
-                function updateRuntime() {
-                    const runtimeElements = document.querySelectorAll('.runtime');
-                    const now = Date.now();
+                    // สุ่มตำแหน่ง X
+                    snowflake.style.left = Math.random() * 100 + "%";
 
-                    runtimeElements.forEach(el => {
-                        const startTime = parseInt(el.getAttribute('data-start-time'));
-                        if (!startTime) return;
+                    // สุ่มขนาด + ระยะเวลาตก
+                    const size = (Math.random() * 1.2 + 0.5) + "em";
+                    const duration = (Math.random() * 5 + 5) + "s"; // 5-10 วินาที
+                    snowflake.style.fontSize = size;
+                    snowflake.style.animationDuration = duration;
 
-                        const elapsed = now - startTime;
-                        const seconds = Math.floor((elapsed / 1000) % 60);
-                        const minutes = Math.floor((elapsed / (1000 * 60)) % 60);
-                        const hours = Math.floor((elapsed / (1000 * 60 * 60)) % 24);
-                        const days = Math.floor(elapsed / (1000 * 60 * 60 * 24));
+                    // เพิ่มเข้าใน #snow-container
+                    const snowContainer = document.getElementById("snow-container");
+                    snowContainer.appendChild(snowflake);
 
-                        el.textContent = \`\${days} วัน \${hours} ชั่วโมง \${minutes} นาที \${seconds} วินาที\`;
+                    // ลบเมื่อแอนิเมชันจบ
+                    snowflake.addEventListener("animationend", () => {
+                        snowflake.remove();
                     });
                 }
 
-                // ฟังก์ชันส่งปิงไปยังเซิร์ฟเวอร์
-                function sendPing() {
-                    const timestamp = Date.now();
-                    socket.emit('ping', timestamp);
-                }
-                // ส่งปิงทุกๆ 5 วินาที
-                setInterval(sendPing, 5000);
-                // ส่งปิงทันทีเมื่อโหลดหน้า
-                sendPing();
-
-                // แสดง Toast
-                function showToast(message, type = 'info') {
-                    const toastContainer = document.querySelector('.toast-container');
-                    const toastEl = document.createElement('div');
-                    toastEl.className = \`toast align-items-center text-bg-\${type} border-0\`;
-                    toastEl.setAttribute('role', 'alert');
-                    toastEl.setAttribute('aria-live', 'assertive');
-                    toastEl.setAttribute('aria-atomic', 'true');
-                    toastEl.innerHTML = \`
-                        <div class="d-flex">
-                            <div class="toast-body">
-                                \${message}
-                            </div>
-                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                        </div>
-                    \`;
-                    toastContainer.appendChild(toastEl);
-                    const toast = new bootstrap.Toast(toastEl);
-                    toast.show();
-
-                    // ลบ Toast หลังจากปิด
-                    toastEl.addEventListener('hidden.bs.toast', () => {
-                        toastEl.remove();
-                    });
-                }
-
-                // รับข้อมูลอัปเดตจากเซิร์ฟเวอร์
-                socket.on('updateBots', (data) => {
-                    document.getElementById('totalBots').textContent = data.totalBots;
-                    document.getElementById('onlineBots').textContent = data.onlineBots;
-                    document.getElementById('activeBots').textContent = data.activeBots;
-                    document.getElementById('websitePing').textContent = data.websitePing + ' ms';
-
-                    const botTableBody = document.getElementById('botTableBody');
-                    if (botTableBody) {
-                        botTableBody.innerHTML = data.botRows;
-                    }
-
-                    updateRuntime();
-                });
-
-                socket.on('botDeleted', (botName) => {
-                    showToast(\`บอท "\${botName}" ถูกลบเรียบร้อยแล้ว\`, 'success');
-                });
-                socket.on('botOffline', (botName) => {
-                    showToast(\`บอท "\${botName}" กำลังจะถูกลบภายใน 60 วินาที เนื่องจากออฟไลน์\`, 'warning');
-                });
-                socket.on('botRestarted', (botName) => {
-                    showToast(\`บอท "\${botName}" ถูกรีสตาร์ทเรียบร้อยแล้ว\`, 'success');
-                });
-
-                // อัปเดตเวลารันทุกวินาที
-                setInterval(updateRuntime, 1000);
-                document.addEventListener('DOMContentLoaded', updateRuntime);
-
-                // จัดการลบ, แก้ไข, และรีสตาร์ทบอทผ่าน Fetch
-                document.addEventListener('click', function(event) {
-                    if (event.target.closest('.delete-btn')) {
-                        const token = decodeURIComponent(event.target.closest('.delete-btn').getAttribute('data-token'));
-                        const deleteCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการลบบอท:');
-                        if (deleteCode) {
-                            fetch('/delete', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({ token, code: deleteCode })
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    showToast('ลบบอทสำเร็จ', 'success');
-                                } else {
-                                    showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
-                                }
-                            })
-                            .catch(err => {
-                                console.error(err);
-                                showToast('เกิดข้อผิดพลาดในการลบบอท', 'danger');
-                            });
-                        }
-                    }
-
-                    if (event.target.closest('.edit-btn')) {
-                        const token = decodeURIComponent(event.target.closest('.edit-btn').getAttribute('data-token'));
-                        const editCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการแก้ไขโทเค่น:');
-                        if (editCode) {
-                            const newToken = prompt('กรุณากรอกโทเค่นใหม่:');
-                            if (newToken) {
-                                fetch('/edit', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json'
-                                    },
-                                    body: JSON.stringify({ token, code: editCode, newToken })
-                                })
-                                .then(response => response.json())
-                                .then(data => {
-                                    if (data.success) {
-                                        showToast('แก้ไขโทเค่นสำเร็จ', 'success');
-                                    } else {
-                                        showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
-                                    }
-                                })
-                                .catch(err => {
-                                    console.error(err);
-                                    showToast('เกิดข้อผิดพลาดในการแก้ไขโทเค่น', 'danger');
-                                });
-                            }
-                        }
-                    }
-
-                    if (event.target.closest('.restart-btn')) {
-                        const token = decodeURIComponent(event.target.closest('.restart-btn').getAttribute('data-token'));
-                        const restartCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการรีสตาร์ทบอท:');
-                        if (restartCode) {
-                            fetch('/restart', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({ token, code: restartCode })
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    showToast('รีสตาร์ทบอทสำเร็จ', 'success');
-                                    socket.emit('botRestarted', data.botName);
-                                } else {
-                                    showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
-                                }
-                            })
-                            .catch(err => {
-                                console.error(err);
-                                showToast('เกิดข้อผิดพลาดในการรีสตาร์ทบอท', 'danger');
-                            });
-                        }
-                    }
-                });
-
-                // ========== สคริปต์สร้างหิมะตกสมจริง ==========
-                document.addEventListener('DOMContentLoaded', function() {
-                    // จำนวนหิมะที่ต้องการ
-                    const snowflakesCount = 60;
-
-                    // ตัวเลือกสัญลักษณ์หิมะ เพื่อให้ดูหลากหลาย
-                    const snowSymbols = ['❄', '❅', '❆', '✻', '✼'];
-
-                    // ฟังก์ชันสุ่มตัวเลขระหว่าง min กับ max
-                    function randomIntBetween(min, max) {
-                        return Math.floor(Math.random() * (max - min + 1) + min);
-                    }
-
-                    // ฟังก์ชันสุ่มเลือกสัญลักษณ์หิมะ
-                    function randomSnowSymbol() {
-                        return snowSymbols[Math.floor(Math.random() * snowSymbols.length)];
-                    }
-
-                    for (let i = 0; i < snowflakesCount; i++) {
-                        const snowflake = document.createElement('div');
-                        snowflake.classList.add('snowflake');
-
-                        // กำหนดค่าแบบสุ่ม
-                        const size = randomIntBetween(15, 30); // ขนาดตัวอักษร (px)
-                        const leftPos = Math.random() * 100;   // ตำแหน่ง left เป็นเปอร์เซ็นต์
-                        const delay = Math.random() * 5;       // หน่วงเวลาเริ่มต้น (s)
-                        const duration = randomIntBetween(10, 20); // ระยะเวลาที่หิมะร่วง (s)
-                        const rotateStart = randomIntBetween(0, 360);
-
-                        snowflake.style.left = leftPos + '%';
-                        snowflake.style.fontSize = size + 'px';
-                        snowflake.style.animation = \`snowfall \${duration}s linear \${delay}s infinite\`;
-                        snowflake.style.transform = \`rotate(\${rotateStart}deg)\`; 
-                        snowflake.style.opacity = Math.random() * 0.6 + 0.4; // ให้ความโปร่งใสหลากหลาย
-                        snowflake.textContent = randomSnowSymbol();
-
-                        document.body.appendChild(snowflake);
-                    }
-                });
+                // สร้างหิมะทุก 300ms
+                setInterval(createSnowflake, 300);
             </script>
         </body>
         </html>
