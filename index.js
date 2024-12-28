@@ -2404,6 +2404,151 @@ app.get("/debug/bots", (req, res) => {
     res.json(bots);
 });
 
+// เส้นทางของไฟล์เก็บคำตอบของบอท
+const botCoFile = path.join(dataDir, 'botco.json');
+
+// โหลดข้อมูลบอทคุยจากไฟล์
+let botResponses = {};
+function loadBotResponses() {
+    if (fs.existsSync(botCoFile)) {
+        try {
+            const data = fs.readFileSync(botCoFile, 'utf-8');
+            botResponses = JSON.parse(data);
+            console.log(chalk.green('✅ โหลดข้อมูลคำตอบของบอทสำเร็จ'));
+        } catch (err) {
+            console.error(chalk.red(`❌ ไม่สามารถโหลดข้อมูลคำตอบของบอทได้: ${err.message}`));
+            botResponses = {};
+        }
+    }
+}
+
+// บันทึกข้อมูลบอทคุยลงไฟล์
+function saveBotResponses() {
+    try {
+        fs.writeFileSync(botCoFile, JSON.stringify(botResponses, null, 4), 'utf-8');
+        console.log(chalk.green('✅ บันทึกข้อมูลคำตอบของบอทสำเร็จ'));
+    } catch (err) {
+        console.error(chalk.red(`❌ ไม่สามารถบันทึกข้อมูลคำตอบของบอทได้: ${err.message}`));
+    }
+}
+
+// โหลดข้อมูลคำตอบของบอทเมื่อเริ่มต้นเซิร์ฟเวอร์
+loadBotResponses();
+
+// หน้าเว็บคุยกับบอท
+app.get('/chat', (req, res) => {
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="th">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>คุยกับบอท | Merry Christmas 2025</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+            <style>
+                body {
+                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png') no-repeat center center fixed;
+                    background-size: cover;
+                    color: #ffffff;
+                    font-family: 'Arial', sans-serif;
+                }
+                .chat-container {
+                    max-width: 600px;
+                    margin: 50px auto;
+                    background: rgba(255, 255, 255, 0.1);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 12px;
+                    padding: 20px;
+                }
+                .message {
+                    margin: 10px 0;
+                    padding: 10px;
+                    border-radius: 8px;
+                }
+                .user-message {
+                    background-color: #ffd54f;
+                    color: #212529;
+                    text-align: right;
+                }
+                .bot-message {
+                    background-color: #c62828;
+                    color: #ffffff;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="chat-container">
+                <h3 class="text-center">คุยกับบอท</h3>
+                <div id="chatbox" class="mb-4" style="height: 300px; overflow-y: scroll; background: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 8px;">
+                </div>
+                <form id="chatForm">
+                    <input type="text" id="userInput" class="form-control" placeholder="พิมพ์ข้อความที่นี่..." required>
+                    <button type="submit" class="btn btn-primary mt-3 w-100">ส่ง</button>
+                </form>
+            </div>
+
+            <script>
+                const chatForm = document.getElementById('chatForm');
+                const chatbox = document.getElementById('chatbox');
+                const userInput = document.getElementById('userInput');
+
+                chatForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const userMessage = userInput.value.trim();
+                    if (!userMessage) return;
+
+                    appendMessage('user', userMessage);
+
+                    const response = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ message: userMessage })
+                    });
+
+                    const data = await response.json();
+                    appendMessage('bot', data.reply || 'บอทยังไม่มีคำตอบสำหรับคำถามนี้');
+
+                    userInput.value = '';
+                });
+
+                function appendMessage(sender, message) {
+                    const div = document.createElement('div');
+                    div.classList.add('message', sender === 'user' ? 'user-message' : 'bot-message');
+                    div.textContent = message;
+                    chatbox.appendChild(div);
+                    chatbox.scrollTop = chatbox.scrollHeight;
+                }
+            </script>
+        </body>
+        </html>
+    `);
+});
+
+// API สำหรับคุยกับบอท
+app.post('/api/chat', (req, res) => {
+    const { message } = req.body;
+    if (!message) {
+        return res.json({ reply: 'กรุณาพิมพ์ข้อความ' });
+    }
+
+    const reply = botResponses[message] || null;
+    res.json({ reply });
+});
+
+// สอนบอท
+app.post('/teach', (req, res) => {
+    const { question, answer } = req.body;
+    if (!question || !answer) {
+        return res.status(400).json({ success: false, message: 'กรุณาระบุคำถามและคำตอบ' });
+    }
+
+    botResponses[question.trim()] = answer.trim();
+    saveBotResponses();
+    res.json({ success: true, message: 'สอนบอทสำเร็จ' });
+});
+
 // POST /start
 app.post('/start', async (req, res) => {
     const { token, prefix, name, password, adminID } = req.body;
