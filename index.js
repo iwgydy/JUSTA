@@ -1,6 +1,6 @@
 /*****************************************************
  * index.js (ธีมคริสต์มาส 2025)
- * ปรับปรุงจากโค้ดต้นฉบับ โดยเพิ่มความสามารถในการอัปโหลดคำสั่งของผู้ใช้
+ * ปรับปรุงจากโค้ดต้นฉบับ โดยเปลี่ยนให้เป็นธีมคริสต์มาส
  *****************************************************/
 const express = require('express');
 const http = require('http');
@@ -10,7 +10,6 @@ const chalk = require('chalk');
 const figlet = require('figlet');
 const fs = require('fs');
 const path = require('path');
-const multer = require('multer'); // สำหรับการอัปโหลดไฟล์
 
 const app = express();
 const server = http.createServer(app);
@@ -103,7 +102,7 @@ if (fs.existsSync(eventsPath)) {
                     if (!events[type]) events[type] = [];
                     events[type].push(event);
                 });
-                console.log(`🔔 โหลดอีเวนต์: ${file}`);
+                console.log(`🔔 โหลดอีเวนต์: ${file}`); // แก้ไขที่นี่: ใช้ Template Literals ด้วยเครื่องหมาย ``
             }
         }
     });
@@ -560,9 +559,6 @@ app.get("/", (req, res) => {
                             <li class="nav-item">
                                 <a class="nav-link" href="/how-to-make-bot"><i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/upload-commands"><i class="fas fa-upload me-1"></i> อัปโหลดคำสั่ง</a>
-                            </li>
                         </ul>
                     </div>
                 </div>
@@ -861,401 +857,38 @@ app.get("/", (req, res) => {
 // หน้าเพิ่มบอท
 app.get("/start", (req, res) => {
     const error = req.query.error;
-    let errorMessage = '';
-    if (error) {
-        switch(error) {
-            case 'missing-fields':
-                errorMessage = '<div class="alert alert-danger">กรุณากรอกข้อมูลให้ครบถ้วน</div>';
-                break;
-            case 'invalid-password':
-                errorMessage = '<div class="alert alert-danger">รหัสผ่านต้องเป็นตัวเลข 6 หลัก</div>';
-                break;
-            case 'invalid-name':
-                errorMessage = '<div class="alert alert-danger">ชื่อบอทต้องมีความยาว 3-20 ตัวอักษร และประกอบด้วย a-z, A-Z, 0-9, -, _</div>';
-                break;
-            case 'already-running':
-                errorMessage = '<div class="alert alert-warning">บอทนี้กำลังทำงานอยู่แล้ว</div>';
-                break;
-            case 'invalid-token':
-                errorMessage = '<div class="alert alert-danger">โทเค็นไม่ถูกต้อง</div>';
-                break;
-            default:
-                errorMessage = '<div class="alert alert-danger">เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ</div>';
-        }
+
+    let errorMessage = "";
+    if (error === 'already-running') {
+        errorMessage = `<div class="alert alert-warning" role="alert">
+                            บอทนี้กำลังทำงานอยู่แล้ว
+                        </div>`;
+    } else if (error === 'invalid-token') {
+        errorMessage = `<div class="alert alert-danger" role="alert">
+                            โทเค็นไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง
+                        </div>`;
+    } else if (error === 'missing-fields') {
+        errorMessage = `<div class="alert alert-danger" role="alert">
+                            กรุณากรอกทั้งโทเค็น, รหัสผ่าน, ID แอดมิน, ชื่อบอท และคำนำหน้าบอท
+                        </div>`;
+    } else if (error === 'invalid-password') {
+        errorMessage = `<div class="alert alert-danger" role="alert">
+                            รหัสผ่านไม่ถูกต้อง กรุณากรอกรหัสผ่าน 6 หลัก
+                        </div>`;
+    } else if (error === 'invalid-name') {
+        errorMessage = `<div class="alert alert-danger" role="alert">
+                            ชื่อบอทไม่ถูกต้อง กรุณากรอกชื่อบอทที่มีความยาว 3-20 ตัวอักษร และประกอบด้วย a-z, A-Z, 0-9, -, _
+                        </div>`;
     }
 
+    // เปลี่ยนเฉพาะธีมให้เป็นคริสต์มาส 2025 + เพิ่มหิมะตก
     res.send(`
         <!DOCTYPE html>
         <html lang="th">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>เริ่มบอท | Merry Christmas 2025</title>
-            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-            <style>
-                /* ========= ธีมคริสต์มาส 2025 ========= */
-                :root {
-                    --primary-color: #c62828;
-                    --secondary-color: #2e7d32;
-                }
-
-                body {
-                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png') no-repeat center center fixed;
-                    background-size: cover;
-                    color: #ffffff;
-                    font-family: 'Roboto', sans-serif;
-                    position: relative;
-                    overflow-x: hidden;
-                    margin: 0;
-                    padding: 0;
-                }
-
-                html, body {
-                    height: 100%;
-                }
-
-                body {
-                    display: flex;
-                    flex-direction: column;
-                    min-height: 100vh;
-                }
-
-                main.flex-grow-1 {
-                    flex: 1;
-                }
-
-                .overlay {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: rgba(0, 0, 0, 0.6);
-                    z-index: -1;
-                }
-
-                .navbar {
-                    background: rgba(198, 40, 40, 0.9) !important;
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-                }
-
-                .navbar-brand {
-                    font-family: 'Kanit', sans-serif;
-                    font-weight: 600;
-                    color: #fff !important;
-                }
-
-                .navbar-nav .nav-link {
-                    color: #fff !important;
-                    transition: color 0.3s ease;
-                }
-                .navbar-nav .nav-link:hover {
-                    color: #ffd54f !important;
-                }
-
-                .glass-card {
-                    background: rgba(255, 255, 255, 0.15);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    border-radius: 16px;
-                    padding: 24px;
-                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-                    transition: transform 0.3s ease, box-shadow 0.3s ease;
-                }
-
-                .glass-card:hover {
-                    transform: translateY(-5px);
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
-                }
-
-                .add-bot-form .form-label {
-                    font-weight: 500;
-                    color: #ffffff;
-                }
-
-                .form-control {
-                    background: rgba(255, 255, 255, 0.2);
-                    border: 1px solid rgba(255, 255, 255, 0.3);
-                    border-radius: 8px;
-                    padding: 10px 12px;
-                    font-size: 1rem;
-                    transition: border-color 0.3s ease, background 0.3s ease;
-                    color: #ffffff;
-                }
-
-                .form-control::placeholder {
-                    color: #e0e0e0;
-                }
-
-                .form-control:focus {
-                    border-color: #ffd54f;
-                    box-shadow: 0 0 0 0.2rem rgba(255, 213, 79, 0.25);
-                    background: rgba(255, 255, 255, 0.3);
-                    color: #ffffff;
-                }
-
-                .btn-primary {
-                    background: #ffd54f;
-                    border: none;
-                    padding: 10px 20px;
-                    font-size: 1rem;
-                    border-radius: 8px;
-                    transition: background 0.3s ease, transform 0.2s ease;
-                    color: #212529;
-                    font-weight: 600;
-                }
-
-                .btn-primary:hover {
-                    background: #ffca28;
-                }
-
-                .footer {
-                    background: rgba(198, 40, 40, 0.9);
-                    border-top: 2px solid rgba(255, 213, 79, 0.5);
-                    padding: 20px 0;
-                    font-size: 0.9rem;
-                    color: #ffffff;
-                }
-
-                .animate-float {
-                    animation: float 3s ease-in-out infinite;
-                }
-
-                @keyframes float {
-                    0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-10px); }
-                }
-
-                .toast-container {
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    z-index: 1055;
-                }
-
-                @media (max-width: 768px) {
-                    .glass-card {
-                        margin-bottom: 20px;
-                    }
-                }
-
-                /* ===== ใส่เอฟเฟกต์หิมะ ===== */
-                #snow-container {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    pointer-events: none; /* ไม่ให้เมาส์คลิกโดน */
-                    overflow: hidden;
-                    z-index: 9999; /* บนสุด */
-                }
-                .snowflake {
-                    position: absolute;
-                    top: -2em; /* เริ่มเหนือจอ */
-                    color: #fff; /* สีขาว */
-                    font-size: 1.2em;
-                    pointer-events: none;
-                    user-select: none;
-                    animation-name: fall;
-                    animation-timing-function: linear;
-                    animation-iteration-count: 1;
-                }
-                @keyframes fall {
-                    0% {
-                        transform: translateY(-100%);
-                        opacity: 1;
-                    }
-                    100% {
-                        transform: translateY(120vh);
-                        opacity: 0;
-                    }
-                }
-
-                /* ====== ตัวอย่างชื่อบอท ====== */
-                #botNamePreview {
-                    margin-top: 10px;
-                    font-weight: 600;
-                    color: #ffd54f;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="overlay"></div>
-            <nav class="navbar navbar-expand-lg navbar-dark mb-4">
-                <div class="container">
-                    <a class="navbar-brand d-flex align-items-center" href="/">
-                        <i class="fas fa-snowflake fa-lg me-2 animate-float" style="color: #fff;"></i>
-                        Merry Christmas 2025
-                    </a>
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
-                            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                        <span class="navbar-toggler-icon"></span>
-                    </button>
-                    <div class="collapse navbar-collapse" id="navbarNav">
-                        <ul class="navbar-nav ms-auto">
-                            <li class="nav-item">
-                                <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/how-to-make-bot"><i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/upload-commands"><i class="fas fa-upload me-1"></i> อัปโหลดคำสั่ง</a>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </nav>
-
-            <main class="flex-grow-1">
-                <div class="container">
-                    <div class="glass-card">
-                        <h5 class="mb-4">
-                            <i class="fas fa-plus-circle me-2" style="color: #ffd54f;"></i>
-                            เพิ่มบอทใหม่
-                        </h5>
-                        ${errorMessage}
-                        <form class="add-bot-form" method="POST" action="/start" id="addBotForm">
-                            <div class="mb-3">
-                                <label for="token" class="form-label">โทเค็นของคุณ</label>
-                                <textarea 
-                                    id="token" 
-                                    name="token" 
-                                    class="form-control" 
-                                    rows="4" 
-                                    placeholder='{"appState": "YOUR_APP_STATE"}'
-                                    required
-                                ></textarea>
-                            </div>
-                            <div class="mb-3">
-                                <label for="prefix" class="form-label">คำนำหน้าบอท</label>
-                                <input 
-                                    type="text" 
-                                    id="prefix" 
-                                    name="prefix" 
-                                    class="form-control" 
-                                    placeholder="/" 
-                                    required
-                                    pattern="^.{1,10}$" 
-                                    title="กรุณากรอกคำนำหน้าที่มีความยาว 1-10 ตัวอักษร"
-                                />
-                            </div>
-                            <div class="mb-3">
-                                <label for="name" class="form-label">ชื่อบอท</label>
-                                <input 
-                                    type="text" 
-                                    id="name" 
-                                    name="name" 
-                                    class="form-control" 
-                                    placeholder="MyBot" 
-                                    required
-                                    pattern="^[a-zA-Z0-9_-]{3,20}$" 
-                                    title="กรุณากรอกชื่อบอทที่มีความยาว 3-20 ตัวอักษร และประกอบด้วย a-z, A-Z, 0-9, -, _"
-                                />
-                                <div id="botNamePreview">ตัวอย่าง: <span id="previewText">MyBot</span></div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="password" class="form-label">ตั้งรหัสผ่าน 6 หลักสำหรับการจัดการบอท</label>
-                                <input 
-                                    type="password" 
-                                    id="password" 
-                                    name="password" 
-                                    class="form-control" 
-                                    pattern="\\d{6}" 
-                                    placeholder="123456" 
-                                    required
-                                    title="กรุณากรอกรหัสผ่าน 6 หลัก"
-                                />
-                            </div>
-                            <div class="mb-3">
-                                <label for="adminID" class="form-label">ID แอดมินของบอท</label>
-                                <input 
-                                    type="text" 
-                                    id="adminID" 
-                                    name="adminID" 
-                                    class="form-control" 
-                                    placeholder="61555184860915" 
-                                    required
-                                    title="กรุณากรอก ID แอดมินของบอท"
-                                />
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100" id="submitButton">
-                                <i class="fas fa-play me-2"></i>
-                                เริ่มบอท
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </main>
-
-            <footer class="footer text-center">
-                <div class="container">
-                    <p class="mb-0">© ${new Date().getFullYear()} Merry Christmas 2025 | Powered with ❤️</p>
-                </div>
-            </footer>
-
-            <!-- Container สำหรับหิมะ -->
-            <div id="snow-container"></div>
-
-            <div class="toast-container"></div>
-
-            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-            <script>
-                // สคริปต์หิมะตก
-                function createSnowflake() {
-                    const snowflakeText = "❄";
-                    const snowflake = document.createElement("span");
-                    snowflake.classList.add("snowflake");
-                    snowflake.textContent = snowflakeText;
-
-                    // สุ่มตำแหน่ง X
-                    snowflake.style.left = Math.random() * 100 + "%";
-
-                    // สุ่มขนาด + ระยะเวลาตก
-                    const size = (Math.random() * 1.2 + 0.5) + "em";
-                    const duration = (Math.random() * 5 + 5) + "s"; // 5-10 วินาที
-                    snowflake.style.fontSize = size;
-                    snowflake.style.animationDuration = duration;
-
-                    // เพิ่มเข้าใน #snow-container
-                    const snowContainer = document.getElementById("snow-container");
-                    snowContainer.appendChild(snowflake);
-
-                    // ลบเมื่อแอนิเมชันจบ
-                    snowflake.addEventListener("animationend", () => {
-                        snowflake.remove();
-                    });
-                }
-
-                // สร้างหิมะทุก 300ms
-                setInterval(createSnowflake, 300);
-            </script>
-        </body>
-        </html>
-    `);
-});
-
-// หน้าอัปโหลดคำสั่ง
-app.get("/upload-commands", (req, res) => {
-    // ตรวจสอบว่าผู้ใช้ได้ล็อกอินและมีสิทธิ์ในการอัปโหลดคำสั่งสำหรับบอทใดบ้าง
-    // ตัวอย่างนี้สมมุติว่าผู้ใช้สามารถอัปโหลดได้ทุกบอทที่เขาเป็นแอดมิน
-    // คุณควรเพิ่มการตรวจสอบสิทธิ์จริงตามระบบของคุณ
-
-    res.send(`
-        <!DOCTYPE html>
-        <html lang="th">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>อัปโหลดคำสั่ง | Merry Christmas 2025</title>
+            <title>เพิ่มบอท | Merry Christmas 2025</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
             <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -1495,9 +1128,6 @@ app.get("/upload-commands", (req, res) => {
                             <li class="nav-item">
                                 <a class="nav-link" href="/how-to-make-bot"><i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/upload-commands"><i class="fas fa-upload me-1"></i> อัปโหลดคำสั่ง</a>
-                            </li>
                         </ul>
                     </div>
                 </div>
@@ -1637,7 +1267,7 @@ app.get("/upload-commands", (req, res) => {
                     snowflake.style.fontSize = size;
                     snowflake.style.animationDuration = duration;
 
-                    // เพิ่มเข้าใน #snow-container
+                    // ใส่ลงใน #snow-container
                     const snowContainer = document.getElementById("snow-container");
                     snowContainer.appendChild(snowflake);
 
@@ -1647,8 +1277,144 @@ app.get("/upload-commands", (req, res) => {
                     });
                 }
 
-                // สร้างหิมะทุก 300ms
+                // สร้างหิมะทุก 300ms (ปรับได้)
                 setInterval(createSnowflake, 300);
+
+                // ========= สคริปต์ Toast Notification =========
+                function showToast(message, type = 'info') {
+                    const toastContainer = document.querySelector('.toast-container');
+                    const toastEl = document.createElement('div');
+                    toastEl.className = \`toast align-items-center text-bg-\${type} border-0\`;
+                    toastEl.setAttribute('role', 'alert');
+                    toastEl.setAttribute('aria-live', 'assertive');
+                    toastEl.setAttribute('aria-atomic', 'true');
+                    toastEl.innerHTML = \`
+                        <div class="d-flex">
+                            <div class="toast-body">
+                                \${message}
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                    \`;
+                    toastContainer.appendChild(toastEl);
+                    const toast = new bootstrap.Toast(toastEl);
+                    toast.show();
+
+                    toastEl.addEventListener('hidden.bs.toast', () => {
+                        toastEl.remove();
+                    });
+                }
+
+                document.addEventListener('DOMContentLoaded', () => {
+                    // แสดงโมดัลคำอธิบายเมื่อโหลดหน้าเว็บ
+                    const descriptionModal = new bootstrap.Modal(document.getElementById('descriptionModal'));
+                    descriptionModal.show();
+
+                    // สร้างตัวอย่างชื่อบอทแบบเรียลไทม์
+                    const nameInput = document.getElementById('name');
+                    const previewText = document.getElementById('previewText');
+
+                    nameInput.addEventListener('input', () => {
+                        const value = nameInput.value || 'MyBot';
+                        previewText.textContent = value;
+                    });
+
+                    // จัดการการส่งแบบฟอร์ม
+                    const addBotForm = document.getElementById('addBotForm');
+                    const loadingOverlay = document.getElementById('loadingOverlay');
+                    const submitButton = document.getElementById('submitButton');
+
+                    addBotForm.addEventListener('submit', (e) => {
+                        // แสดงอินดิเคเตอร์การส่งข้อมูล
+                        loadingOverlay.style.display = 'flex';
+                        // ปิดใช้งานปุ่มส่ง
+                        submitButton.disabled = true;
+                    });
+                });
+
+                document.addEventListener('click', function(event) {
+                    if (event.target.closest('.delete-btn')) {
+                        const token = decodeURIComponent(event.target.closest('.delete-btn').getAttribute('data-token'));
+                        const deleteCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการลบบอท:');
+                        if (deleteCode) {
+                            fetch('/delete', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ token, code: deleteCode })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    showToast('ลบบอทสำเร็จ', 'success');
+                                } else {
+                                    showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
+                                }
+                            })
+                            .catch(err => {
+                                console.error(err);
+                                showToast('เกิดข้อผิดพลาดในการลบบอท', 'danger');
+                            });
+                        }
+                    }
+
+                    if (event.target.closest('.edit-btn')) {
+                        const token = decodeURIComponent(event.target.closest('.edit-btn').getAttribute('data-token'));
+                        const editCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการแก้ไขโทเค่น:');
+                        if (editCode) {
+                            const newToken = prompt('กรุณากรอกโทเค่นใหม่:');
+                            if (newToken) {
+                                fetch('/edit', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({ token, code: editCode, newToken })
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        showToast('แก้ไขโทเค่นสำเร็จ', 'success');
+                                    } else {
+                                        showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
+                                    }
+                                })
+                                .catch(err => {
+                                    console.error(err);
+                                    showToast('เกิดข้อผิดพลาดในการแก้ไขโทเค่น', 'danger');
+                                });
+                            }
+                        }
+                    }
+
+                    if (event.target.closest('.restart-btn')) {
+                        const token = decodeURIComponent(event.target.closest('.restart-btn').getAttribute('data-token'));
+                        const restartCode = prompt('กรุณากรอกรหัสผ่าน 6 หลักเพื่อยืนยันการรีสตาร์ทบอท:');
+                        if (restartCode) {
+                            fetch('/restart', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ token, code: restartCode })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    showToast('รีสตาร์ทบอทสำเร็จ', 'success');
+                                    // socket.emit('botRestarted', data.botName); <-- หน้า /start ยังไม่มี socket.io เชื่อม
+                                } else {
+                                    showToast(data.message || 'รหัสไม่ถูกต้องหรือเกิดข้อผิดพลาด', 'danger');
+                                }
+                            })
+                            .catch(err => {
+                                console.error(err);
+                                showToast('เกิดข้อผิดพลาดในการรีสตาร์ทบอท', 'danger');
+                            });
+                        }
+                    }
+                });
             </script>
         </body>
         </html>
@@ -1903,8 +1669,7 @@ app.get("/bots", (req, res) => {
                         <i class="fas fa-snowflake fa-lg me-2 animate-float" style="color: #fff;"></i>
                         Merry Christmas 2025
                     </a>
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
-                            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                         <span class="navbar-toggler-icon"></span>
                     </button>
                     <div class="collapse navbar-collapse" id="navbarNav">
@@ -1920,9 +1685,6 @@ app.get("/bots", (req, res) => {
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="/how-to-make-bot"><i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/upload-commands"><i class="fas fa-upload me-1"></i> อัปโหลดคำสั่ง</a>
                             </li>
                         </ul>
                     </div>
@@ -1993,40 +1755,16 @@ app.get("/bots", (req, res) => {
                 sendPing();
 
                 function showToast(message, type = 'info') {
-                    const toastContainer = document.querySelector('.toast-container');
-                    const toastEl = document.createElement('div');
-                    toastEl.className = \`toast align-items-center text-bg-\${type} border-0\`;
-                    toastEl.setAttribute('role', 'alert');
-                    toastEl.setAttribute('aria-live', 'assertive');
-                    toastEl.setAttribute('aria-atomic', 'true');
-                    toastEl.innerHTML = \`
-                        <div class="d-flex">
-                            <div class="toast-body">
-                                \${message}
-                            </div>
-                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                        </div>
-                    \`;
-                    toastContainer.appendChild(toastEl);
-                    const toast = new bootstrap.Toast(toastEl);
-                    toast.show();
-
-                    toastEl.addEventListener('hidden.bs.toast', () => {
-                        toastEl.remove();
-                    });
+                    // หน้า /bots ยังไม่มี .toast-container? ถ้าต้องการ toast ให้เพิ่มได้
+                    console.log(\`[\${type}] \${message}\`);
                 }
 
                 socket.on('updateBots', (data) => {
-                    document.getElementById('totalBots').textContent = data.totalBots;
-                    document.getElementById('onlineBots').textContent = data.onlineBots;
-                    document.getElementById('activeBots').textContent = data.activeBots;
-                    document.getElementById('websitePing').textContent = data.websitePing + ' ms';
-
+                    // ถ้าต้องการอัปเดต element อื่น เช่น totalBots, onlineBots, ฯลฯ ก็เพิ่มเองได้
                     const botTableBody = document.getElementById('botTableBody');
                     if (botTableBody) {
                         botTableBody.innerHTML = data.botRows;
                     }
-
                     updateRuntime();
                 });
 
@@ -2034,7 +1772,7 @@ app.get("/bots", (req, res) => {
                     showToast(\`บอท "\${botName}" ถูกลบเรียบร้อยแล้ว\`, 'success');
                 });
                 socket.on('botOffline', (botName) => {
-                    showToast(\`บอท "\${botName}" กำลังจะถูกลบภายใน 60 วินาที เนื่องจากออฟไลน์\`, 'warning');
+                    showToast(\`บอท "\${botName}" กำลังจะถูกลบภายใน 60 วินาที\`, 'warning');
                 });
                 socket.on('botRestarted', (botName) => {
                     showToast(\`บอท "\${botName}" ถูกรีสตาร์ทเรียบร้อยแล้ว\`, 'success');
@@ -2043,6 +1781,7 @@ app.get("/bots", (req, res) => {
                 setInterval(updateRuntime, 1000);
                 document.addEventListener('DOMContentLoaded', updateRuntime);
 
+                // จัดการปุ่ม ลบ / แก้ไข / รีสตาร์ท
                 document.addEventListener('click', function(event) {
                     if (event.target.closest('.delete-btn')) {
                         const token = decodeURIComponent(event.target.closest('.delete-btn').getAttribute('data-token'));
@@ -2050,9 +1789,7 @@ app.get("/bots", (req, res) => {
                         if (deleteCode) {
                             fetch('/delete', {
                                 method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
+                                headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ token, code: deleteCode })
                             })
                             .then(response => response.json())
@@ -2078,9 +1815,7 @@ app.get("/bots", (req, res) => {
                             if (newToken) {
                                 fetch('/edit', {
                                     method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json'
-                                    },
+                                    headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ token, code: editCode, newToken })
                                 })
                                 .then(response => response.json())
@@ -2105,9 +1840,7 @@ app.get("/bots", (req, res) => {
                         if (restartCode) {
                             fetch('/restart', {
                                 method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
+                                headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ token, code: restartCode })
                             })
                             .then(response => response.json())
@@ -2383,19 +2116,24 @@ app.get("/commands", (req, res) => {
                     <div class="collapse navbar-collapse" id="navbarNav">
                         <ul class="navbar-nav ms-auto">
                             <li class="nav-item">
-                                <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
+                                <a class="nav-link" href="/start">
+                                    <i class="fas fa-plus-circle me-1"></i> เพิ่มบอท
+                                </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
+                                <a class="nav-link" href="/bots">
+                                    <i class="fas fa-list me-1"></i> ดูบอทรัน
+                                </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
+                                <a class="nav-link active" href="/commands">
+                                    <i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้
+                                </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="/how-to-make-bot"><i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/upload-commands"><i class="fas fa-upload me-1"></i> อัปโหลดคำสั่ง</a>
+                                <a class="nav-link" href="/how-to-make-bot">
+                                    <i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง
+                                </a>
                             </li>
                         </ul>
                     </div>
@@ -2456,7 +2194,7 @@ app.get("/commands", (req, res) => {
                     snowflake.style.fontSize = size;
                     snowflake.style.animationDuration = duration;
 
-                    // เพิ่มเข้าใน #snow-container
+                    // ใส่ลงใน #snow-container
                     const snowContainer = document.getElementById("snow-container");
                     snowContainer.appendChild(snowflake);
 
@@ -2466,7 +2204,7 @@ app.get("/commands", (req, res) => {
                     });
                 }
 
-                // สร้างหิมะทุก 300ms
+                // สร้างหิมะทุก 300ms (ปรับได้)
                 setInterval(createSnowflake, 300);
             </script>
         </body>
@@ -2593,8 +2331,7 @@ app.get("/how-to-make-bot", (req, res) => {
                         <i class="fas fa-snowflake fa-lg me-2 animate-float" style="color: #fff;"></i>
                         Merry Christmas 2025
                     </a>
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
-                            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                         <span class="navbar-toggler-icon"></span>
                     </button>
                     <div class="collapse navbar-collapse" id="navbarNav">
@@ -2610,9 +2347,6 @@ app.get("/how-to-make-bot", (req, res) => {
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link active" href="/how-to-make-bot"><i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/upload-commands"><i class="fas fa-upload me-1"></i> อัปโหลดคำสั่ง</a>
                             </li>
                         </ul>
                     </div>
@@ -2650,762 +2384,7 @@ app.get("/how-to-make-bot", (req, res) => {
                 </div>
             </footer>
 
-            <!-- Container สำหรับหิมะ -->
-            <div id="snow-container"></div>
-
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-        </body>
-        </html>
-    `);
-});
-
-// หน้าอัปโหลดคำสั่ง
-app.get("/upload-commands", (req, res) => {
-    // ตรวจสอบว่าผู้ใช้ได้ล็อกอินและมีสิทธิ์ในการอัปโหลดคำสั่งสำหรับบอทใดบ้าง
-    // ตัวอย่างนี้สมมุติว่าผู้ใช้สามารถอัปโหลดได้ทุกบอทที่เขาเป็นแอดมิน
-    // คุณควรเพิ่มการตรวจสอบสิทธิ์จริงตามระบบของคุณ
-
-    res.send(`
-        <!DOCTYPE html>
-        <html lang="th">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>อัปโหลดคำสั่ง | Merry Christmas 2025</title>
-            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-            <style>
-                /* ========= ธีมคริสต์มาส 2025 ========= */
-                :root {
-                    --primary-color: #c62828;
-                    --secondary-color: #2e7d32;
-                }
-
-                body {
-                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png') no-repeat center center fixed;
-                    background-size: cover;
-                    color: #ffffff;
-                    font-family: 'Roboto', sans-serif;
-                    position: relative;
-                    overflow-x: hidden;
-                    margin: 0;
-                    padding: 0;
-                }
-
-                html, body {
-                    height: 100%;
-                }
-
-                body {
-                    display: flex;
-                    flex-direction: column;
-                    min-height: 100vh;
-                }
-
-                main.flex-grow-1 {
-                    flex: 1;
-                }
-
-                .overlay {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: rgba(0, 0, 0, 0.6);
-                    z-index: -1;
-                }
-
-                .navbar {
-                    background: rgba(198, 40, 40, 0.9) !important;
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-                }
-
-                .navbar-brand {
-                    font-family: 'Kanit', sans-serif;
-                    font-weight: 600;
-                    color: #fff !important;
-                }
-
-                .navbar-nav .nav-link {
-                    color: #fff !important;
-                    transition: color 0.3s ease;
-                }
-                .navbar-nav .nav-link:hover {
-                    color: #ffd54f !important;
-                }
-
-                .glass-card {
-                    background: rgba(255, 255, 255, 0.15);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    border-radius: 16px;
-                    padding: 24px;
-                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-                    transition: transform 0.3s ease, box-shadow 0.3s ease;
-                }
-
-                .glass-card:hover {
-                    transform: translateY(-5px);
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
-                }
-
-                .add-bot-form .form-label {
-                    font-weight: 500;
-                    color: #ffffff;
-                }
-
-                .form-control {
-                    background: rgba(255, 255, 255, 0.2);
-                    border: 1px solid rgba(255, 255, 255, 0.3);
-                    border-radius: 8px;
-                    padding: 10px 12px;
-                    font-size: 1rem;
-                    transition: border-color 0.3s ease, background 0.3s ease;
-                    color: #ffffff;
-                }
-
-                .form-control::placeholder {
-                    color: #e0e0e0;
-                }
-
-                .form-control:focus {
-                    border-color: #ffd54f;
-                    box-shadow: 0 0 0 0.2rem rgba(255, 213, 79, 0.25);
-                    background: rgba(255, 255, 255, 0.3);
-                    color: #ffffff;
-                }
-
-                .btn-primary {
-                    background: #ffd54f;
-                    border: none;
-                    padding: 10px 20px;
-                    font-size: 1rem;
-                    border-radius: 8px;
-                    transition: background 0.3s ease, transform 0.2s ease;
-                    color: #212529;
-                    font-weight: 600;
-                }
-
-                .btn-primary:hover {
-                    background: #ffca28;
-                }
-
-                .footer {
-                    background: rgba(198, 40, 40, 0.9);
-                    border-top: 2px solid rgba(255, 213, 79, 0.5);
-                    padding: 20px 0;
-                    font-size: 0.9rem;
-                    color: #ffffff;
-                }
-
-                .animate-float {
-                    animation: float 3s ease-in-out infinite;
-                }
-
-                @keyframes float {
-                    0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-10px); }
-                }
-
-                .toast-container {
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    z-index: 1055;
-                }
-
-                @media (max-width: 768px) {
-                    .glass-card {
-                        margin-bottom: 20px;
-                    }
-                }
-
-                /* ===== ใส่เอฟเฟกต์หิมะ ===== */
-                #snow-container {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    pointer-events: none; /* ไม่ให้เมาส์คลิกโดน */
-                    overflow: hidden;
-                    z-index: 9999; /* บนสุด */
-                }
-                .snowflake {
-                    position: absolute;
-                    top: -2em; /* เริ่มเหนือจอ */
-                    color: #fff; /* สีขาว */
-                    font-size: 1.2em;
-                    pointer-events: none;
-                    user-select: none;
-                    animation-name: fall;
-                    animation-timing-function: linear;
-                    animation-iteration-count: 1;
-                }
-                @keyframes fall {
-                    0% {
-                        transform: translateY(-100%);
-                        opacity: 1;
-                    }
-                    100% {
-                        transform: translateY(120vh);
-                        opacity: 0;
-                    }
-                }
-
-                /* ====== โมดัลคำอธิบาย ====== */
-                .modal-header {
-                    border-bottom: none;
-                }
-                .modal-footer {
-                    border-top: none;
-                }
-
-                /* ====== ตัวอย่างชื่อบอท ====== */
-                #botNamePreview {
-                    margin-top: 10px;
-                    font-weight: 600;
-                    color: #ffd54f;
-                }
-
-                /* ====== อินดิเคเตอร์การส่งข้อมูล ====== */
-                #loadingOverlay {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: rgba(0, 0, 0, 0.5);
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    z-index: 10000;
-                    display: none;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="overlay"></div>
-            <nav class="navbar navbar-expand-lg navbar-dark mb-4">
-                <div class="container">
-                    <a class="navbar-brand d-flex align-items-center" href="/">
-                        <i class="fas fa-snowflake fa-lg me-2 animate-float" style="color: #fff;"></i>
-                        Merry Christmas 2025
-                    </a>
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
-                            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                        <span class="navbar-toggler-icon"></span>
-                    </button>
-                    <div class="collapse navbar-collapse" id="navbarNav">
-                        <ul class="navbar-nav ms-auto">
-                            <li class="nav-item">
-                                <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/how-to-make-bot"><i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link active" href="/upload-commands"><i class="fas fa-upload me-1"></i> อัปโหลดคำสั่ง</a>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </nav>
-
-            <main class="flex-grow-1">
-                <div class="container">
-                    <div class="glass-card">
-                        <h5 class="mb-4">
-                            <i class="fas fa-upload me-2" style="color: #ffd54f;"></i>
-                            อัปโหลดไฟล์คำสั่ง
-                        </h5>
-                        <form action="/upload-commands" method="POST" enctype="multipart/form-data">
-                            <div class="mb-3">
-                                <label for="botToken" class="form-label">เลือกบอท</label>
-                                <select class="form-select" id="botToken" name="botToken" required>
-                                    ${Object.entries(botSessions).map(([token, bot]) => `
-                                        <option value="${token}">${bot.name}</option>
-                                    `).join('')}
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="commandFile" class="form-label">ไฟล์คำสั่ง (.js)</label>
-                                <input class="form-control" type="file" id="commandFile" name="commandFile" accept=".js" required>
-                            </div>
-                            <button type="submit" class="btn btn-primary">อัปโหลดคำสั่ง</button>
-                        </form>
-                    </div>
-                </div>
-            </main>
-
-            <footer class="footer text-center">
-                <div class="container">
-                    <p class="mb-0">© ${new Date().getFullYear()} Merry Christmas 2025 | Powered with ❤️</p>
-                </div>
-            </footer>
-
-            <!-- Container สำหรับหิมะ -->
-            <div id="snow-container"></div>
-
-            <div class="toast-container"></div>
-
-            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-            <script>
-                // ========= สคริปต์หิมะตก =========
-                function createSnowflake() {
-                    const snowflakeText = "❄";
-                    const snowflake = document.createElement("span");
-                    snowflake.classList.add("snowflake");
-                    snowflake.textContent = snowflakeText;
-
-                    // สุ่มตำแหน่ง X
-                    snowflake.style.left = Math.random() * 100 + "%";
-
-                    // สุ่มขนาด + ระยะเวลาตก
-                    const size = (Math.random() * 1.2 + 0.5) + "em";
-                    const duration = (Math.random() * 5 + 5) + "s"; // 5-10 วินาที
-                    snowflake.style.fontSize = size;
-                    snowflake.style.animationDuration = duration;
-
-                    // เพิ่มเข้าใน #snow-container
-                    const snowContainer = document.getElementById("snow-container");
-                    snowContainer.appendChild(snowflake);
-
-                    // ลบเมื่อแอนิเมชันจบ
-                    snowflake.addEventListener("animationend", () => {
-                        snowflake.remove();
-                    });
-                }
-
-                // สร้างหิมะทุก 300ms
-                setInterval(createSnowflake, 300);
-            </script>
-        </body>
-        </html>
-    `);
-});
-
-// Route สำหรับการอัปโหลดคำสั่ง
-// ตั้งค่า multer สำหรับการอัปโหลดไฟล์
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        const botToken = req.body.botToken;
-        const userCommandsDir = path.join(botsDir, 'user', botToken);
-        if (!fs.existsSync(userCommandsDir)) {
-            fs.mkdirSync(userCommandsDir, { recursive: true });
-        }
-        cb(null, userCommandsDir);
-    },
-    filename: function (req, file, cb) {
-        // ตั้งชื่อไฟล์ให้เป็นชื่อเดิม
-        cb(null, file.originalname);
-    }
-});
-
-// กำหนดการตรวจสอบไฟล์
-const fileFilter = (req, file, cb) => {
-    if (path.extname(file.originalname) !== '.js') {
-        return cb(new Error('เฉพาะไฟล์ .js เท่านั้นที่อนุญาตให้ใช้'), false);
-    }
-    cb(null, true);
-};
-
-const upload = multer({ storage: storage, fileFilter: fileFilter });
-
-// Route สำหรับการอัปโหลดคำสั่ง
-app.post('/upload-commands', upload.single('commandFile'), (req, res) => {
-    const { botToken } = req.body;
-    if (!botToken || !botSessions[botToken]) {
-        return res.status(400).send('ไม่พบบอทที่ต้องการอัปโหลดคำสั่ง');
-    }
-
-    if (!req.file) {
-        return res.status(400).send('ไม่พบไฟล์ที่อัปโหลด');
-    }
-
-    // โหลดคำสั่งที่อัปโหลดใหม่
-    try {
-        const userCommandPath = path.join(botsDir, 'user', botToken, req.file.filename);
-        delete require.cache[require.resolve(userCommandPath)]; // ล้าง cache เพื่อโหลดไฟล์ใหม่
-        const userCommand = require(userCommandPath);
-
-        if (userCommand.config && userCommand.config.name) {
-            const commandName = userCommand.config.name.toLowerCase();
-            // เก็บคำสั่งในระบบคำสั่งเฉพาะของบอทนี้
-            botSessions[botToken].userCommands = botSessions[botToken].userCommands || {};
-            botSessions[botToken].userCommands[commandName] = userCommand;
-
-            // เพิ่มคำสั่งเข้าไปในคำอธิบายและการใช้งาน
-            commandDescriptions.push({
-                name: userCommand.config.name,
-                description: userCommand.config.description || "ไม่มีคำอธิบาย",
-            });
-            commandUsage[commandName] = commandUsage[commandName] || 0;
-
-            console.log(`📥 อัปโหลดคำสั่งสำเร็จ: ${userCommand.config.name} สำหรับบอท: ${botSessions[botToken].name}`);
-            saveCommandUsage();
-            io.emit('updateBots', generateBotData());
-            io.emit('updateCommands', generateCommandData());
-
-            res.redirect('/commands'); // เปลี่ยนเส้นทางไปยังหน้าคำสั่ง
-        } else {
-            throw new Error('ไฟล์คำสั่งไม่มีการกำหนด config.name');
-        }
-    } catch (err) {
-        console.error(`❌ เกิดข้อผิดพลาดในการโหลดคำสั่ง: ${err.message}`);
-        res.status(500).send('เกิดข้อผิดพลาดในการโหลดคำสั่ง');
-    }
-});
-
-// หน้าแสดงบอทรัน
-app.get("/bots", (req, res) => {
-    const data = generateBotData(); 
-
-    // เปลี่ยนเฉพาะธีมเป็นคริสต์มาส 2025 + หิมะตก
-    res.send(`
-        <!DOCTYPE html>
-        <html lang="th">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>ดูบอทรัน | Merry Christmas 2025</title>
-            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-            <style>
-                /* ========= ธีมคริสต์มาส 2025 ========= */
-                :root {
-                    --primary-color: #c62828;
-                    --secondary-color: #2e7d32;
-                }
-
-                body {
-                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png') no-repeat center center fixed;
-                    background-size: cover;
-                    color: #ffffff;
-                    font-family: 'Roboto', sans-serif;
-                    position: relative;
-                    overflow-x: hidden;
-                    margin: 0;
-                    padding: 0;
-                }
-
-                html, body {
-                    height: 100%;
-                }
-
-                body {
-                    display: flex;
-                    flex-direction: column;
-                    min-height: 100vh;
-                }
-
-                main.flex-grow-1 {
-                    flex: 1;
-                }
-
-                .overlay {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: rgba(0, 0, 0, 0.6);
-                    z-index: -1;
-                }
-
-                .navbar {
-                    background: rgba(198, 40, 40, 0.9) !important;
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-                }
-
-                .navbar-brand {
-                    font-family: 'Kanit', sans-serif;
-                    font-weight: 600;
-                    color: #fff !important;
-                }
-                .navbar-nav .nav-link {
-                    color: #fff !important;
-                    transition: color 0.3s ease;
-                }
-                .navbar-nav .nav-link:hover {
-                    color: #ffd54f !important;
-                }
-
-                .glass-card {
-                    background: rgba(255, 255, 255, 0.15);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    border-radius: 16px;
-                    padding: 24px;
-                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-                    transition: transform 0.3s ease, box-shadow 0.3s ease;
-                }
-                .glass-card:hover {
-                    transform: translateY(-5px);
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
-                }
-
-                .bot-table, .command-table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-top: 20px;
-                }
-                .bot-table th, .bot-table td,
-                .command-table th, .command-table td {
-                    padding: 12px 15px;
-                    text-align: left;
-                }
-                .bot-table th, .command-table th {
-                    background-color: rgba(198, 40, 40, 0.9);
-                    color: #fff;
-                    font-weight: 600;
-                }
-                .bot-table tr:nth-child(even),
-                .command-table tr:nth-child(even) {
-                    background-color: rgba(255, 255, 255, 0.1);
-                }
-
-                .status-online {
-                    background: #2e7d32;
-                    color: #ffffff;
-                    padding: 5px 10px;
-                    border-radius: 20px;
-                    font-size: 0.9rem;
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                }
-                .status-active {
-                    background: #43a047;
-                    color: #ffffff;
-                    padding: 5px 10px;
-                    border-radius: 20px;
-                    font-size: 0.9rem;
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                }
-                .status-connecting {
-                    background: #ffd54f;
-                    color: #212529;
-                    padding: 5px 10px;
-                    border-radius: 20px;
-                    font-size: 0.9rem;
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                }
-                .status-connection-failed {
-                    background: #ef5350;
-                    color: #ffffff;
-                    padding: 5px 10px;
-                    border-radius: 20px;
-                    font-size: 0.9rem;
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                }
-                .status-offline {
-                    background: #616161;
-                    color: #ffffff;
-                    padding: 5px 10px;
-                    border-radius: 20px;
-                    font-size: 0.9rem;
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                }
-
-                .footer {
-                    background: rgba(198, 40, 40, 0.9);
-                    border-top: 2px solid rgba(255, 213, 79, 0.5);
-                    padding: 20px 0;
-                    font-size: 0.9rem;
-                    color: #ffffff;
-                }
-
-                .btn-warning, .btn-danger, .btn-secondary {
-                    transition: transform 0.2s ease;
-                }
-                .btn-warning:hover, .btn-danger:hover, .btn-secondary:hover {
-                    transform: scale(1.05);
-                }
-
-                .bot-name {
-                    font-family: 'Press Start 2P', cursive;
-                    color: #ffd54f;
-                    font-size: 1.1rem;
-                }
-                .runtime {
-                    font-weight: 500;
-                    color: #ffd54f;
-                }
-                .ping {
-                    font-weight: 500;
-                    color: #2e7d32;
-                }
-
-                .animate-float {
-                    animation: float 3s ease-in-out infinite;
-                }
-                @keyframes float {
-                    0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-10px); }
-                }
-
-                @media (max-width: 768px) {
-                    .glass-card {
-                        margin-bottom: 20px;
-                    }
-                    .bot-table th, .bot-table td,
-                    .command-table th, .command-table td {
-                        padding: 8px 10px;
-                    }
-                }
-
-                /* ===== เพิ่มเอฟเฟกต์หิมะ ===== */
-                #snow-container {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    pointer-events: none; /* ไม่ให้เมาส์คลิกโดน */
-                    overflow: hidden;
-                    z-index: 9999; /* บนสุด */
-                }
-                .snowflake {
-                    position: absolute;
-                    top: -2em; /* เริ่มเหนือจอ */
-                    color: #fff; /* สีขาว */
-                    font-size: 1.2em;
-                    pointer-events: none;
-                    user-select: none;
-                    animation-name: fall;
-                    animation-timing-function: linear;
-                    animation-iteration-count: 1;
-                }
-                @keyframes fall {
-                    0% {
-                        transform: translateY(-100%);
-                        opacity: 1;
-                    }
-                    100% {
-                        transform: translateY(120vh);
-                        opacity: 0;
-                    }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="overlay"></div>
-            <nav class="navbar navbar-expand-lg navbar-dark mb-4">
-                <div class="container">
-                    <a class="navbar-brand d-flex align-items-center" href="/">
-                        <i class="fas fa-snowflake fa-lg me-2 animate-float" style="color: #fff;"></i>
-                        Merry Christmas 2025
-                    </a>
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
-                            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                        <span class="navbar-toggler-icon"></span>
-                    </button>
-                    <div class="collapse navbar-collapse" id="navbarNav">
-                        <ul class="navbar-nav ms-auto">
-                            <li class="nav-item">
-                                <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/how-to-make-bot"><i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link active" href="/upload-commands"><i class="fas fa-upload me-1"></i> อัปโหลดคำสั่ง</a>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </nav>
-
-            <main class="flex-grow-1">
-                <div class="container">
-                    <div class="glass-card">
-                        <h5 class="mb-4">
-                            <i class="fas fa-upload me-2" style="color: #ffd54f;"></i>
-                            อัปโหลดไฟล์คำสั่ง
-                        </h5>
-                        <form action="/upload-commands" method="POST" enctype="multipart/form-data">
-                            <div class="mb-3">
-                                <label for="botToken" class="form-label">เลือกบอท</label>
-                                <select class="form-select" id="botToken" name="botToken" required>
-                                    ${Object.entries(botSessions).map(([token, bot]) => `
-                                        <option value="${token}">${bot.name}</option>
-                                    `).join('')}
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="commandFile" class="form-label">ไฟล์คำสั่ง (.js)</label>
-                                <input class="form-control" type="file" id="commandFile" name="commandFile" accept=".js" required>
-                            </div>
-                            <button type="submit" class="btn btn-primary">อัปโหลดคำสั่ง</button>
-                        </form>
-                    </div>
-                </div>
-            </main>
-
-            <footer class="footer text-center">
-                <div class="container">
-                    <p class="mb-0">© ${new Date().getFullYear()} Merry Christmas 2025 | Powered with ❤️</p>
-                </div>
-            </footer>
-
-            <!-- Container สำหรับหิมะ -->
-            <div id="snow-container"></div>
-
-            <div class="toast-container"></div>
-
-            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-            <script>
-                // ========= สคริปต์หิมะตก =========
-                function createSnowflake() {
-                    const snowflakeText = "❄";
-                    const snowflake = document.createElement("span");
-                    snowflake.classList.add("snowflake");
-                    snowflake.textContent = snowflakeText;
-
-                    // สุ่มตำแหน่ง X
-                    snowflake.style.left = Math.random() * 100 + "%";
-
-                    // สุ่มขนาด + ระยะเวลาตก
-                    const size = (Math.random() * 1.2 + 0.5) + "em";
-                    const duration = (Math.random() * 5 + 5) + "s"; // 5-10 วินาที
-                    snowflake.style.fontSize = size;
-                    snowflake.style.animationDuration = duration;
-
-                    // เพิ่มเข้าใน #snow-container
-                    const snowContainer = document.getElementById("snow-container");
-                    snowContainer.appendChild(snowflake);
-
-                    // ลบเมื่อแอนิเมชันจบ
-                    snowflake.addEventListener("animationend", () => {
-                        snowflake.remove();
-                    });
-                }
-
-                // สร้างหิมะทุก 300ms
-                setInterval(createSnowflake, 300);
-            </script>
         </body>
         </html>
     `);
@@ -3491,8 +2470,7 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
             adminID: adminID.trim(),
             ping: 'N/A',
             deletionTimeout: null,
-            retryCount: 0,
-            userCommands: {} // เก็บคำสั่งของผู้ใช้
+            retryCount: 0
         };
 
         login({ appState }, (err, api) => {
@@ -3514,100 +2492,72 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
 
             api.setOptions({ listenEvents: true });
 
-            // โหลดคำสั่งจากโฟลเดอร์ผู้ใช้
-            const userCommandsDir = path.join(botsDir, 'user', token);
-            if (fs.existsSync(userCommandsDir)) {
-                fs.readdirSync(userCommandsDir).forEach((file) => {
-                    if (file.endsWith('.js')) {
-                        try {
-                            const commandPath = path.join(userCommandsDir, file);
-                            delete require.cache[require.resolve(commandPath)]; // ล้าง cache เพื่อโหลดไฟล์ใหม่
-                            const command = require(commandPath);
-                            if (command.config && command.config.name) {
-                                const commandName = command.config.name.toLowerCase();
-                                botSessions[token].userCommands[commandName] = command;
-                                commandDescriptions.push({
-                                    name: command.config.name,
-                                    description: command.config.description || "ไม่มีคำอธิบาย",
-                                });
-                                commandUsage[commandName] = commandUsage[commandName] || 0;
-                                console.log(`📦 โหลดคำสั่งผู้ใช้: ${command.config.name} สำหรับบอท: ${name}`);
-                            }
-                        } catch (err) {
-                            console.error(`❌ ไม่สามารถโหลดคำสั่งผู้ใช้จากไฟล์: ${file}, error=${err.message}`);
-                        }
-                    }
-                });
-            }
-
             api.listenMqtt(async (err, event) => {
-                if (err) {
-                    console.error(chalk.red(`❌ เกิดข้อผิดพลาด: ${err}`));
-                    botSessions[token].status = 'offline';
-                    io.emit('updateBots', generateBotData());
-                    io.emit('botOffline', botSessions[token].name);
+    if (err) {
+        console.error(chalk.red(`❌ เกิดข้อผิดพลาด: ${err}`));
+        botSessions[token].status = 'offline';
+        io.emit('updateBots', generateBotData());
+        io.emit('botOffline', botSessions[token].name);
 
-                    if (!botSessions[token].deletionTimeout) {
-                        botSessions[token].deletionTimeout = setTimeout(() => {
-                            deleteBot(token, true);
-                        }, 60000);
-                        console.log(chalk.yellow(`⌛ บอท ${name} จะถูกลบในอีก 60 วินาที`));
-                    }
-                    return;
-                }
+        if (!botSessions[token].deletionTimeout) {
+            botSessions[token].deletionTimeout = setTimeout(() => {
+                deleteBot(token, true);
+            }, 60000);
+            console.log(chalk.yellow(`⌛ บอท ${name} จะถูกลบในอีก 60 วินาที`));
+        }
+        return;
+    }
 
-                console.log(chalk.blue(`📩 รับอีเวนต์: ${event.type}`));
+    console.log(chalk.blue(`📩 รับอีเวนต์: ${event.type}`));
 
-                // ตรวจสอบอีเวนต์ตามประเภท
-                if (event.logMessageType && events[event.logMessageType]) {
-                    for (const eventHandler of events[event.logMessageType]) {
-                        try {
-                            console.log(chalk.blue(`🔄 กำลังประมวลผลอีเวนต์: ${eventHandler.config.name}`));
-                            await eventHandler.run({ api, event });
-                            console.log(chalk.green(`✅ ประมวลผลอีเวนต์สำเร็จ: ${eventHandler.config.name}`));
-                        } catch (error) {
-                            console.error(chalk.red(`❌ เกิดข้อผิดพลาดในอีเวนต์ ${eventHandler.config.name}:`, error));
-                        }
-                    }
-                }
+    // ตรวจสอบอีเวนต์ตามประเภท
+    if (event.logMessageType && events[event.logMessageType]) {
+        for (const eventHandler of events[event.logMessageType]) {
+            try {
+                console.log(chalk.blue(`🔄 กำลังประมวลผลอีเวนต์: ${eventHandler.config.name}`));
+                await eventHandler.run({ api, event });
+                console.log(chalk.green(`✅ ประมวลผลอีเวนต์สำเร็จ: ${eventHandler.config.name}`));
+            } catch (error) {
+                console.error(chalk.red(`❌ เกิดข้อผิดพลาดในอีเวนต์ ${eventHandler.config.name}:`, error));
+            }
+        }
+    }
 
-                // ตัวอย่างการจัดการอีเวนต์ข้อความ (message)
-                if (event.type === "message") {
-                    const message = event.body ? event.body.trim() : "";
-                    console.log(chalk.cyan(`📨 ข้อความที่ได้รับ: "${message}" จากผู้ใช้ ${event.senderID}`));
+    // ตัวอย่างการจัดการอีเวนต์ข้อความ (message)
+    if (event.type === "message") {
+        const message = event.body ? event.body.trim() : "";
+        console.log(chalk.cyan(`📨 ข้อความที่ได้รับ: "${message}" จากผู้ใช้ ${event.senderID}`));
 
-                    if (!message.startsWith(botSessions[token].prefix)) return;
+        if (!message.startsWith(botSessions[token].prefix)) return;
 
-                    const args = message.slice(botSessions[token].prefix.length).trim().split(/ +/);
-                    const commandName = args.shift().toLowerCase();
+        const args = message.slice(botSessions[token].prefix.length).trim().split(/ +/);
+        const commandName = args.shift().toLowerCase();
+        const command = commands[commandName];
 
-                    // ตรวจสอบคำสั่งจากคำสั่งของผู้ใช้ก่อน
-                    let command = botSessions[token].userCommands[commandName] || commands[commandName];
-
-                    if (command && typeof command.run === "function") {
-                        try {
-                            console.log(chalk.yellow(`🚀 กำลังรันคำสั่ง: ${commandName}`));
-                            await command.run({ api, event, args });
-                            console.log(chalk.green(`✅ รันคำสั่งสำเร็จ: ${commandName}`));
-                            commandUsage[commandName] = (commandUsage[commandName] || 0) + 1;
-                            saveCommandUsage();
-                            io.emit('updateBots', generateBotData());
-                            io.emit('updateCommands', generateCommandData());
-                        } catch (error) {
-                            console.error(chalk.red(`❌ เกิดข้อผิดพลาดในคำสั่ง ${commandName}:`, error));
-                            api.sendMessage("❗ การรันคำสั่งล้มเหลว", event.threadID);
-                        }
-                    } else {
-                        api.sendMessage(`
-    ===========================
-    🎄 [ ERROR 404 ] ❗ ไม่พบคำสั่งที่ระบุ 🎄  
-    🎅 กรุณาตรวจสอบคำสั่งอีกครั้ง 🎁  
-    ✨ คำแนะนำ: พิมพ์ ${botSessions[token].prefix}ดูคำสั่ง เพื่อดูรายการคำสั่ง  
-    ===========================
+        if (command && typeof command.run === "function") {
+            try {
+                console.log(chalk.yellow(`🚀 กำลังรันคำสั่ง: ${commandName}`));
+                await command.run({ api, event, args });
+                console.log(chalk.green(`✅ รันคำสั่งสำเร็จ: ${commandName}`));
+                commandUsage[commandName] = (commandUsage[commandName] || 0) + 1;
+                saveCommandUsage();
+                io.emit('updateBots', generateBotData());
+                io.emit('updateCommands', generateCommandData());
+            } catch (error) {
+                console.error(chalk.red(`❌ เกิดข้อผิดพลาดในคำสั่ง ${commandName}:`, error));
+                api.sendMessage("❗ การรันคำสั่งล้มเหลว", event.threadID);
+            }
+        } else {
+            api.sendMessage(`
+===========================
+🎄 [ ERROR 404 ] ❗ ไม่พบคำสั่งที่ระบุ 🎄  
+🎅 กรุณาตรวจสอบคำสั่งอีกครั้ง 🎁  
+✨ คำแนะนำ: พิมพ์ /ดูคำสั่ง เพื่อดูรายการคำสั่ง  
+===========================
 `, event.threadID);
-                    }
-                }
-
+        }
+    }
+                
                 if (botSessions[token].status === 'online') {
                     if (botSessions[token].deletionTimeout) {
                         clearTimeout(botSessions[token].deletionTimeout);
@@ -3841,63 +2791,3 @@ setInterval(() => {
         console.log(chalk.green('✅ ไม่มีบอทที่ต้องการลบในครั้งนี้'));
     }
 }, 300000);
-
-// โหลดคำสั่งจากโฟลเดอร์ commands และ userCommands
-const loadAllCommands = () => {
-    // โหลดคำสั่งจากโฟลเดอร์ commands
-    const commandsPath = path.join(__dirname, 'commands');
-    if (fs.existsSync(commandsPath)) {
-        fs.readdirSync(commandsPath).forEach((file) => {
-            if (file.endsWith(".js")) {
-                const command = require(`./commands/${file}`);
-                if (command.config && command.config.name) {
-                    commands[command.config.name.toLowerCase()] = command;
-                    commandDescriptions.push({
-                        name: command.config.name,
-                        description: command.config.description || "ไม่มีคำอธิบาย",
-                    });
-                    commandUsage[command.config.name.toLowerCase()] = commandUsage[command.config.name.toLowerCase()] || 0;
-                    console.log(`📦 โหลดคำสั่ง: ${command.config.name}`);
-                }
-            }
-        });
-    }
-
-    // โหลดคำสั่งจากโฟลเดอร์ผู้ใช้
-    const userCommandsBaseDir = path.join(botsDir, 'user');
-    if (fs.existsSync(userCommandsBaseDir)) {
-        fs.readdirSync(userCommandsBaseDir).forEach((botToken) => {
-            const userCommandsDir = path.join(userCommandsBaseDir, botToken);
-            if (fs.existsSync(userCommandsDir)) {
-                fs.readdirSync(userCommandsDir).forEach((file) => {
-                    if (file.endsWith('.js')) {
-                        try {
-                            const commandPath = path.join(userCommandsDir, file);
-                            delete require.cache[require.resolve(commandPath)]; // ล้าง cache เพื่อโหลดไฟล์ใหม่
-                            const command = require(commandPath);
-                            if (command.config && command.config.name) {
-                                if (botSessions[botToken]) {
-                                    const commandName = command.config.name.toLowerCase();
-                                    botSessions[botToken].userCommands = botSessions[botToken].userCommands || {};
-                                    botSessions[botToken].userCommands[commandName] = command;
-
-                                    commandDescriptions.push({
-                                        name: command.config.name,
-                                        description: command.config.description || "ไม่มีคำอธิบาย",
-                                    });
-                                    commandUsage[commandName] = commandUsage[commandName] || 0;
-                                    console.log(`📦 โหลดคำสั่งผู้ใช้: ${command.config.name} สำหรับบอท: ${botSessions[botToken].name}`);
-                                }
-                            }
-                        } catch (err) {
-                            console.error(`❌ ไม่สามารถโหลดคำสั่งผู้ใช้จากไฟล์: ${file}, error=${err.message}`);
-                        }
-                    }
-                });
-            }
-        });
-    }
-};
-
-// เรียกใช้เมื่อเริ่มต้นเซิร์ฟเวอร์
-loadAllCommands();
