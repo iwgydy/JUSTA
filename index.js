@@ -1071,86 +1071,34 @@ app.get("/start", (req, res) => {
                     }
                 }
 
-                /* ===== Dark Mode Styles ===== */
-                .dark-mode {
-                    background-color: #121212;
-                    color: #ffffff;
+                /* ====== โมดัลคำอธิบาย ====== */
+                .modal-header {
+                    border-bottom: none;
+                }
+                .modal-footer {
+                    border-top: none;
                 }
 
-                .dark-mode .glass-card {
-                    background: rgba(0, 0, 0, 0.7);
-                }
-
-                .dark-mode .form-control {
-                    background: rgba(255, 255, 255, 0.1);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    color: #ffffff;
-                }
-
-                .dark-mode .form-control::placeholder {
-                    color: #b0b0b0;
-                }
-
-                .dark-mode .navbar {
-                    background: rgba(34, 34, 34, 0.9) !important;
-                }
-
-                .dark-mode .navbar-brand,
-                .dark-mode .navbar-nav .nav-link {
-                    color: #ffffff !important;
-                }
-
-                .dark-mode .btn-primary {
-                    background: #555555;
-                    color: #ffffff;
-                }
-
-                .dark-mode .btn-primary:hover {
-                    background: #777777;
-                }
-
-                /* ===== Preview Box ===== */
-                #namePreview {
-                    background: rgba(255, 255, 255, 0.1);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    border-radius: 8px;
-                    padding: 10px;
-                    text-align: center;
+                /* ====== ตัวอย่างชื่อบอท ====== */
+                #botNamePreview {
                     margin-top: 10px;
-                    font-weight: 500;
+                    font-weight: 600;
+                    color: #ffd54f;
                 }
 
-                /* ===== Loading Overlay ===== */
-                #loading-overlay {
-                    display: none;
+                /* ====== อินดิเคเตอร์การส่งข้อมูล ====== */
+                #loadingOverlay {
                     position: fixed;
                     top: 0;
                     left: 0;
                     width: 100%;
                     height: 100%;
-                    background: rgba(0,0,0,0.6);
-                    z-index: 9999;
-                    color: white;
+                    background: rgba(0, 0, 0, 0.5);
                     display: flex;
-                    align-items: center;
                     justify-content: center;
-                    flex-direction: column;
-                }
-
-                /* ===== Wizard Steps ===== */
-                .wizard-step {
-                    display: none;
-                }
-                .wizard-step.active {
-                    display: block;
-                }
-
-                /* ===== Theme Toggle Button ===== */
-                #theme-toggle {
-                    position: fixed;
-                    bottom: 20px;
-                    right: 20px;
+                    align-items: center;
                     z-index: 10000;
+                    display: none;
                 }
             </style>
         </head>
@@ -1193,106 +1141,74 @@ app.get("/start", (req, res) => {
                             เพิ่มบอทใหม่
                         </h5>
                         ${errorMessage}
-                        <!-- Wizard Form -->
-                        <form class="add-bot-form" method="POST" action="/start" enctype="multipart/form-data">
-                            <!-- Step 1: Basic Info -->
-                            <div id="step-1" class="wizard-step active">
-                                <h5>ขั้นตอนที่ 1: ตั้งค่าเบื้องต้น</h5>
-                                <div class="mb-3 position-relative">
-                                    <label for="name" class="form-label">ชื่อบอท <i class="fas fa-info-circle" data-bs-toggle="tooltip" data-bs-placement="top" title="กรุณากรอกชื่อบอทที่ต้องการ"></i></label>
-                                    <input 
-                                        type="text" 
-                                        id="name" 
-                                        name="name" 
-                                        class="form-control" 
-                                        placeholder="MyBot" 
-                                        required
-                                        pattern="^[a-zA-Z0-9_-]{3,20}$" 
-                                        title="กรุณากรอกชื่อบอทที่มีความยาว 3-20 ตัวอักษร และประกอบด้วย a-z, A-Z, 0-9, -, _"
-                                    />
-                                </div>
-                                <div class="mb-3 position-relative">
-                                    <label for="prefix" class="form-label">คำนำหน้าบอท <i class="fas fa-info-circle" data-bs-toggle="tooltip" data-bs-placement="top" title="กรุณากรอกคำนำหน้าที่ต้องการสำหรับบอท"></i></label>
-                                    <input 
-                                        type="text" 
-                                        id="prefix" 
-                                        name="prefix" 
-                                        class="form-control" 
-                                        placeholder="/" 
-                                        required
-                                        pattern="^.{1,10}$" 
-                                        title="กรุณากรอกคำนำหน้าที่มีความยาว 1-10 ตัวอักษร"
-                                    />
-                                </div>
-                                <!-- Preview Section -->
-                                <div class="mb-3">
-                                    <label class="form-label">ตัวอย่างชื่อบอท:</label>
-                                    <div id="namePreview" class="glass-card p-2 text-center">
-                                        MyBot [Prefix: /]
-                                    </div>
-                                </div>
-                                <button type="button" class="btn btn-primary" onclick="nextStep(2)">ถัดไป</button>
+                        <form class="add-bot-form" method="POST" action="/start" id="addBotForm">
+                            <div class="mb-3">
+                                <label for="token" class="form-label">โทเค็นของคุณ</label>
+                                <textarea 
+                                    id="token" 
+                                    name="token" 
+                                    class="form-control" 
+                                    rows="4" 
+                                    placeholder='{"appState": "YOUR_APP_STATE"}'
+                                    required
+                                ></textarea>
                             </div>
-
-                            <!-- Step 2: Token and Avatar -->
-                            <div id="step-2" class="wizard-step">
-                                <h5>ขั้นตอนที่ 2: ตั้งค่าโทเค็นและอัปโหลดรูป</h5>
-                                <div class="mb-3 position-relative">
-                                    <label for="token" class="form-label">โทเค็นของคุณ <i class="fas fa-info-circle" data-bs-toggle="tooltip" data-bs-placement="top" title='กรุณาใส่ JSON โทเค็นจากแพลตฟอร์มของคุณ เช่น {"appState": "YOUR_APP_STATE"}'></i></label>
-                                    <textarea 
-                                        id="token" 
-                                        name="token" 
-                                        class="form-control" 
-                                        rows="4" 
-                                        placeholder='{"appState": "YOUR_APP_STATE"}'
-                                        required
-                                    ></textarea>
-                                </div>
-                                <div class="mb-3 position-relative">
-                                    <label for="botAvatar" class="form-label">เลือกรูปภาพบอท <i class="fas fa-info-circle" data-bs-toggle="tooltip" data-bs-placement="top" title="เลือกรูปภาพสำหรับบอทของคุณ"></i></label>
-                                    <input 
-                                        type="file" 
-                                        id="botAvatar" 
-                                        name="botAvatar" 
-                                        class="form-control" 
-                                        accept="image/*"
-                                    />
-                                </div>
-                                <button type="button" class="btn btn-secondary me-2" onclick="previousStep(1)">ย้อนกลับ</button>
-                                <button type="button" class="btn btn-primary" onclick="nextStep(3)">ถัดไป</button>
+                            <div class="mb-3">
+                                <label for="prefix" class="form-label">คำนำหน้าบอท</label>
+                                <input 
+                                    type="text" 
+                                    id="prefix" 
+                                    name="prefix" 
+                                    class="form-control" 
+                                    placeholder="/" 
+                                    required
+                                    pattern="^.{1,10}$" 
+                                    title="กรุณากรอกคำนำหน้าที่มีความยาว 1-10 ตัวอักษร"
+                                />
                             </div>
-
-                            <!-- Step 3: Security -->
-                            <div id="step-3" class="wizard-step">
-                                <h5>ขั้นตอนที่ 3: ตั้งค่าความปลอดภัย</h5>
-                                <div class="mb-3 position-relative">
-                                    <label for="password" class="form-label">ตั้งรหัสผ่าน 6 หลักสำหรับการจัดการบอท <i class="fas fa-info-circle" data-bs-toggle="tooltip" data-bs-placement="top" title="รหัสผ่านนี้ใช้สำหรับจัดการบอทของคุณ"></i></label>
-                                    <input 
-                                        type="password" 
-                                        id="password" 
-                                        name="password" 
-                                        class="form-control" 
-                                        pattern="\\d{6}" 
-                                        placeholder="123456" 
-                                        required
-                                        title="กรุณากรอกรหัสผ่าน 6 หลัก"
-                                    />
-                                </div>
-                                <div class="mb-3 position-relative">
-                                    <label for="adminID" class="form-label">ID แอดมินของบอท <i class="fas fa-info-circle" data-bs-toggle="tooltip" data-bs-placement="top" title="ID แอดมินคือรหัสที่ใช้ในการจัดการบอทของคุณ"></i></label>
-                                    <input 
-                                        type="text" 
-                                        id="adminID" 
-                                        name="adminID" 
-                                        class="form-control" 
-                                        placeholder="61555184860915" 
-                                        required
-                                        title="กรุณากรอก ID แอดมินของบอท"
-                                    />
-                                </div>
-                                <button type="button" class="btn btn-secondary me-2" onclick="previousStep(2)">ย้อนกลับ</button>
-                                <button type="submit" class="btn btn-primary">เริ่มบอท</button>
+                            <div class="mb-3">
+                                <label for="name" class="form-label">ชื่อบอท</label>
+                                <input 
+                                    type="text" 
+                                    id="name" 
+                                    name="name" 
+                                    class="form-control" 
+                                    placeholder="MyBot" 
+                                    required
+                                    pattern="^[a-zA-Z0-9_-]{3,20}$" 
+                                    title="กรุณากรอกชื่อบอทที่มีความยาว 3-20 ตัวอักษร และประกอบด้วย a-z, A-Z, 0-9, -, _"
+                                />
+                                <div id="botNamePreview">ตัวอย่าง: <span id="previewText">MyBot</span></div>
                             </div>
+                            <div class="mb-3">
+                                <label for="password" class="form-label">ตั้งรหัสผ่าน 6 หลักสำหรับการจัดการบอท</label>
+                                <input 
+                                    type="password" 
+                                    id="password" 
+                                    name="password" 
+                                    class="form-control" 
+                                    pattern="\\d{6}" 
+                                    placeholder="123456" 
+                                    required
+                                    title="กรุณากรอกรหัสผ่าน 6 หลัก"
+                                />
+                            </div>
+                            <div class="mb-3">
+                                <label for="adminID" class="form-label">ID แอดมินของบอท</label>
+                                <input 
+                                    type="text" 
+                                    id="adminID" 
+                                    name="adminID" 
+                                    class="form-control" 
+                                    placeholder="61555184860915" 
+                                    required
+                                    title="กรุณากรอก ID แอดมินของบอท"
+                                />
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100" id="submitButton">
+                                <i class="fas fa-play me-2"></i>
+                                เริ่มบอท
+                            </button>
                         </form>
                     </div>
                 </div>
@@ -1307,20 +1223,31 @@ app.get("/start", (req, res) => {
             <!-- Container สำหรับหิมะ -->
             <div id="snow-container"></div>
 
-            <!-- Loading Overlay -->
-            <div id="loading-overlay">
-                <div class="spinner-border text-warning" role="status">
-                    <span class="visually-hidden">กำลังโหลด...</span>
+            <!-- โมดัลคำอธิบาย -->
+            <div class="modal fade" id="descriptionModal" tabindex="-1" aria-labelledby="descriptionModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content bg-dark text-white">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="descriptionModalLabel">คำอธิบายการเพิ่มบอท</h5>
+                        </div>
+                        <div class="modal-body">
+                            กรุณากรอกข้อมูลโทเค็น, คำนำหน้าบอท, ชื่อบอท, รหัสผ่าน 6 หลัก และ ID แอดมิน เพื่อเริ่มต้นบอทของคุณ
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">ตกลง</button>
+                        </div>
+                    </div>
                 </div>
-                <p class="mt-3">กำลังเพิ่มบอทของคุณ...</p>
+            </div>
+
+            <!-- อินดิเคเตอร์การส่งข้อมูล -->
+            <div id="loadingOverlay">
+                <div class="spinner-border text-light" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
             </div>
 
             <div class="toast-container"></div>
-
-            <!-- Theme Toggle Button -->
-            <button id="theme-toggle" class="btn btn-secondary">
-                <i class="fas fa-moon"></i> เปลี่ยนธีม
-            </button>
 
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
             <script>
@@ -1378,60 +1305,33 @@ app.get("/start", (req, res) => {
                     });
                 }
 
-                // ========= Theme Toggle Script =========
-                const toggleButton = document.getElementById('theme-toggle');
-                toggleButton.addEventListener('click', () => {
-                    document.body.classList.toggle('dark-mode');
-                    const icon = toggleButton.querySelector('i');
-                    if (document.body.classList.contains('dark-mode')) {
-                        icon.className = 'fas fa-sun';
-                        toggleButton.innerHTML = '<i class="fas fa-sun"></i> โหมดสว่าง';
-                    } else {
-                        icon.className = 'fas fa-moon';
-                        toggleButton.innerHTML = '<i class="fas fa-moon"></i> โหมดมืด';
-                    }
+                document.addEventListener('DOMContentLoaded', () => {
+                    // แสดงโมดัลคำอธิบายเมื่อโหลดหน้าเว็บ
+                    const descriptionModal = new bootstrap.Modal(document.getElementById('descriptionModal'));
+                    descriptionModal.show();
+
+                    // สร้างตัวอย่างชื่อบอทแบบเรียลไทม์
+                    const nameInput = document.getElementById('name');
+                    const previewText = document.getElementById('previewText');
+
+                    nameInput.addEventListener('input', () => {
+                        const value = nameInput.value || 'MyBot';
+                        previewText.textContent = value;
+                    });
+
+                    // จัดการการส่งแบบฟอร์ม
+                    const addBotForm = document.getElementById('addBotForm');
+                    const loadingOverlay = document.getElementById('loadingOverlay');
+                    const submitButton = document.getElementById('submitButton');
+
+                    addBotForm.addEventListener('submit', (e) => {
+                        // แสดงอินดิเคเตอร์การส่งข้อมูล
+                        loadingOverlay.style.display = 'flex';
+                        // ปิดใช้งานปุ่มส่ง
+                        submitButton.disabled = true;
+                    });
                 });
 
-                // ========= Wizard Form Script =========
-                function nextStep(step) {
-                    document.querySelectorAll('.wizard-step').forEach((el, index) => {
-                        el.classList.remove('active');
-                    });
-                    document.getElementById('step-' + step).classList.add('active');
-                }
-
-                function previousStep(step) {
-                    document.querySelectorAll('.wizard-step').forEach((el, index) => {
-                        el.classList.remove('active');
-                    });
-                    document.getElementById('step-' + step).classList.add('active');
-                }
-
-                // ========= Real-Time Preview Script =========
-                const nameInput = document.getElementById('name');
-                const prefixInput = document.getElementById('prefix');
-                const preview = document.getElementById('namePreview');
-
-                nameInput.addEventListener('input', updatePreview);
-                prefixInput.addEventListener('input', updatePreview);
-
-                function updatePreview() {
-                    const name = nameInput.value || 'MyBot';
-                    const prefix = prefixInput.value || '/';
-                    preview.textContent = \`\${name} [Prefix: \${prefix}]\`;
-                }
-
-                // ========= Tooltip Initialization =========
-                const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-                const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
-
-                // ========= Loading Overlay Script =========
-                const form = document.querySelector('.add-bot-form');
-                form.addEventListener('submit', () => {
-                    document.getElementById('loading-overlay').style.display = 'flex';
-                });
-
-                // ========= Additional Button Actions =========
                 document.addEventListener('click', function(event) {
                     if (event.target.closest('.delete-btn')) {
                         const token = decodeURIComponent(event.target.closest('.delete-btn').getAttribute('data-token'));
