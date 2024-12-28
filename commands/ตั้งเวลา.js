@@ -57,14 +57,19 @@ module.exports = {
         // แจ้งเตือนเมื่อถึงเวลา
         setTimeout(async () => {
             await api.sendMessage(
-                `⏰ เตือนเวลา: ${message}`,
+                `⏰ เตือนเวลา!\n${message}\n${getMentionText(event.senderID)}`,
                 event.threadID
             );
         }, duration.asMilliseconds());
 
         await api.sendMessage(
-            `✅ ตั้งเวลาเรียบร้อย!\nจะแจ้งเตือนเมื่อถึงเวลา ${targetTime.format("HH:mm")} (อีกประมาณ ${Math.floor(duration.asMinutes())} นาที)`,
+            `✅ ตั้งเวลาเรียบร้อย!\nจะแจ้งเตือนเมื่อถึงเวลา ${targetTime.format("HH:mm")} (อีกประมาณ ${Math.floor(duration.asMinutes())} นาที)\n${getMentionText(event.senderID)}`,
             event.threadID
         );
     }
 };
+
+// ฟังก์ชันสร้างข้อความแท็กผู้ใช้
+function getMentionText(userID) {
+    return `🫵 แท็กคุณ: @[${userID}]`;
+}
