@@ -1831,30 +1831,19 @@ app.get("/commands", (req, res) => {
                 :root {
                     --primary-color: #c62828;
                     --secondary-color: #2e7d32;
+                    --glow-color: rgba(255, 213, 79, 0.3);
                 }
 
                 body {
-                    background: linear-gradient(-45deg, #c62828, #2e7d32, #c62828, #2e7d32);
-                    background-size: 400% 400%;
-                    animation: gradientBG 15s ease infinite;
+                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png')
+                        no-repeat center center fixed;
+                    background-size: cover;
                     color: #ffffff;
                     font-family: 'Roboto', sans-serif;
                     position: relative;
                     overflow-x: hidden;
                     margin: 0;
                     padding: 0;
-                }
-
-                @keyframes gradientBG {
-                    0% {
-                        background-position: 0% 50%;
-                    }
-                    50% {
-                        background-position: 100% 50%;
-                    }
-                    100% {
-                        background-position: 0% 50%;
-                    }
                 }
 
                 html, body {
@@ -1879,12 +1868,6 @@ app.get("/commands", (req, res) => {
                     height: 100%;
                     background: rgba(0, 0, 0, 0.6);
                     z-index: -1;
-                    transition: background-color 0.3s ease, transform 0.3s ease;
-                }
-
-                .overlay:hover {
-                    background-color: rgba(0, 0, 0, 0.8) !important;
-                    transform: translateY(-5px);
                 }
 
                 .navbar {
@@ -1895,19 +1878,13 @@ app.get("/commands", (req, res) => {
                     font-family: 'Kanit', sans-serif;
                     font-weight: 600;
                     color: #fff !important;
-                    transition: color 0.3s ease, transform 0.3s ease;
-                }
-                .navbar-brand:hover {
-                    color: #ffd54f !important;
-                    transform: scale(1.1);
                 }
                 .navbar-nav .nav-link {
                     color: #fff !important;
-                    transition: color 0.3s ease, transform 0.3s ease;
+                    transition: color 0.3s ease;
                 }
                 .navbar-nav .nav-link:hover {
                     color: #ffd54f !important;
-                    transform: translateY(-2px);
                 }
 
                 .glass-card {
@@ -1915,12 +1892,14 @@ app.get("/commands", (req, res) => {
                     border: 1px solid rgba(255, 255, 255, 0.2);
                     border-radius: 16px;
                     padding: 24px;
-                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3), 0 0 20px var(--glow-color);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
+                    position: relative;
+                    overflow: hidden;
                 }
                 .glass-card:hover {
                     transform: translateY(-5px);
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5), 0 0 30px var(--glow-color);
                 }
 
                 .command-table {
@@ -1931,19 +1910,11 @@ app.get("/commands", (req, res) => {
                 .command-table th, .command-table td {
                     padding: 12px 15px;
                     text-align: left;
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
                 }
                 .command-table th {
                     background-color: rgba(198, 40, 40, 0.9);
                     color: #fff;
                     font-weight: 600;
-                }
-                .command-table tr {
-                    transition: background-color 0.3s ease;
-                }
-                .command-table tr:hover {
-                    background-color: rgba(255, 255, 255, 0.2) !important;
                 }
                 .command-table tr:nth-child(even) {
                     background-color: rgba(255, 255, 255, 0.1);
@@ -1955,43 +1926,27 @@ app.get("/commands", (req, res) => {
                     padding: 20px 0;
                     font-size: 0.9rem;
                     color: #ffffff;
-                    transition: background-color 0.3s ease;
-                }
-                .footer:hover {
-                    background-color: rgba(198, 40, 40, 1) !important;
                 }
 
                 .btn-warning, .btn-danger, .btn-secondary {
-                    transition: transform 0.2s ease, box-shadow 0.2s ease;
+                    transition: transform 0.2s ease;
                 }
                 .btn-warning:hover, .btn-danger:hover, .btn-secondary:hover {
                     transform: scale(1.05);
-                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
                 }
 
                 .bot-name {
                     font-family: 'Press Start 2P', cursive;
                     color: #ffd54f;
                     font-size: 1.1rem;
-                    transition: color 0.3s ease, transform 0.3s ease;
-                }
-                .bot-name:hover {
-                    color: #ffd54f !important;
-                    transform: scale(1.1);
-                }
-                .runtime, .ping {
-                    font-weight: 500;
-                    transition: color 0.3s ease, transform 0.3s ease;
                 }
                 .runtime {
+                    font-weight: 500;
                     color: #ffd54f;
                 }
                 .ping {
+                    font-weight: 500;
                     color: #2e7d32;
-                }
-                .runtime:hover, .ping:hover {
-                    color: #ffd54f !important;
-                    transform: scale(1.1);
                 }
                 .animate-float {
                     animation: float 3s ease-in-out infinite;
@@ -2020,11 +1975,6 @@ app.get("/commands", (req, res) => {
                     pointer-events: none; 
                     overflow: hidden;
                     z-index: 9999; /* บนสุด */
-                    transition: transform 0.3s ease, box-shadow 0.3s ease;
-                }
-                #snow-container:hover {
-                    transform: translateY(-5px);
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
                 }
                 .snowflake {
                     position: absolute;
@@ -2036,21 +1986,41 @@ app.get("/commands", (req, res) => {
                     animation-name: fall;
                     animation-timing-function: linear;
                     animation-iteration-count: 1;
+                    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.8));
                 }
                 @keyframes fall {
                     0% {
-                        transform: translateY(-100%);
+                        transform: translateY(-100%) rotate(0deg);
                         opacity: 1;
                     }
                     100% {
-                        transform: translateY(120vh);
+                        transform: translateY(120vh) rotate(360deg);
                         opacity: 0;
                     }
+                }
+
+                /* ===== เอฟเฟกต์แสงสว่าง ===== */
+                .glow {
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    width: 200px;
+                    height: 200px;
+                    background: radial-gradient(circle, rgba(255, 213, 79, 0.3), transparent 70%);
+                    transform: translate(-50%, -50%);
+                    z-index: -1;
+                    opacity: 0.5;
+                    animation: glow-pulse 3s infinite alternate;
+                }
+                @keyframes glow-pulse {
+                    0% { transform: translate(-50%, -50%) scale(1); }
+                    100% { transform: translate(-50%, -50%) scale(1.2); }
                 }
             </style>
         </head>
         <body>
             <div class="overlay"></div>
+            <div class="glow"></div>
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center" href="/">
