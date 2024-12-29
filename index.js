@@ -535,7 +535,7 @@ app.get("/", (req, res) => {
         </head>
         <body>
             <div class="overlay"></div>
-            <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+           <nav class="navbar navbar-expand-lg navbar-dark mb-4">
     <div class="container">
         <a class="navbar-brand d-flex align-items-center" href="/">
             <i class="fas fa-snowflake fa-lg me-2 animate-float" style="color: #fff;"></i>
@@ -559,9 +559,7 @@ app.get("/", (req, res) => {
                     <a class="nav-link" href="/how-to-make-bot"><i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link btn btn-warning text-dark fw-bold px-3" href="/chat-ai">
-                        <i class="fas fa-comments me-1"></i> คุยกับ AI
-                    </a>
+                    <a class="nav-link active" href="/talk-to-jerknight"><i class="fas fa-comments me-1"></i> คุยกับเจอไนท์</a>
                 </li>
             </ul>
         </div>
