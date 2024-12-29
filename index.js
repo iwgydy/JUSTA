@@ -2394,114 +2394,189 @@ app.get("/how-to-make-bot", (req, res) => {
     `);
 });
 
-// เส้นทางหน้า "คุยกับ AI"
-app.get("/chat-ai", (req, res) => {
+// หน้า "คุยกับเจอไนท์"
+app.get("/talk-to-jerknight", (req, res) => {
+    // เปลี่ยนเฉพาะธีมเป็นคริสต์มาส 2025
     res.send(`
         <!DOCTYPE html>
-        <html lang="en">
+        <html lang="th">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Chat with AI</title>
+            <title>คุยกับเจอไนท์ | Merry Christmas 2025</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                body {
-                    font-family: 'Roboto', sans-serif;
-                    background-color: #f4f4f4;
-                    padding: 20px;
+                :root {
+                    --primary-color: #c62828;
+                    --secondary-color: #2e7d32;
                 }
-                .chat-container {
+
+                body {
+                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png') no-repeat center center fixed;
+                    background-size: cover;
+                    color: #ffffff;
+                    font-family: 'Roboto', sans-serif;
+                    position: relative;
+                    overflow-x: hidden;
+                }
+
+                html, body {
+                    height: 100%;
+                    margin: 0;
+                    padding: 0;
+                }
+
+                body {
+                    display: flex;
+                    flex-direction: column;
+                    min-height: 100vh;
+                }
+
+                main.flex-grow-1 {
+                    flex: 1;
+                }
+
+                .overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.6);
+                    z-index: -1;
+                }
+
+                .navbar {
+                    background: rgba(198, 40, 40, 0.9) !important;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+                }
+
+                .navbar-brand {
+                    font-family: 'Kanit', sans-serif;
+                    font-weight: 600;
+                    color: #fff !important;
+                }
+
+                .navbar-nav .nav-link {
+                    color: #fff !important;
+                    transition: color 0.3s ease;
+                }
+                .navbar-nav .nav-link:hover {
+                    color: #ffd54f !important;
+                }
+
+                .chat-card {
+                    background: rgba(255, 255, 255, 0.15);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 16px;
+                    padding: 24px;
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
                     max-width: 600px;
                     margin: 0 auto;
-                    background: white;
-                    padding: 20px;
-                    border-radius: 10px;
-                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
                 }
+
                 .chat-box {
-                    height: 400px;
-                    overflow-y: scroll;
-                    margin-bottom: 20px;
-                    border: 1px solid #ddd;
-                    padding: 10px;
-                    border-radius: 5px;
-                    background: #f9f9f9;
+                    background: rgba(0, 0, 0, 0.2);
+                    padding: 15px;
+                    height: 300px;
+                    overflow-y: auto;
+                    border-radius: 8px;
                 }
-                .chat-box .message {
+
+                .message {
                     margin-bottom: 10px;
                 }
-                .chat-box .message.user {
-                    text-align: right;
-                    color: #007bff;
-                }
-                .chat-box .message.bot {
+
+                .message.user {
                     text-align: left;
-                    color: #333;
+                    color: #00e676;
                 }
-                .chat-input {
-                    display: flex;
-                    gap: 10px;
+
+                .message.bot {
+                    text-align: right;
+                    color: #ff8f00;
                 }
-                .chat-input input {
-                    flex: 1;
-                    padding: 10px;
-                    border-radius: 5px;
-                    border: 1px solid #ddd;
+
+                .footer {
+                    background: rgba(198, 40, 40, 0.9);
+                    border-top: 2px solid rgba(255, 213, 79, 0.5);
+                    padding: 20px 0;
+                    font-size: 0.9rem;
+                    color: #ffffff;
                 }
-                .chat-input button {
-                    padding: 10px 20px;
-                    border: none;
-                    background: #007bff;
-                    color: white;
-                    border-radius: 5px;
-                    cursor: pointer;
+
+                .animate-float {
+                    animation: float 3s ease-in-out infinite;
                 }
-                .chat-input button:hover {
-                    background: #0056b3;
+
+                @keyframes float {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-10px); }
+                }
+
+                @media (max-width: 768px) {
+                    .chat-card {
+                        margin-bottom: 20px;
+                    }
                 }
             </style>
         </head>
         <body>
-            <div class="chat-container">
-                <h4 class="text-center">Chat with AI</h4>
-                <div class="chat-box" id="chatBox"></div>
-                <div class="chat-input">
-                    <input type="text" id="userMessage" placeholder="Type your message...">
-                    <button onclick="sendMessage()">Send</button>
+            <div class="overlay"></div>
+            <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+                <div class="container">
+                    <a class="navbar-brand d-flex align-items-center" href="/">
+                        <i class="fas fa-snowflake fa-lg me-2 animate-float" style="color: #fff;"></i>
+                        Merry Christmas 2025
+                    </a>
                 </div>
-            </div>
+            </nav>
+
+            <main class="flex-grow-1">
+                <div class="container">
+                    <div class="chat-card">
+                        <h5 class="mb-4">
+                            <i class="fas fa-comment-dots me-2" style="color: #ffd54f;"></i>
+                            คุยกับเจอไนท์
+                        </h5>
+                        <div id="chatBox" class="chat-box mb-3"></div>
+                        <textarea id="userInput" class="form-control mb-2" placeholder="พิมพ์ข้อความ..."></textarea>
+                        <button id="sendBtn" class="btn btn-success w-100">ส่งข้อความ</button>
+                    </div>
+                </div>
+            </main>
+
+            <footer class="footer text-center">
+                <div class="container">
+                    <p class="mb-0">© ${new Date().getFullYear()} Merry Christmas 2025 | Powered with ❤️</p>
+                </div>
+            </footer>
 
             <script>
                 const chatBox = document.getElementById('chatBox');
-                const userMessageInput = document.getElementById('userMessage');
+                const userInput = document.getElementById('userInput');
+                const sendBtn = document.getElementById('sendBtn');
 
-                function sendMessage() {
-                    const userMessage = userMessageInput.value.trim();
-                    if (!userMessage) return;
+                sendBtn.addEventListener('click', () => {
+                    const message = userInput.value.trim();
+                    if (!message) return;
 
-                    addMessage('user', userMessage);
-                    userMessageInput.value = '';
+                    addMessage('user', message);
+                    userInput.value = '';
 
-                    fetch('https://kaiz-apis.gleeze.com/api/gpt-4o-pro?q=' + encodeURIComponent(userMessage) + '&uid=1')
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.response) {
-                                addMessage('bot', data.response);
-                            } else {
-                                addMessage('bot', 'Sorry, I did not understand that.');
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
-                            addMessage('bot', 'An error occurred. Please try again.');
-                        });
-                }
+                    // Fake bot response
+                    setTimeout(() => {
+                        addMessage('bot', '🎄 Merry Christmas! ผมคือ เจอไนท์');
+                    }, 1000);
+                });
 
                 function addMessage(sender, message) {
-                    const messageElement = document.createElement('div');
-                    messageElement.classList.add('message', sender);
-                    messageElement.textContent = message;
-                    chatBox.appendChild(messageElement);
+                    const msgElement = document.createElement('div');
+                    msgElement.className = \`message \${sender}\`;
+                    msgElement.textContent = message;
+                    chatBox.appendChild(msgElement);
                     chatBox.scrollTop = chatBox.scrollHeight;
                 }
             </script>
@@ -2911,3 +2986,4 @@ setInterval(() => {
         console.log(chalk.green('✅ ไม่มีบอทที่ต้องการลบในครั้งนี้'));
     }
 }, 300000);
+เพิ่มอะไรเข้าไปดีขอเเบบน่าใช้ๆ
