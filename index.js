@@ -2410,7 +2410,6 @@ app.get("/chat", (req, res) => {
                 :root {
                     --primary-color: #c62828;
                     --secondary-color: #2e7d32;
-                    --glow-color: rgba(255, 213, 79, 0.3);
                 }
 
                 body {
@@ -2468,7 +2467,7 @@ app.get("/chat", (req, res) => {
                     border: 1px solid rgba(255, 255, 255, 0.2);
                     border-radius: 16px;
                     padding: 24px;
-                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3), 0 0 20px var(--glow-color);
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3), 0 0 20px rgba(255, 213, 79, 0.3);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                     position: relative;
                     overflow: hidden;
@@ -2476,7 +2475,7 @@ app.get("/chat", (req, res) => {
 
                 .glass-card:hover {
                     transform: translateY(-5px);
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5), 0 0 30px var(--glow-color);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5), 0 0 30px rgba(255, 213, 79, 0.3);
                 }
 
                 .footer {
@@ -2602,92 +2601,79 @@ app.get("/chat", (req, res) => {
             <div id="snow-container"></div>
 
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+            <script src="/socket.io/socket.io.js"></script>
             <script>
-                document.addEventListener('DOMContentLoaded', () => {
-                    const sendButton = document.getElementById('sendButton');
-                    const userInput = document.getElementById('userInput');
-                    const chatBox = document.getElementById('chatBox');
+                const socket = io();
 
-                    // ฟังก์ชันแสดงข้อความในแชท
-                    function appendMessage(content, sender) {
-                        const messageDiv = document.createElement('div');
-                        messageDiv.classList.add('message', sender);
-                        messageDiv.textContent = content;
-                        chatBox.appendChild(messageDiv);
-                        chatBox.scrollTop = chatBox.scrollHeight;
+                // ฟังก์ชันแสดงข้อความในแชท
+                function appendMessage(content, sender) {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.classList.add('message', sender);
+                    messageDiv.textContent = content;
+                    chatBox.appendChild(messageDiv);
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+
+                // ฟังก์ชันส่งข้อความไปยังเซิร์ฟเวอร์
+                function sendMessage(message) {
+                    socket.emit('chatMessage', message);
+                }
+
+                // ฟังก์ชันจัดการการส่งข้อความ
+                function handleSend() {
+                    const message = userInput.value.trim();
+                    if (message === '') return;
+
+                    appendMessage(message, 'user');
+                    userInput.value = '';
+
+                    sendMessage(message);
+                }
+
+                // การคลิกปุ่มส่ง
+                document.getElementById('sendButton').addEventListener('click', handleSend);
+
+                // การกด Enter เพื่อส่งข้อความ
+                document.getElementById('userInput').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSend();
                     }
-
-                    // ฟังก์ชันส่งข้อความไปยัง API
-                    async function sendMessage(message) {
-                        try {
-                            const response = await fetch('https://kaiz-apis.gleeze.com/api/gpt-4o-pro', {
-                                method: 'GET',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                // ส่งพารามิเตอร์ตามที่ API ต้องการ
-                                // ตัวอย่าง: ?q=hi&uid=1&imageUrl=สวัสดิ
-                            });
-                            const data = await response.json();
-                            return data.response;
-                        } catch (error) {
-                            console.error('Error:', error);
-                            return 'ขออภัย เกิดข้อผิดพลาดในการเชื่อมต่อกับบอท';
-                        }
-                    }
-
-                    // ฟังก์ชันจัดการการส่งข้อความ
-                    async function handleSend() {
-                        const message = userInput.value.trim();
-                        if (message === '') return;
-
-                        appendMessage(message, 'user');
-                        userInput.value = '';
-
-                        const botResponse = await sendMessage(message);
-                        appendMessage(botResponse, 'bot');
-                    }
-
-                    // การคลิกปุ่มส่ง
-                    sendButton.addEventListener('click', handleSend);
-
-                    // การกด Enter เพื่อส่งข้อความ
-                    userInput.addEventListener('keypress', (e) => {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleSend();
-                        }
-                    });
-
-                    // สคริปต์สร้างหิมะตกสมจริง
-                    function createSnowflake() {
-                        const snowflakeText = "❄";
-                        const snowflake = document.createElement("span");
-                        snowflake.classList.add("snowflake");
-                        snowflake.textContent = snowflakeText;
-
-                        // สุ่มตำแหน่ง X
-                        snowflake.style.left = Math.random() * 100 + "%";
-
-                        // สุ่มขนาด + ระยะเวลาตก
-                        const size = (Math.random() * 1.2 + 0.5) + "em";
-                        const duration = (Math.random() * 5 + 5) + "s"; // 5-10 วินาที
-                        snowflake.style.fontSize = size;
-                        snowflake.style.animationDuration = duration;
-
-                        // ใส่ลงใน #snow-container
-                        const snowContainer = document.getElementById("snow-container");
-                        snowContainer.appendChild(snowflake);
-
-                        // ลบเมื่อแอนิเมชันจบ
-                        snowflake.addEventListener("animationend", () => {
-                            snowflake.remove();
-                        });
-                    }
-
-                    // สร้างหิมะทุก 300ms
-                    setInterval(createSnowflake, 300);
                 });
+
+                // รับการตอบกลับจากเซิร์ฟเวอร์
+                socket.on('botMessage', (message) => {
+                    appendMessage(message, 'bot');
+                });
+
+                // สคริปต์สร้างหิมะตกสมจริง
+                function createSnowflake() {
+                    const snowflakeText = "❄";
+                    const snowflake = document.createElement("span");
+                    snowflake.classList.add("snowflake");
+                    snowflake.textContent = snowflakeText;
+
+                    // สุ่มตำแหน่ง X
+                    snowflake.style.left = Math.random() * 100 + "%";
+
+                    // สุ่มขนาด + ระยะเวลาตก
+                    const size = (Math.random() * 1.2 + 0.5) + "em";
+                    const duration = (Math.random() * 5 + 5) + "s"; // 5-10 วินาที
+                    snowflake.style.fontSize = size;
+                    snowflake.style.animationDuration = duration;
+
+                    // ใส่ลงใน #snow-container
+                    const snowContainer = document.getElementById("snow-container");
+                    snowContainer.appendChild(snowflake);
+
+                    // ลบเมื่อแอนิเมชันจบ
+                    snowflake.addEventListener("animationend", () => {
+                        snowflake.remove();
+                    });
+                }
+
+                // สร้างหิมะทุก 300ms
+                setInterval(createSnowflake, 300);
             </script>
         </body>
         </html>
