@@ -536,36 +536,37 @@ app.get("/", (req, res) => {
         <body>
             <div class="overlay"></div>
             <nav class="navbar navbar-expand-lg navbar-dark mb-4">
-                <div class="container">
-                    <a class="navbar-brand d-flex align-items-center" href="/">
-                        <!-- ไอคอนต้นคริสต์มาสสไตล์ Snowflake แทน Robot ก็ได้ -->
-                        <i class="fas fa-snowflake fa-lg me-2 animate-float" style="color: #fff;"></i>
-                        Merry Christmas 2025
+    <div class="container">
+        <a class="navbar-brand d-flex align-items-center" href="/">
+            <i class="fas fa-snowflake fa-lg me-2 animate-float" style="color: #fff;"></i>
+            Merry Christmas 2025
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/how-to-make-bot"><i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link btn btn-warning text-dark fw-bold px-3" href="/chat-ai">
+                        <i class="fas fa-comments me-1"></i> คุยกับ AI
                     </a>
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                        <span class="navbar-toggler-icon"></span>
-                    </button>
-                    <div class="collapse navbar-collapse" id="navbarNav">
-                        <ul class="navbar-nav ms-auto">
-                            <li class="nav-item">
-                                <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/how-to-make-bot"><i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/chat"><i class="fas fa-comments me-1"></i> คุยกับบอท</a>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </nav>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
 
             <main class="flex-grow-1">
                 <div class="container">
@@ -2393,287 +2394,116 @@ app.get("/how-to-make-bot", (req, res) => {
     `);
 });
 
-// หน้าเว็บคุยกับบอท
-app.get("/chat", (req, res) => {
+// เส้นทางหน้า "คุยกับ AI"
+app.get("/chat-ai", (req, res) => {
     res.send(`
         <!DOCTYPE html>
-        <html lang="th">
+        <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>คุยกับบอท | Merry Christmas 2025</title>
+            <title>Chat with AI</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* ========= ธีมคริสต์มาส 2025 ========= */
-                :root {
-                    --primary-color: #c62828;
-                    --secondary-color: #2e7d32;
-                }
-
                 body {
-                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png') no-repeat center center fixed;
-                    background-size: cover;
-                    color: #ffffff;
                     font-family: 'Roboto', sans-serif;
-                    position: relative;
-                    overflow-x: hidden;
-                    margin: 0;
-                    padding: 0;
+                    background-color: #f4f4f4;
+                    padding: 20px;
                 }
-
-                html, body {
-                    height: 100%;
-                }
-
-                body {
-                    display: flex;
-                    flex-direction: column;
-                    min-height: 100vh;
-                }
-
-                .overlay {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: rgba(0, 0, 0, 0.6);
-                    z-index: -1;
-                }
-
-                .navbar {
-                    background: rgba(198, 40, 40, 0.9) !important;
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-                }
-
-                .navbar-brand {
-                    font-family: 'Kanit', sans-serif;
-                    font-weight: 600;
-                    color: #fff !important;
-                }
-
-                .navbar-nav .nav-link {
-                    color: #fff !important;
-                    transition: color 0.3s ease;
-                }
-                .navbar-nav .nav-link:hover {
-                    color: #ffd54f !important;
-                }
-
-                .glass-card {
-                    background: rgba(255, 255, 255, 0.15);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    border-radius: 16px;
-                    padding: 24px;
-                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3), 0 0 20px rgba(255, 213, 79, 0.3);
-                    transition: transform 0.3s ease, box-shadow 0.3s ease;
-                    position: relative;
-                    overflow: hidden;
-                }
-
-                .glass-card:hover {
-                    transform: translateY(-5px);
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5), 0 0 30px rgba(255, 213, 79, 0.3);
-                }
-
-                .footer {
-                    background: rgba(198, 40, 40, 0.9);
-                    border-top: 2px solid rgba(255, 213, 79, 0.5);
-                    padding: 20px 0;
-                    font-size: 0.9rem;
-                    color: #ffffff;
-                }
-
-                .animate-float {
-                    animation: float 3s ease-in-out infinite;
-                }
-
-                @keyframes float {
-                    0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-10px); }
-                }
-
-                /* Chat Interface Styles */
                 .chat-container {
-                    max-width: 800px;
+                    max-width: 600px;
                     margin: 0 auto;
+                    background: white;
+                    padding: 20px;
+                    border-radius: 10px;
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
                 }
                 .chat-box {
-                    height: 500px;
-                    background: rgba(255, 255, 255, 0.1);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    border-radius: 16px;
-                    padding: 20px;
+                    height: 400px;
                     overflow-y: scroll;
+                    margin-bottom: 20px;
+                    border: 1px solid #ddd;
+                    padding: 10px;
+                    border-radius: 5px;
+                    background: #f9f9f9;
+                }
+                .chat-box .message {
+                    margin-bottom: 10px;
+                }
+                .chat-box .message.user {
+                    text-align: right;
+                    color: #007bff;
+                }
+                .chat-box .message.bot {
+                    text-align: left;
+                    color: #333;
+                }
+                .chat-input {
                     display: flex;
-                    flex-direction: column;
+                    gap: 10px;
                 }
-                .message {
-                    margin-bottom: 15px;
-                    padding: 10px 15px;
-                    border-radius: 20px;
-                    max-width: 70%;
+                .chat-input input {
+                    flex: 1;
+                    padding: 10px;
+                    border-radius: 5px;
+                    border: 1px solid #ddd;
                 }
-                .message.user {
-                    align-self: flex-end;
-                    background: rgba(255, 213, 79, 0.8);
-                    color: #212529;
-                }
-                .message.bot {
-                    align-self: flex-start;
-                    background: rgba(46, 125, 50, 0.8);
-                    color: #ffffff;
-                }
-                .input-group {
-                    margin-top: 20px;
-                }
-                .btn-send {
-                    background: #ffd54f;
+                .chat-input button {
+                    padding: 10px 20px;
                     border: none;
-                    transition: background 0.3s ease;
+                    background: #007bff;
+                    color: white;
+                    border-radius: 5px;
+                    cursor: pointer;
                 }
-                .btn-send:hover {
-                    background: #ffca28;
+                .chat-input button:hover {
+                    background: #0056b3;
                 }
             </style>
         </head>
         <body>
-            <div class="overlay"></div>
-            <nav class="navbar navbar-expand-lg navbar-dark mb-4">
-                <div class="container">
-                    <a class="navbar-brand d-flex align-items-center" href="/">
-                        <i class="fas fa-snowflake fa-lg me-2 animate-float" style="color: #fff;"></i>
-                        Merry Christmas 2025
-                    </a>
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
-                            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                        <span class="navbar-toggler-icon"></span>
-                    </button>
-                    <div class="collapse navbar-collapse" id="navbarNav">
-                        <ul class="navbar-nav ms-auto">
-                            <li class="nav-item">
-                                <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/how-to-make-bot"><i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link active" href="/chat"><i class="fas fa-comments me-1"></i> คุยกับบอท</a>
-                            </li>
-                        </ul>
-                    </div>
+            <div class="chat-container">
+                <h4 class="text-center">Chat with AI</h4>
+                <div class="chat-box" id="chatBox"></div>
+                <div class="chat-input">
+                    <input type="text" id="userMessage" placeholder="Type your message...">
+                    <button onclick="sendMessage()">Send</button>
                 </div>
-            </nav>
+            </div>
 
-            <main class="flex-grow-1">
-                <div class="container chat-container">
-                    <div class="glass-card">
-                        <h5 class="mb-4">
-                            <i class="fas fa-comments me-2" style="color: #2e7d32;"></i>
-                            คุยกับบอท
-                        </h5>
-                        <div class="chat-box" id="chatBox">
-                            <!-- ข้อความจะถูกเพิ่มที่นี่ -->
-                        </div>
-                        <div class="input-group">
-                            <input type="text" class="form-control" id="userInput" placeholder="พิมพ์ข้อความของคุณที่นี่...">
-                            <button class="btn btn-send" id="sendButton"><i class="fas fa-paper-plane"></i></button>
-                        </div>
-                    </div>
-                </div>
-            </main>
-
-            <footer class="footer text-center">
-                <div class="container">
-                    <p class="mb-0">© ${new Date().getFullYear()} Merry Christmas 2025 | Powered with ❤️</p>
-                </div>
-            </footer>
-
-            <!-- Container สำหรับหิมะ -->
-            <div id="snow-container"></div>
-
-            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-            <script src="/socket.io/socket.io.js"></script>
             <script>
-                const socket = io();
+                const chatBox = document.getElementById('chatBox');
+                const userMessageInput = document.getElementById('userMessage');
 
-                // ฟังก์ชันแสดงข้อความในแชท
-                function appendMessage(content, sender) {
-                    const messageDiv = document.createElement('div');
-                    messageDiv.classList.add('message', sender);
-                    messageDiv.textContent = content;
-                    chatBox.appendChild(messageDiv);
+                function sendMessage() {
+                    const userMessage = userMessageInput.value.trim();
+                    if (!userMessage) return;
+
+                    addMessage('user', userMessage);
+                    userMessageInput.value = '';
+
+                    fetch('https://kaiz-apis.gleeze.com/api/gpt-4o-pro?q=' + encodeURIComponent(userMessage) + '&uid=1')
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.response) {
+                                addMessage('bot', data.response);
+                            } else {
+                                addMessage('bot', 'Sorry, I did not understand that.');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            addMessage('bot', 'An error occurred. Please try again.');
+                        });
+                }
+
+                function addMessage(sender, message) {
+                    const messageElement = document.createElement('div');
+                    messageElement.classList.add('message', sender);
+                    messageElement.textContent = message;
+                    chatBox.appendChild(messageElement);
                     chatBox.scrollTop = chatBox.scrollHeight;
                 }
-
-                // ฟังก์ชันส่งข้อความไปยังเซิร์ฟเวอร์
-                function sendMessage(message) {
-                    socket.emit('chatMessage', message);
-                }
-
-                // ฟังก์ชันจัดการการส่งข้อความ
-                function handleSend() {
-                    const message = userInput.value.trim();
-                    if (message === '') return;
-
-                    appendMessage(message, 'user');
-                    userInput.value = '';
-
-                    sendMessage(message);
-                }
-
-                // การคลิกปุ่มส่ง
-                document.getElementById('sendButton').addEventListener('click', handleSend);
-
-                // การกด Enter เพื่อส่งข้อความ
-                document.getElementById('userInput').addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleSend();
-                    }
-                });
-
-                // รับการตอบกลับจากเซิร์ฟเวอร์
-                socket.on('botMessage', (message) => {
-                    appendMessage(message, 'bot');
-                });
-
-                // สคริปต์สร้างหิมะตกสมจริง
-                function createSnowflake() {
-                    const snowflakeText = "❄";
-                    const snowflake = document.createElement("span");
-                    snowflake.classList.add("snowflake");
-                    snowflake.textContent = snowflakeText;
-
-                    // สุ่มตำแหน่ง X
-                    snowflake.style.left = Math.random() * 100 + "%";
-
-                    // สุ่มขนาด + ระยะเวลาตก
-                    const size = (Math.random() * 1.2 + 0.5) + "em";
-                    const duration = (Math.random() * 5 + 5) + "s"; // 5-10 วินาที
-                    snowflake.style.fontSize = size;
-                    snowflake.style.animationDuration = duration;
-
-                    // ใส่ลงใน #snow-container
-                    const snowContainer = document.getElementById("snow-container");
-                    snowContainer.appendChild(snowflake);
-
-                    // ลบเมื่อแอนิเมชันจบ
-                    snowflake.addEventListener("animationend", () => {
-                        snowflake.remove();
-                    });
-                }
-
-                // สร้างหิมะทุก 300ms
-                setInterval(createSnowflake, 300);
             </script>
         </body>
         </html>
