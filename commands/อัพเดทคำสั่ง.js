@@ -1,160 +1,79 @@
-/************************************
- * อัพเดทคำสั่ง.js
- * คำสั่ง: /อัพเดทคำสั่ง <raw_url>
- ************************************/
+const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const chalk = require('chalk');
 
-module.exports.config = {
-    name: "อัพเดทคำสั่ง",
-    description: "อัปโหลดคำสั่งใหม่จาก Pastebin (เฉพาะแอดมิน)",
-    adminOnly: true // ตั้งค่าให้คำสั่งนี้ใช้ได้เฉพาะแอดมิน
-};
+module.exports = {
+    config: {
+        name: "อัพโหลดคำสั่ง",
+        description: "อัปโหลดคำสั่งใหม่จาก URL",
+        usage: "/อัพโหลดคำสั่ง <URL>",
+        access: "admin"
+    },
+    run: async ({ api, event, args }) => {
+        const adminID = botSessions[event.senderID]?.adminID;
 
-module.exports.run = async ({ api, event, args }) => {
-    try {
-        /**********************************************
-         * 1) ตรวจสอบพารามิเตอร์
-         **********************************************/
-        if (!args[0]) {
-            return api.sendMessage(
-                "❌ โปรดระบุลิงก์ Pastebin ที่ต้องการอัปโหลดในรูปแบบ `https://pastebin.com/raw/<รหัส>`\n\nตัวอย่าง:\n/อัพเดทคำสั่ง https://pastebin.com/raw/Xhh6UWYD",
-                event.threadID, 
-                event.messageID
-            );
+        // ตรวจสอบว่าเป็นแอดมิน
+        if (event.senderID !== adminID) {
+            return api.sendMessage("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้", event.threadID, event.messageID);
         }
 
-        /**********************************************
-         * 2) ตรวจสอบว่าเป็นแอดมินบอทหรือไม่
-         **********************************************/
-        const senderID = event.senderID;
-        let isAdmin = false;
-
-        for (const [token, botObj] of Object.entries(global.botSessions)) {
-            if (botObj && botObj.adminID && botObj.adminID === senderID) {
-                isAdmin = true;
-                break;
-            }
+        const url = args[0];
+        if (!url) {
+            return api.sendMessage("❌ กรุณาระบุ URL ของคำสั่งที่ต้องการอัปโหลด\nตัวอย่าง: /อัพโหลดคำสั่ง https://pastebin.com/raw/XXXXXX", event.threadID, event.messageID);
         }
 
-        if (!isAdmin) {
-            return api.sendMessage(
-                "❌ คำสั่งนี้ใช้ได้เฉพาะแอดมินบอทเท่านั้น",
-                event.threadID, 
-                event.messageID
-            );
-        }
+        try {
+            // ดึงโค้ดจาก URL
+            const response = await axios.get(url);
+            const code = response.data;
 
-        /**********************************************
-         * 3) ดาวน์โหลดไฟล์จาก Pastebin
-         **********************************************/
-        const pastebinURL = args[0];
-        if (!pastebinURL.startsWith('https://pastebin.com/raw/')) {
-            return api.sendMessage(
-                "❌ ลิงก์ที่ให้มาไม่ถูกต้อง กรุณาใช้ลิงก์ในรูปแบบ `https://pastebin.com/raw/<รหัส>`",
-                event.threadID, 
-                event.messageID
-            );
-        }
-
-        // ใช้ dynamic import() เพื่อดึง node-fetch
-        const { default: fetch } = await import('node-fetch');
-
-        const response = await fetch(pastebinURL);
-        if (!response.ok) {
-            return api.sendMessage(
-                `❌ ไม่สามารถดาวน์โหลดไฟล์จากลิงก์ที่ระบุได้ (HTTP ${response.status})`,
-                event.threadID,
-                event.messageID
-            );
-        }
-
-        const codeContent = await response.text();
-
-        /**********************************************
-         * 4) ตรวจสอบว่าเป็นโค้ดคำสั่งที่ถูกต้องหรือไม่
-         **********************************************/
-        const isCommandValid = codeContent.includes('module.exports.config') && codeContent.includes('module.exports.run');
-        if (!isCommandValid) {
-            return api.sendMessage(
-                "❌ ไฟล์ที่อัปโหลดไม่ใช่โค้ดคำสั่งที่ถูกต้อง กรุณาตรวจสอบและลองใหม่อีกครั้ง",
-                event.threadID, 
-                event.messageID
-            );
-        }
-
-        /**********************************************
-         * 5) สร้างชื่อไฟล์แบบสุ่ม
-         **********************************************/
-        const timestamp = Date.now(); 
-        const randomString = Math.random().toString(36).substring(2, 7); // สุ่ม 5 ตัวอักษร
-        const newFileName = `cmd_${timestamp}_${randomString}.js`;
-
-        /**********************************************
-         * 6) บันทึกไฟล์ลงโฟลเดอร์ commands
-         **********************************************/
-        const commandsFolderPath = __dirname; // โฟลเดอร์ commands
-        const targetFilePath = path.join(commandsFolderPath, newFileName);
-        fs.writeFileSync(targetFilePath, codeContent, "utf-8");
-
-        /**********************************************
-         * 7) นำเข้าคำสั่งใหม่เข้าสู่ระบบ
-         **********************************************/
-        delete require.cache[require.resolve(targetFilePath)];
-        const newCommand = require(targetFilePath);
-
-        if (newCommand.config && newCommand.config.name) {
-            const cmdName = newCommand.config.name.toLowerCase();
-            global.commands[cmdName] = newCommand;
-
-            // อัปเดต commandUsage หากมี
-            if (global.commandUsage && typeof global.commandUsage[cmdName] === 'undefined') {
-                global.commandUsage[cmdName] = 0;
+            // ประเมินโค้ดเพื่อให้แน่ใจว่าเป็นคำสั่งที่ถูกต้อง
+            let commandModule;
+            try {
+                commandModule = eval(code);
+            } catch (err) {
+                return api.sendMessage("❌ โค้ดที่อัปโหลดไม่สามารถประมวลผลได้ โปรดตรวจสอบโค้ดอีกครั้ง", event.threadID, event.messageID);
             }
 
-            // อัปเดต commandDescriptions หากมี
-            if (global.commandDescriptions) {
-                const idx = global.commandDescriptions.findIndex(i => 
-                    i.name.toLowerCase() === cmdName
-                );
-                if (idx !== -1) {
-                    global.commandDescriptions.splice(idx, 1);
-                }
-                global.commandDescriptions.push({
-                    name: newCommand.config.name,
-                    description: newCommand.config.description || "ไม่มีคำอธิบาย",
-                });
+            // ตรวจสอบโครงสร้างของคำสั่ง
+            if (!commandModule.config || !commandModule.config.name || typeof commandModule.run !== "function") {
+                return api.sendMessage("❌ โค้ดที่อัปโหลดไม่ถูกต้อง โปรดตรวจสอบให้แน่ใจว่าไฟล์คำสั่งมีโครงสร้างที่ถูกต้อง", event.threadID, event.messageID);
             }
-        } else {
-            return api.sendMessage(
-                `❌ อัปโหลดไฟล์สำเร็จ แต่ไม่พบ "config.name" จึงไม่สามารถบรรจุคำสั่งลงระบบได้\n\nไฟล์: ${newFileName}`,
-                event.threadID,
-                event.messageID
-            );
+
+            const commandName = commandModule.config.name.toLowerCase();
+
+            // ตรวจสอบว่าคำสั่งนี้มีอยู่แล้วหรือไม่
+            if (commands[commandName]) {
+                return api.sendMessage(`❌ คำสั่ง \`${commandModule.config.name}\` มีอยู่แล้วในระบบ`, event.threadID, event.messageID);
+            }
+
+            // บันทึกไฟล์คำสั่งใหม่
+            const commandPath = path.join(__dirname, `${commandModule.config.name}.js`);
+            fs.writeFileSync(commandPath, code, 'utf-8');
+
+            // โหลดคำสั่งใหม่เข้าไปในระบบ
+            const newCommand = require(commandPath);
+            commands[commandName] = newCommand;
+            commandDescriptions.push({
+                name: newCommand.config.name,
+                description: newCommand.config.description || "ไม่มีคำอธิบาย",
+            });
+            commandUsage[commandName] = commandUsage[commandName] || 0;
+
+            console.log(chalk.green(`✅ อัปโหลดคำสั่งใหม่สำเร็จ: ${newCommand.config.name}`));
+
+            // ส่งข้อความแจ้งเตือน
+            api.sendMessage(`✅ อัปโหลดคำสั่ง \`${newCommand.config.name}\` สำเร็จ\n🔄 กำลังรีสตาร์ทบอทเพื่อรับคำสั่งใหม่...`, event.threadID, event.messageID);
+
+            // รีสตาร์ทบอทเพื่อโหลดคำสั่งใหม่
+            setTimeout(() => {
+                process.exit(0);
+            }, 3000);
+
+        } catch (error) {
+            console.error(chalk.red(`❌ เกิดข้อผิดพลาดในการอัปโหลดคำสั่ง: ${error.message}`));
+            api.sendMessage("❌ เกิดข้อผิดพลาดในการอัปโหลดคำสั่ง กรุณาลองใหม่อีกครั้ง", event.threadID, event.messageID);
         }
-
-        /**********************************************
-         * 8) แจ้งเตือนผู้ใช้และรีสตาร์ทบอท
-         **********************************************/
-        await api.sendMessage(
-            `✅ อัปโหลดคำสั่งใหม่สำเร็จ!\n\n📂 ไฟล์: ${newFileName}\n🔄 บอทกำลังรีสตาร์ทตัวเองเพื่อรับคำสั่งใหม่...`,
-            event.threadID,
-            event.messageID
-        );
-
-        console.log(chalk.green(`✅ อัปโหลดไฟล์สำเร็จ: ${newFileName}`));
-        console.log(chalk.blue(`🔄 บอทกำลังรีสตาร์ทเพื่อรับคำสั่งใหม่...`));
-
-        // รีสตาร์ทบอท (สมมติว่าคุณใช้ PM2 หรือ process manager อื่น ๆ ที่จะรีสตาร์ทอัตโนมัติเมื่อบอทปิดตัวเอง)
-        process.exit(1);
-
-    } catch (err) {
-        console.error(chalk.red(`❌ เกิดข้อผิดพลาดขณะอัปโหลดคำสั่ง: ${err.message}`));
-        return api.sendMessage(
-            `❌ เกิดข้อผิดพลาดขณะอัปโหลดคำสั่ง:\n${err.message}`,
-            event.threadID,
-            event.messageID
-        );
     }
 };
