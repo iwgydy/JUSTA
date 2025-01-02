@@ -535,36 +535,34 @@ app.get("/", (req, res) => {
         </head>
         <body>
             <div class="overlay"></div>
-           <nav class="navbar navbar-expand-lg navbar-dark mb-4">
-    <div class="container">
-        <a class="navbar-brand d-flex align-items-center" href="/">
-            <i class="fas fa-snowflake fa-lg me-2 animate-float" style="color: #fff;"></i>
-            Merry Christmas 2025
-        </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ms-auto">
-                <li class="nav-item">
-                    <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/how-to-make-bot"><i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link active" href="/talk-to-jerknight"><i class="fas fa-comments me-1"></i> คุยกับเจอไนท์</a>
-                </li>
-            </ul>
-        </div>
-    </div>
-</nav>
+            <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+                <div class="container">
+                    <a class="navbar-brand d-flex align-items-center" href="/">
+                        <!-- ไอคอนต้นคริสต์มาสสไตล์ Snowflake แทน Robot ก็ได้ -->
+                        <i class="fas fa-snowflake fa-lg me-2 animate-float" style="color: #fff;"></i>
+                        Merry Christmas 2025
+                    </a>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav ms-auto">
+                            <li class="nav-item">
+                                <a class="nav-link" href="/start"><i class="fas fa-plus-circle me-1"></i> เพิ่มบอท</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/bots"><i class="fas fa-list me-1"></i> ดูบอทรัน</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/commands"><i class="fas fa-terminal me-1"></i> คำสั่งที่ใช้</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/how-to-make-bot"><i class="fas fa-video me-1"></i> วิธีทำบอทของคุณเอง</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
 
             <main class="flex-grow-1">
                 <div class="container">
@@ -2392,197 +2390,6 @@ app.get("/how-to-make-bot", (req, res) => {
     `);
 });
 
-// หน้า "คุยกับเจอไนท์"
-app.get("/talk-to-jerknight", (req, res) => {
-    // เปลี่ยนเฉพาะธีมเป็นคริสต์มาส 2025
-    res.send(`
-        <!DOCTYPE html>
-        <html lang="th">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>คุยกับเจอไนท์ | Merry Christmas 2025</title>
-            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-            <style>
-                :root {
-                    --primary-color: #c62828;
-                    --secondary-color: #2e7d32;
-                }
-
-                body {
-                    background: url('https://i.postimg.cc/WbGnSFc9/snapedit-1734599436384.png') no-repeat center center fixed;
-                    background-size: cover;
-                    color: #ffffff;
-                    font-family: 'Roboto', sans-serif;
-                    position: relative;
-                    overflow-x: hidden;
-                }
-
-                html, body {
-                    height: 100%;
-                    margin: 0;
-                    padding: 0;
-                }
-
-                body {
-                    display: flex;
-                    flex-direction: column;
-                    min-height: 100vh;
-                }
-
-                main.flex-grow-1 {
-                    flex: 1;
-                }
-
-                .overlay {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: rgba(0, 0, 0, 0.6);
-                    z-index: -1;
-                }
-
-                .navbar {
-                    background: rgba(198, 40, 40, 0.9) !important;
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-                }
-
-                .navbar-brand {
-                    font-family: 'Kanit', sans-serif;
-                    font-weight: 600;
-                    color: #fff !important;
-                }
-
-                .navbar-nav .nav-link {
-                    color: #fff !important;
-                    transition: color 0.3s ease;
-                }
-                .navbar-nav .nav-link:hover {
-                    color: #ffd54f !important;
-                }
-
-                .chat-card {
-                    background: rgba(255, 255, 255, 0.15);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    border-radius: 16px;
-                    padding: 24px;
-                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-                    max-width: 600px;
-                    margin: 0 auto;
-                }
-
-                .chat-box {
-                    background: rgba(0, 0, 0, 0.2);
-                    padding: 15px;
-                    height: 300px;
-                    overflow-y: auto;
-                    border-radius: 8px;
-                }
-
-                .message {
-                    margin-bottom: 10px;
-                }
-
-                .message.user {
-                    text-align: left;
-                    color: #00e676;
-                }
-
-                .message.bot {
-                    text-align: right;
-                    color: #ff8f00;
-                }
-
-                .footer {
-                    background: rgba(198, 40, 40, 0.9);
-                    border-top: 2px solid rgba(255, 213, 79, 0.5);
-                    padding: 20px 0;
-                    font-size: 0.9rem;
-                    color: #ffffff;
-                }
-
-                .animate-float {
-                    animation: float 3s ease-in-out infinite;
-                }
-
-                @keyframes float {
-                    0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-10px); }
-                }
-
-                @media (max-width: 768px) {
-                    .chat-card {
-                        margin-bottom: 20px;
-                    }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="overlay"></div>
-            <nav class="navbar navbar-expand-lg navbar-dark mb-4">
-                <div class="container">
-                    <a class="navbar-brand d-flex align-items-center" href="/">
-                        <i class="fas fa-snowflake fa-lg me-2 animate-float" style="color: #fff;"></i>
-                        Merry Christmas 2025
-                    </a>
-                </div>
-            </nav>
-
-            <main class="flex-grow-1">
-                <div class="container">
-                    <div class="chat-card">
-                        <h5 class="mb-4">
-                            <i class="fas fa-comment-dots me-2" style="color: #ffd54f;"></i>
-                            คุยกับเจอไนท์
-                        </h5>
-                        <div id="chatBox" class="chat-box mb-3"></div>
-                        <textarea id="userInput" class="form-control mb-2" placeholder="พิมพ์ข้อความ..."></textarea>
-                        <button id="sendBtn" class="btn btn-success w-100">ส่งข้อความ</button>
-                    </div>
-                </div>
-            </main>
-
-            <footer class="footer text-center">
-                <div class="container">
-                    <p class="mb-0">© ${new Date().getFullYear()} Merry Christmas 2025 | Powered with ❤️</p>
-                </div>
-            </footer>
-
-            <script>
-                const chatBox = document.getElementById('chatBox');
-                const userInput = document.getElementById('userInput');
-                const sendBtn = document.getElementById('sendBtn');
-
-                sendBtn.addEventListener('click', () => {
-                    const message = userInput.value.trim();
-                    if (!message) return;
-
-                    addMessage('user', message);
-                    userInput.value = '';
-
-                    // Fake bot response
-                    setTimeout(() => {
-                        addMessage('bot', '🎄 Merry Christmas! ผมคือ เจอไนท์');
-                    }, 1000);
-                });
-
-                function addMessage(sender, message) {
-                    const msgElement = document.createElement('div');
-                    msgElement.className = \`message \${sender}\`;
-                    msgElement.textContent = message;
-                    chatBox.appendChild(msgElement);
-                    chatBox.scrollTop = chatBox.scrollHeight;
-                }
-            </script>
-        </body>
-        </html>
-    `);
-});
-
 // debug/bots
 app.get("/debug/bots", (req, res) => {
     const bots = Object.entries(botSessions).map(([token, bot]) => ({
@@ -2703,7 +2510,7 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
 
     console.log(chalk.blue(`📩 รับอีเวนต์: ${event.type}`));
 
-    // ตรวจสอบอีเวนต์ตามประเภท
+    // หากมีการกำหนด eventType (logMessageType) ก็ประมวลผลอีเวนต์ตามไฟล์ในโฟลเดอร์ events
     if (event.logMessageType && events[event.logMessageType]) {
         for (const eventHandler of events[event.logMessageType]) {
             try {
@@ -2716,24 +2523,52 @@ async function startBot(appState, token, name, prefix, startTime, password, admi
         }
     }
 
-    // ตัวอย่างการจัดการอีเวนต์ข้อความ (message)
+    // ─────────────────────────────────────────────
+    // ❶ ตรวจจับอีเวนต์ type = 'message'
+    // ─────────────────────────────────────────────
     if (event.type === "message") {
         const message = event.body ? event.body.trim() : "";
         console.log(chalk.cyan(`📨 ข้อความที่ได้รับ: "${message}" จากผู้ใช้ ${event.senderID}`));
 
-        if (!message.startsWith(botSessions[token].prefix)) return;
+        // ❶.๑ ตรวจสอบว่ามีไฟล์แนบ (attachments) มาด้วยหรือไม่
+        if (event.attachments && event.attachments.length > 0) {
+            for (const attach of event.attachments) {
+                if (attach.type === 'photo') {
+                    api.sendMessage('ฉันเห็นว่าคุณส่งรูปภาพมาด้วยนะ!', event.threadID);
+                } else if (attach.type === 'animated_image') {
+                    api.sendMessage('เจอไฟล์ GIF แล้ว เยี่ยมไปเลย!', event.threadID);
+                } else if (attach.type === 'video') {
+                    api.sendMessage('ได้รับวิดีโอเรียบร้อย!', event.threadID);
+                } else if (attach.type === 'sticker') {
+                    api.sendMessage('โอ้ สติกเกอร์น่ารักจัง!', event.threadID);
+                } else {
+                    api.sendMessage('บอทตรวจพบไฟล์แนบอื่นๆ ด้วยนะ!', event.threadID);
+                }
+            }
+        }
 
+        // ❶.๒ ตรวจสอบ prefix (ถ้ามี) เพื่อจับเป็น “คำสั่ง”
+        if (!message.startsWith(botSessions[token].prefix)) {
+            // ถ้าไม่มี prefix หรือไม่ตรง prefix ของบอท ก็ไม่ต้องทำอะไร
+            return;
+        }
+
+        // ดึง “คำสั่ง” กับ “argument”
         const args = message.slice(botSessions[token].prefix.length).trim().split(/ +/);
         const commandName = args.shift().toLowerCase();
         const command = commands[commandName];
 
+        // ถ้าเป็นคำสั่งที่มีในระบบ ก็เรียกใช้งาน
         if (command && typeof command.run === "function") {
             try {
                 console.log(chalk.yellow(`🚀 กำลังรันคำสั่ง: ${commandName}`));
                 await command.run({ api, event, args });
                 console.log(chalk.green(`✅ รันคำสั่งสำเร็จ: ${commandName}`));
+
+                // นับจำนวนครั้งที่ใช้คำสั่ง
                 commandUsage[commandName] = (commandUsage[commandName] || 0) + 1;
                 saveCommandUsage();
+
                 io.emit('updateBots', generateBotData());
                 io.emit('updateCommands', generateCommandData());
             } catch (error) {
