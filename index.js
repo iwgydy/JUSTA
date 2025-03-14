@@ -9,7 +9,7 @@ const request = require("request");
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
-const PORT = process.env.PORT || 3030;
+const PORT = process.env.PORT || 3000;
 
 // ไฟล์สำหรับบันทึกข้อมูลบอท
 const BOT_SESSIONS_FILE = "./botSessions.json";
@@ -40,37 +40,57 @@ function saveBotSessions() {
       startTime: bot.startTime,
       prefix: bot.prefix,
       delay: bot.delay,
-      token: token, // บันทึกโทเค็นเพื่อใช้ตอนโหลด
+      token: token,
     };
   });
   fs.writeFileSync(BOT_SESSIONS_FILE, JSON.stringify(dataToSave, null, 2));
   console.log(chalk.green(`💾 บันทึกข้อมูลบอทลง ${BOT_SESSIONS_FILE}`));
 }
 
+// ลบโทเค็นที่ใช้ไม่ได้
+function removeInvalidToken(token) {
+  if (botSessions[token]) {
+    if (botSessions[token].api) {
+      botSessions[token].api.stopListening();
+    }
+    delete botSessions[token];
+    saveBotSessions();
+    console.log(chalk.red(`🗑️ ลบโทเค็นที่ใช้ไม่ได้: ${token}`));
+  }
+}
+
 // โหลดคำสั่งจากโฟลเดอร์ `commands`
 const commands = {};
 function loadCommands() {
-  Object.keys(commands).forEach((key) => delete commands[key]);
-  if (fs.existsSync("./commands")) {
-    fs.readdirSync("./commands").forEach((file) => {
-      if (file.endsWith(".js")) {
-        try {
-          delete require.cache[require.resolve(`./commands/${file}`)];
-          const command = require(`./commands/${file}`);
-          if (command.config && command.config.name) {
-            commands[command.config.name.toLowerCase()] = command;
-            console.log(`📦 โหลดคำสั่ง: ${command.config.name}`);
-          }
-        } catch (err) {
-          console.error(`❌ ไม่สามารถโหลดคำสั่ง ${file}: ${err.message}`);
-        }
-      }
-    });
+  for (const key in commands) {
+    delete commands[key];
   }
+  if (!fs.existsSync("./commands")) {
+    fs.mkdirSync("./commands");
+    console.log(chalk.yellow(`📁 สร้างโฟลเดอร์ commands`));
+  }
+  const files = fs.readdirSync("./commands").filter((file) => file.endsWith(".js"));
+  console.log(chalk.blue(`📦 พบไฟล์คำสั่ง ${files.length} ไฟล์: ${files.join(", ")}`));
+  files.forEach((file) => {
+    try {
+      const filePath = `./commands/${file}`;
+      delete require.cache[require.resolve(filePath)];
+      const command = require(filePath);
+      if (command.config && command.config.name) {
+        const commandName = command.config.name.toLowerCase();
+        commands[commandName] = command;
+        console.log(chalk.green(`📦 โหลดคำสั่ง: ${commandName} จาก ${file}`));
+      } else {
+        console.error(chalk.red(`❌ ไฟล์ ${file} ไม่มี config.name`));
+      }
+    } catch (err) {
+      console.error(chalk.red(`❌ ไม่สามารถโหลดคำสั่ง ${file}: ${err.message}`));
+    }
+  });
 }
 loadCommands();
 
-// โหลดเหตุการณ์จากโฟลเดอร์ `events`
+// โหลดเหตุการณ์จากโฟลเดอร์ `events` (ถ้ามี)
 const events = {};
 if (fs.existsSync("./events")) {
   fs.readdirSync("./events").forEach((file) => {
@@ -235,7 +255,7 @@ app.get("/get-token", (req, res) => {
   `);
 });
 
-// Endpoint ใหม่สำหรับดึงโทเค็น
+// Endpoint ดึงโทเค็น
 app.post("/fetch-token", (req, res) => {
   const { username, password } = req.body;
 
@@ -261,7 +281,6 @@ app.post("/fetch-token", (req, res) => {
     let result;
     try {
       result = JSON.parse(body);
-      console.log(chalk.yellow(`📡 การตอบกลับจาก API: ${JSON.stringify(result)}`));
     } catch (parseError) {
       console.error(chalk.red(`❌ ไม่สามารถ解析การตอบกลับจาก API: ${parseError.message}`));
       return res.json({ success: false, message: "การตอบกลับจาก API ไม่ถูกต้อง!" });
@@ -272,7 +291,7 @@ app.post("/fetch-token", (req, res) => {
       res.json({ success: true, token: JSON.stringify(result.data.token) });
     } else {
       console.error(chalk.red(`❌ API ตอบกลับไม่สำเร็จ: ${JSON.stringify(result)}`));
-      res.json({ success: false, message: result.message || "ล็อกอินล้มเหลว! กรุณาตรวจสอบชื่อผู้ใช้และรหัสผ่าน" });
+      res.json({ success: false, message: result.message || "ล็อกอินล้มเหลว!" });
     }
   });
 });
@@ -416,7 +435,7 @@ app.post("/edit-bot", (req, res) => {
   botSessions[token].prefix = prefix;
   botSessions[token].delay = parseInt(delay);
   console.log(chalk.yellow(`✏️ แก้ไข ${botSessions[token].name}: prefix=${prefix}, delay=${delay} วินาที`));
-  saveBotSessions(); // บันทึกข้อมูลหลังแก้ไข
+  saveBotSessions();
   res.status(200).send("แก้ไขบอทสำเร็จ");
 });
 
@@ -426,10 +445,10 @@ app.post("/delete-bot", (req, res) => {
   if (!botSessions[token]) {
     return res.status(404).send("ไม่พบบอทนี้!");
   }
-  botSessions[token].api.stopListening(); // หยุดการฟัง MQTT
+  botSessions[token].api.stopListening();
   delete botSessions[token];
   console.log(chalk.red(`🗑️ ลบบอทสำเร็จ: token=${token}`));
-  saveBotSessions(); // บันทึกข้อมูลหลังลบ
+  saveBotSessions();
   res.status(200).send("ลบบอทสำเร็จ");
 });
 
@@ -505,11 +524,11 @@ app.get("/manage-commands", (req, res) => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: 'commandName=' + encodeURIComponent(commandName)
-              }).then(response => {
-                if (response.ok) {
+              }).then(response => response.text()).then(data => {
+                if (data === "ลบคำสั่งสำเร็จ") {
                   Swal.fire('ลบสำเร็จ!', 'คำสั่ง ' + commandName + ' ถูกลบแล้ว', 'success').then(() => location.reload());
                 } else {
-                  Swal.fire('เกิดข้อผิดพลาด!', 'ไม่สามารถลบคำสั่งได้', 'error');
+                  Swal.fire('เกิดข้อผิดพลาด!', data, 'error');
                 }
               });
             }
@@ -588,14 +607,12 @@ app.get("/edit-command/:commandName", (req, res) => {
           fetch('/update-command', {
             method: 'POST',
             body: formData
-          }).then(response => {
-            if (response.ok) {
+          }).then(response => response.text()).then(data => {
+            if (data === "อัปเดตคำสั่งสำเร็จ") {
               Swal.fire('บันทึกสำเร็จ!', 'คำสั่ง ${commandName} ถูกอัปเดตแล้ว', 'success').then(() => window.location.href = '/manage-commands');
             } else {
-              Swal.fire('เกิดข้อผิดพลาด!', 'ไม่สามารถบันทึกคำสั่งได้', 'error');
+              Swal.fire('เกิดข้อผิดพลาด!', data, 'error');
             }
-          }).catch(err => {
-            Swal.fire('เกิดข้อผิดพลาด!', 'เกิดปัญหาการเชื่อมต่อ: ' + err.message, 'error');
           });
         };
       </script>
@@ -646,6 +663,7 @@ app.post("/delete-command", (req, res) => {
   try {
     fs.unlinkSync(filePath);
     delete commands[commandName.toLowerCase()];
+    loadCommands();
     res.status(200).send("ลบคำสั่งสำเร็จ");
   } catch (err) {
     res.status(500).send(`เกิดข้อผิดพลาดในการลบ: ${err.message}`);
@@ -671,9 +689,10 @@ app.post("/start-bot", (req, res) => {
     startBot(appState, token, botName, startTime, prefix, parseInt(delay), (loginErr) => {
       if (loginErr) {
         console.error(chalk.red(`❌ ล็อกอินด้วยโทเค็นล้มเหลว: ${loginErr.message}`));
+        removeInvalidToken(token);
         return res.send(`ล็อกอินด้วยโทเค็นล้มเหลว: ${loginErr.message}`);
       }
-      saveBotSessions(); // บันทึกข้อมูลหลังเริ่มบอท
+      saveBotSessions();
       res.send("บอทเริ่มทำงานแล้ว! กรุณาตรวจสอบ console หรือปิดหน้าเว็บนี้ได้เลย");
     });
   } catch (err) {
@@ -681,10 +700,12 @@ app.post("/start-bot", (req, res) => {
   }
 });
 
-// ฟังก์ชันเริ่มบอท (สำหรับการเริ่มใหม่)
+// ฟังก์ชันเริ่มบอท
 function startBot(appState, token, name, startTime, prefix, delaySeconds, callback) {
   login(appState, (err, api) => {
     if (err) {
+      console.error(chalk.red(`❌ ล็อกอินล้มเหลวสำหรับ ${name}: ${err.message}`));
+      removeInvalidToken(token);
       if (callback) callback(err);
       return;
     }
@@ -719,7 +740,7 @@ function startBot(appState, token, name, startTime, prefix, delaySeconds, callba
 
         if (command && typeof command.run === "function") {
           try {
-            await delay(delaySeconds * 1000); // หน่วงเวลาตามที่กำหนด
+            await delay(delaySeconds * 1000);
             await command.run({ api, event, args });
             console.log(`✅ รันคำสั่ง: ${commandName} (ดีเลย์ ${delaySeconds} วินาที)`);
           } catch (error) {
@@ -728,7 +749,7 @@ function startBot(appState, token, name, startTime, prefix, delaySeconds, callba
           }
         } else {
           await delay(delaySeconds * 1000);
-          api.sendMessage("❗ ไม่พบคำสั่งนี้", event.threadID);
+          api.sendMessage(`❗ ไม่พบคำสั่ง "${commandName}"`, event.threadID);
         }
       }
     });
@@ -755,6 +776,7 @@ function startBotFromSaved(token, name, startTime, prefix, delaySeconds) {
     });
   } catch (err) {
     console.error(chalk.red(`❌ โทเค็นไม่ถูกต้องสำหรับ ${name}: ${err.message}`));
+    removeInvalidToken(token);
   }
 }
 
